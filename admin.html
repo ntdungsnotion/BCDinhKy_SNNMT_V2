@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị – BC định kỳ NN và MT</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="db.js"></script>
+<script src="utils.js"></script>
+<style>
+:root{--xd:#1b4332;--xc:#2d6a4f;--xn:#52b788;--xp:#d8f3dc;--w:#fff;--g1:#f4f6f5;--g2:#e4e9e6;--g3:#c5d0c9;--g4:#7a9485;--g5:#3d5247;--dk:#1a2e22;--red:#c0392b;--yellow:#d97706;--blue:#1e40af;--sw:210px;--font:'Be Vietnam Pro',sans-serif;--mono:'JetBrains Mono',monospace;--r:7px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1);height:100vh;overflow:hidden}
+#app{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--xd);display:flex;flex-direction:column;flex-shrink:0}
+.sb-head{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sb-logo .i{font-size:20px}.sb-logo .t{font-size:11px;font-weight:700;color:white;line-height:1.35}
+.sb-user{background:rgba(255,255,255,.07);border-radius:var(--r);padding:8px 10px}
+.sb-user .n{font-size:12px;font-weight:700;color:white}.sb-user .r{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
+.nlbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 3px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;color:rgba(255,255,255,.65);font-size:12px;font-weight:500;transition:.15s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.08);color:white}
+.ni.act{background:linear-gradient(135deg,var(--xc),#40916c);color:white}
+.ni .i{font-size:14px;width:17px;text-align:center}
+.sb-foot{padding:8px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-btn{width:100%;padding:7px;background:rgba(255,255,255,.06);border:none;border-radius:6px;color:rgba(255,255,255,.6);font-family:var(--font);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s;margin-bottom:5px}
+.sb-btn:hover{background:rgba(255,255,255,.12);color:white}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:50px;background:white;border-bottom:1px solid var(--g2);display:flex;align-items:center;padding:0 18px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.topbar-t{font-size:14px;font-weight:700;color:var(--xd)}
+.content{flex:1;overflow:auto;padding:16px}
+.content::-webkit-scrollbar{width:6px}.content::-webkit-scrollbar-thumb{background:var(--g3);border-radius:3px}
+.card{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:14px}
+.card-head{padding:12px 16px;border-bottom:1px solid var(--g2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.card-head h3{font-size:14px;font-weight:700;color:var(--xd)}
+.filter-bar{padding:10px 16px;background:var(--g1);border-bottom:1px solid var(--g2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-bar label{font-size:12px;color:var(--g5);font-weight:600}
+.filter-bar select,.filter-bar input[type=number]{padding:5px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none;background:white}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--xc)}
+table.dt{width:100%;border-collapse:collapse;font-size:13px}
+table.dt thead th{background:var(--g1);padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--g2);white-space:nowrap;cursor:pointer;user-select:none}
+table.dt thead th:hover{background:var(--g2)}
+table.dt thead th .sort-icon{margin-left:4px;opacity:.5}
+table.dt thead th.sort-asc .sort-icon::after{content:'↑'}
+table.dt thead th.sort-desc .sort-icon::after{content:'↓'}
+table.dt thead th:not(.sort-asc):not(.sort-desc) .sort-icon::after{content:'↕'}
+table.dt td{padding:8px 12px;border-bottom:1px solid var(--g2)}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:#f7faf8}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.green{background:#d1fae5;color:#065f46}.badge.red{background:#fee2e2;color:#991b1b}
+.badge.blue{background:#dbeafe;color:var(--blue)}.badge.gray{background:var(--g2);color:var(--g5)}
+.badge.yellow{background:#fef3c7;color:#92400e}
+.btn{padding:6px 12px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.btn.primary{background:var(--xc);color:white}.btn.primary:hover{opacity:.85}
+.btn.danger{background:#fee2e2;color:var(--red)}.btn.danger:hover{background:#fecaca}
+.btn.ghost{background:var(--g2);color:var(--g5)}.btn.ghost:hover{background:var(--g3)}
+.btn.yellow{background:#fef3c7;color:#92400e}.btn.yellow:hover{background:#fde68a}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label,.lbl{font-size:11px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.3px}
+.inp{width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px;outline:none;transition:.2s;color:var(--dk)}
+.inp:focus{border-color:var(--xc);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;padding:14px 16px}
+.form-actions{padding:10px 16px;border-top:1px solid var(--g2);display:flex;gap:8px}
+.sw-wrap{display:flex;align-items:center;gap:6px}
+.sw{position:relative;width:36px;height:20px;cursor:pointer}
+.sw input{opacity:0;width:0;height:0}
+.sw-slider{position:absolute;inset:0;background:var(--g3);border-radius:20px;transition:.2s}
+.sw input:checked+.sw-slider{background:var(--xn)}
+.sw-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+.sw input:checked+.sw-slider::before{transform:translateX(16px)}
+.sw-lbl{font-size:12px;color:var(--g5)}
+.err-txt{color:var(--red);font-size:12px;min-height:16px}
+.mono{font-family:var(--mono);font-size:12px}
+.loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:32px;color:var(--g4);font-size:13px}
+.spin{width:16px;height:16px;border:2px solid var(--g2);border-top-color:var(--xc);border-radius:50%;animation:sp .6s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{display:flex;flex-direction:column;align-items:center;padding:40px;color:var(--g4);gap:8px;font-size:13px}.empty .i{font-size:30px}
+.toast{position:fixed;top:58px;right:14px;padding:10px 15px;border-radius:var(--r);font-size:13px;color:white;box-shadow:0 2px 10px rgba(0,0,0,.15);transform:translateX(110%);transition:.3s;z-index:200}
+.toast.on{transform:translateX(0)}.toast.ok{background:#1b5e20}.toast.er{background:var(--red)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.modal-bg.on{display:flex}
+.mbox{background:white;border-radius:14px;padding:24px;min-width:320px;max-width:500px;width:90%;box-shadow:0 8px 28px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+.mbox h3{color:var(--xd);margin-bottom:5px}.mbox p{font-size:12px;color:var(--g4);margin-bottom:14px}
+.mrow{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}.mbtns{display:flex;gap:8px}
+.btn-p{padding:8px 18px;background:var(--xc);color:white;border:none;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer}
+.btn-g{padding:8px 14px;background:var(--g2);color:var(--g5);border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer}
+.num-inp{width:60px;padding:4px 6px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono);font-size:12px;text-align:center;outline:none}
+.num-inp:focus{border-color:var(--xc)}
+
+/* Bảng chỉ tiêu — kéo thả cột */
+table.ct-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+table.ct-tbl thead th{background:var(--g1);padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--g2);position:relative;overflow:hidden;white-space:nowrap;user-select:none}
+table.ct-tbl thead th .rh{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;z-index:1}
+table.ct-tbl thead th .rh:hover{background:var(--g3)}
+table.ct-tbl td{padding:3px 8px;border-bottom:1px solid var(--g2);vertical-align:middle;overflow:hidden}
+table.ct-tbl tr:hover td{background:#f7faf8}
+table.ct-tbl tr.tr-td{background:var(--xp)}
+table.ct-tbl tr.tr-td td{font-weight:600;color:var(--xd)}
+table.ct-tbl tr.tr-locked{opacity:.55}
+.ct-tbl .cell-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.ct-tbl .cell-wrap{white-space:normal;word-break:break-word;display:block}
+.ct-inp{width:100%;padding:2px 5px;border:1.5px solid transparent;border-radius:4px;font-family:var(--font);font-size:12px;background:transparent;outline:none;transition:.15s}
+.ct-inp:focus{border-color:var(--xc);background:white}
+.ct-inp.mono{font-family:var(--mono)}
+.ct-sel{width:100%;padding:2px 4px;border:1.5px solid var(--g2);border-radius:4px;font-size:11px;font-family:var(--font);background:white;outline:none}
+.ct-sel:focus{border-color:var(--xc)}
+/* ── Mobile: sidebar off-canvas + overlay ── */
+.hamburger{display:none;background:none;border:none;color:var(--xd);font-size:20px;cursor:pointer;padding:4px 8px;margin-right:6px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:95}
+.sb-overlay.on{display:block}
+@media(max-width:768px){
+  body{overflow:auto;height:auto}
+  #app{height:auto;min-height:100vh}
+  .sb{position:fixed;top:0;left:0;height:100%;width:min(230px,84vw);z-index:100;
+      transform:translateX(-105%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow:4px 0 20px rgba(0,0,0,.25)}
+  .sb.open{transform:translateX(0)}
+  .hamburger{display:flex;align-items:center;justify-content:center}
+  .main{width:100%;overflow:visible}
+  .topbar{position:sticky;top:0;z-index:90;padding:0 10px}
+  .topbar-t{font-size:13px}
+  .content{overflow:visible;padding:8px}
+  .card{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .toast{left:8px;right:8px;top:54px}
+  .mbox{min-width:unset;width:94vw;padding:16px;max-height:90vh;overflow-y:auto}
+}
+</style>
+</head>
+<body>
+<div id="sb-overlay" class="sb-overlay" onclick="closeSidebar()"></div>
+<div id="app">
+  <aside class="sb" id="sb">
+    <div class="sb-head">
+      <div class="sb-logo"><span class="i">⚙️</span>
+        <div class="t">Quản trị<br><span style="opacity:.55;font-weight:400">BC định kỳ NN & MT</span></div>
+      </div>
+      <div class="sb-user">
+        <div class="n" id="sb-name">Đang tải...</div>
+        <div class="r" id="sb-role"></div>
+      </div>
+    </div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="sb-foot">
+      <button class="sb-btn" onclick="window.close()">✕ Đóng trang này</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar"><button class="hamburger" onclick="toggleSidebar()">☰</button><div class="topbar-t" id="topbar-t">Quản trị hệ thống</div></div>
+    <div class="content" id="content"><div class="loading"><span class="spin"></span> Đang tải...</div></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Modal xác nhận -->
+<div class="modal-bg" id="modal-xn">
+  <div class="mbox">
+    <h3 id="xn-title">Xác nhận</h3><p id="xn-msg"></p>
+    <div class="mbtns">
+      <button class="btn danger" id="xn-ok">Xác nhận</button>
+      <button class="btn ghost" onclick="UTILS.dongModal('modal-xn')">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal thêm/sửa kỳ -->
+<div class="modal-bg" id="modal-ky">
+  <div class="mbox">
+    <h3 id="ky-modal-title">Thêm kỳ báo cáo</h3>
+    <p>Mã kỳ tự động sinh — bạn có thể chỉnh lại.</p>
+    <div class="mrow">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Tháng</label>
+          <input class="inp" id="ky-thang" type="number" min="1" max="12" placeholder="3"
+            oninput="sinhMaKy()"></div>
+        <div class="fg"><label>Năm</label>
+          <input class="inp" id="ky-nam" type="number" placeholder="2026"
+            oninput="sinhMaKy()"></div>
+      </div>
+      <div class="fg"><label>Loại số liệu</label>
+        <select class="inp" id="ky-loai" onchange="sinhMaKy()">
+          <option value="Ước thực hiện">Ước thực hiện</option>
+          <option value="Ước lũy kế">Ước lũy kế</option>
+          <option value="Chính thức">Chính thức</option>
+          <option value="Lũy kế chính thức">Lũy kế chính thức</option>
+          <option value="So cùng kỳ">So cùng kỳ</option>
+        </select></div>
+      <div class="fg"><label>Mã kỳ <span style="color:var(--g4);font-weight:400">(tự sinh, có thể sửa)</span></label>
+        <input class="inp mono" id="ky-ma" type="text" placeholder="uoc_03/2026"></div>
+      <div class="fg"><label>Tên kỳ đầy đủ</label>
+        <input class="inp" id="ky-ten" type="text" placeholder="Ước tháng 3 năm 2026"></div>
+      <div class="fg"><label>Nguồn số liệu mặc định</label>
+        <input class="inp" id="ky-nguon" type="text" placeholder="Dữ liệu ngành"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Thứ tự hiển thị</label>
+          <input class="inp" id="ky-thutu" type="number" placeholder="1" min="1"></div>
+        <div class="fg"><label>Độ rộng cột (px)</label>
+          <input class="inp" id="ky-dorong" type="number" placeholder="120" min="60" max="300"></div>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="ADMIN.luuKy()">💾 Lưu kỳ</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-ky')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-ky" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- Modal thêm/sửa tài khoản -->
+<div class="modal-bg" id="modal-tk">
+  <div class="mbox">
+    <h3 id="tk-modal-title">Thêm tài khoản</h3>
+    <p>Mật khẩu mặc định: <strong id="mk-mac-admin"></strong></p>
+    <div class="mrow">
+      <div class="fg"><label>Tên đơn vị / phòng ban</label>
+        <input class="inp" id="tk-donvi" placeholder="Chi cục Thủy sản"></div>
+      <div class="fg"><label>Họ tên người phụ trách</label>
+        <input class="inp" id="tk-hoten" placeholder="Nguyễn Văn A"></div>
+      <div class="fg"><label>Email (tuỳ chọn)</label>
+        <input class="inp" id="tk-email" type="email" placeholder="a@sonmt.gov.vn"></div>
+      <div class="fg"><label>Vai trò</label>
+        <select class="inp" id="tk-vaitro">
+          <option value="editor">Người nhập liệu (Editor)</option>
+          <option value="admin">Quản trị viên (Admin)</option>
+        </select></div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-tk" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- Modal phân quyền -->
+<div class="modal-bg" id="modal-pq">
+  <div class="mbox">
+    <h3 id="pq-title">Phân quyền bảng</h3><p id="pq-sub"></p>
+    <div id="pq-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="ADMIN.luuPQ()">💾 Lưu phân quyền</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-pq')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal thêm chỉ tiêu mới -->
+<div class="modal-bg" id="modal-ct">
+  <div class="mbox" style="max-width:560px;width:95%">
+    <h3 id="ct-modal-title">➕ Thêm chỉ tiêu mới</h3>
+    <p>Mã hệ thống phải duy nhất. Thứ tự dùng số thực để chèn linh hoạt (vd: 1.5 nằm giữa 1 và 2).</p>
+    <div class="mrow">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Mã hệ thống <span style="color:var(--red)">*</span></label>
+          <input class="inp mono" id="ct-id" placeholder="TT01, CN_01..." autocomplete="off"></div>
+        <div class="fg"><label>Mã Bộ</label>
+          <input class="inp mono" id="ct-idbo" placeholder="(tuỳ chọn)"></div>
+      </div>
+      <div class="fg"><label>Tên chỉ tiêu <span style="color:var(--red)">*</span></label>
+        <input class="inp" id="ct-ten" placeholder="Tổng diện tích canh tác"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Đơn vị tính</label>
+          <input class="inp" id="ct-dvt" placeholder="Ha, tấn, con..."></div>
+        <div class="fg"><label>Thứ tự <span style="color:var(--red)">*</span></label>
+          <input class="inp mono" id="ct-thutu" type="number" step="any" placeholder="1, 1.5, 2.1..."></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>STT hiển thị</label>
+          <input class="inp" id="ct-stt" placeholder="I, 1, 1.1, a..."></div>
+        <div class="fg"><label>Kiểu dữ liệu</label>
+          <select class="inp" id="ct-kieu">
+            <option value="number">Số (number)</option>
+            <option value="text">Văn bản (text)</option>
+          </select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Tần suất</label>
+          <select class="inp" id="ct-tansuat">
+            <option value="hang_thang">Hàng tháng</option>
+            <option value="hang_quy">Hàng quý</option>
+            <option value="nua_nam">Nửa năm</option>
+            <option value="cuoi_nam">Cuối năm</option>
+            <option value="nam_dac_biet">Năm đặc biệt</option>
+          </select></div>
+        <div class="fg"><label>Là tiêu đề nhóm?</label>
+          <select class="inp" id="ct-latd">
+            <option value="false">Không (dòng nhập liệu)</option>
+            <option value="true">Có (tiêu đề nhóm)</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="luuChiTieuMoi()">💾 Thêm chỉ tiêu</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-ct')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-ct" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- Modal xóa chỉ tiêu — yêu cầu mật khẩu cấp 2 -->
+<div class="modal-bg" id="modal-xoa-ct">
+  <div class="mbox" style="max-width:420px;width:95%">
+    <h3 style="color:var(--red)">🗑️ Xác nhận xóa chỉ tiêu</h3>
+    <p id="xoa-ct-info" style="margin:10px 0 14px;font-size:13px;line-height:1.6"></p>
+    <div class="mrow">
+      <div class="fg">
+        <label>Mật khẩu cấp 2 <span style="color:var(--red)">*</span></label>
+        <input class="inp" type="password" id="mk2-inp" placeholder="Nhập mật khẩu bảo vệ..."
+          onkeydown="if(event.key==='Enter')xacNhanXoaCT()">
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" style="background:var(--red)" onclick="xacNhanXoaCT()">🗑️ Xác nhận xóa</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-xoa-ct')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-xoa-ct" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+// Tham chiếu UTILS.xacNhan
+const xacNhan = (t,m,cb) => UTILS.xacNhan(t,m,cb);
+const toast = (m,t) => UTILS.toast(m,t);
+
+// ── Sidebar mobile ──
+function toggleSidebar(){
+  document.getElementById('sb')?.classList.toggle('open');
+  document.getElementById('sb-overlay')?.classList.toggle('on');
+}
+function closeSidebar(){
+  document.getElementById('sb')?.classList.remove('open');
+  document.getElementById('sb-overlay')?.classList.remove('on');
+}
+
+let user=null, dsKy=[], dsTK=[], dsBang=[], editKyId=null, editTKId=null, pqTKId=null;
+let sortCol='', sortDir=1; // sort kỳ báo cáo
+let dsSoSanh=[], coBangSoSanh=true; // cấu hình cột so sánh (Kỳ A ÷ Kỳ B × 100%)
+
+// ── INIT ──
+window.addEventListener('load', async () => {
+  const sv = UTILS.laySession();
+  if (!sv) { alert('Vui lòng đăng nhập từ trang chính!'); window.close(); return; }
+  user = sv;
+  document.getElementById('sb-name').textContent = user.don_vi;
+  document.getElementById('sb-role').textContent = user.vai_tro==='admin'?'⚙️ Quản trị viên':'✏️ Người nhập liệu';
+  document.getElementById('mk-mac-admin').textContent = CONFIG.MAT_KHAU_MAC_DINH;
+
+  if (user.vai_tro === 'admin') {
+    buildMenuAdmin();
+    await Promise.all([loadKy(), loadTK(), loadBang()]);
+    hienKyBaoCao();
+  } else {
+    buildMenuUser();
+    hienDoiPass();
+  }
+});
+
+function buildMenuAdmin() {
+  document.getElementById('sb-nav').innerHTML = `
+    <div class="nlbl">Quản lý</div>
+    <div class="ni act" id="ni-ky" onclick="hienKyBaoCao()"><span class="i">📅</span> Kỳ báo cáo</div>
+    <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
+    <div class="ni" id="ni-pq" onclick="hienPhanQuyen()"><span class="i">🔑</span> Phân quyền</div>
+    <div class="ni" id="ni-ct" onclick="hienChiTieu()"><span class="i">📑</span> Chỉ tiêu</div>
+    <div class="ni" id="ni-bang" onclick="hienQuanLyBang()"><span class="i">🗂️</span> Quản lý bảng</div>
+    <div class="ni" id="ni-tdb" onclick="hienTieuDeBang()"><span class="i">🏷️</span> Tiêu đề bảng</div>
+    <div class="nlbl">Tài khoản</div>
+    <div class="ni" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
+}
+function buildMenuUser() {
+  document.getElementById('sb-nav').innerHTML = `
+    <div class="nlbl">Tài khoản</div>
+    <div class="ni act" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
+}
+function setAct(id) { closeSidebar(); document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act')); document.getElementById(id)?.classList.add('act'); }
+
+async function loadKy(namBD, namKT) { dsKy = await DB.layTatCaKy(namBD, namKT); }
+async function loadTK() { dsTK = await DB.layTatCaTaiKhoan(); }
+async function loadBang() { dsBang = await DB.layTatCaBang(); }
+
+// ── KỲ BÁO CÁO ──
+let filterNamBD = '', filterNamKT = '';
+
+async function hienKyBaoCao() {
+  setAct('ni-ky');
+  document.getElementById('topbar-t').textContent = 'Quản lý kỳ báo cáo';
+  const namHienTai = new Date().getFullYear();
+  if (!filterNamBD) filterNamBD = namHienTai - 1;
+  if (!filterNamKT) filterNamKT = namHienTai + 1;
+  await loadKy(filterNamBD, filterNamKT);
+  // Bảng cau_hinh_so_sanh có thể chưa được tạo → hiện hướng dẫn thay vì lỗi
+  try { dsSoSanh = await DB.laySoSanh(false); coBangSoSanh = true; }
+  catch(e) { dsSoSanh = []; coBangSoSanh = false; }
+  renderKyBaoCao();
+}
+
+function renderKyBaoCao() {
+  let ds = [...dsKy];
+  // Sort
+  if (sortCol) {
+    ds.sort((a,b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (va === null || va === undefined) va = '';
+      if (vb === null || vb === undefined) vb = '';
+      return String(va).localeCompare(String(vb), 'vi') * sortDir;
+    });
+  }
+
+  const cols = [
+    { key:'thu_tu_hien_thi', label:'Thứ tự', w:'110px' },
+    { key:'ky_bao_cao',      label:'Mã kỳ',  w:'160px' },
+    { key:'ky_bao_cao_tieu_de', label:'Tên kỳ', w:'' },
+    { key:'thang_bao_cao',   label:'Tháng',  w:'60px' },
+    { key:'nam_bao_cao',     label:'Năm',    w:'65px' },
+    { key:'loai_so_lieu',    label:'Loại',   w:'120px' },
+    { key:'do_rong_cot',     label:'Rộng(px)',w:'80px' },
+  ];
+
+  const thead = cols.map(c => {
+    const cls = sortCol===c.key ? (sortDir===1?'sort-asc':'sort-desc') : '';
+    return `<th class="${cls}" style="${c.w?'width:'+c.w:''}" onclick="doSort('${c.key}')">${c.label}<span class="sort-icon"></span></th>`;
+  }).join('') + '<th style="text-align:center">Nhập</th><th style="text-align:center">Hiện</th><th></th>';
+
+  const tbody = ds.map(k => `<tr>
+    <td style="text-align:center;padding:4px 8px">
+      <input class="num-inp" type="number" min="1" value="${k.thu_tu_hien_thi||''}" placeholder="--"
+        style="width:90px"
+        onchange="capNhatKyField('${k.ky_bao_cao}','thu_tu_hien_thi',this.value===''?null:parseInt(this.value))">
+    </td>
+    <td class="mono">${k.ky_bao_cao}</td>
+    <td>${k.ky_bao_cao_tieu_de||''}</td>
+    <td style="text-align:center">${k.thang_bao_cao}</td>
+    <td style="text-align:center">${k.nam_bao_cao}</td>
+    <td><span class="badge ${k.loai_so_lieu==='Chính thức'||k.loai_so_lieu==='Lũy kế chính thức'?'green':'blue'}">${k.loai_so_lieu||'--'}</span></td>
+    <td style="text-align:center;padding:4px 8px">
+      <input class="num-inp" type="number" min="60" max="400" value="${k.do_rong_cot||120}" placeholder="120"
+        onchange="capNhatKyField('${k.ky_bao_cao}','do_rong_cot',parseInt(this.value)||120)">
+    </td>
+    <td style="text-align:center">
+      <label class="sw-wrap" style="justify-content:center">
+        <label class="sw"><input type="checkbox" ${!k.khoa_nhap_lieu?'checked':''}
+          onchange="capNhatKyField('${k.ky_bao_cao}','khoa_nhap_lieu',!this.checked)">
+          <span class="sw-slider"></span></label>
+        <span class="sw-lbl" style="font-size:10px">${!k.khoa_nhap_lieu?'🔓':'🔒'}</span>
+      </label>
+    </td>
+    <td style="text-align:center">
+      <label class="sw-wrap" style="justify-content:center">
+        <label class="sw"><input type="checkbox" ${k.dua_vao_bieu_bao_cao?'checked':''}
+          onchange="capNhatKyField('${k.ky_bao_cao}','dua_vao_bieu_bao_cao',this.checked)">
+          <span class="sw-slider"></span></label>
+        <span class="sw-lbl" style="font-size:10px">${k.dua_vao_bieu_bao_cao?'✅':'⬜'}</span>
+      </label>
+    </td>
+    <td style="white-space:nowrap">
+      <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalKy('${k.ky_bao_cao}')">✏️</button>
+      <button class="btn danger" style="padding:4px 8px" onclick="xoaKy('${k.ky_bao_cao}')">🗑</button>
+    </td>
+  </tr>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h3>📅 Kỳ báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${ds.length} kỳ)</span></h3>
+        <button class="btn primary" onclick="ADMIN.moModalKy()">+ Thêm kỳ mới</button>
+      </div>
+      <div class="filter-bar">
+        <label>Lọc năm:</label>
+        <label>Từ</label>
+        <input type="number" id="f-nam-bd" value="${filterNamBD}" style="width:70px" oninput="filterNamBD=this.value">
+        <label>đến</label>
+        <input type="number" id="f-nam-kt" value="${filterNamKT}" style="width:70px" oninput="filterNamKT=this.value">
+        <button class="btn ghost" onclick="hienKyBaoCao()">Lọc</button>
+        <button class="btn ghost" onclick="filterNamBD='';filterNamKT='';hienKyBaoCao()">Tất cả</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>${thead}</tr></thead>
+          <tbody>${tbody||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--g4)">Không có kỳ báo cáo nào</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    ${renderCardSoSanh()}`;
+}
+
+// ── CỘT SO SÁNH TRONG BẢNG NHẬP LIỆU (index.html) ──
+// Cột = Kỳ A ÷ Kỳ B × 100%, chỉ đọc, tự tính lại khi số liệu nhập thay đổi.
+function tenKyAdmin(ma) {
+  const k = dsKy.find(x => x.ky_bao_cao === ma);
+  return k ? (k.ky_bao_cao_tieu_de || ma) : ma;
+}
+
+function renderCardSoSanh() {
+  if (!coBangSoSanh) {
+    return `<div class="card" style="margin-top:12px">
+      <div class="card-head"><h3>➗ Cột so sánh trong bảng nhập liệu</h3></div>
+      <div style="padding:14px;font-size:13px;color:var(--g5)">
+        ⚠️ Chưa tạo bảng <b class="mono">cau_hinh_so_sanh</b> trong Supabase.<br>
+        Hãy chạy file <b class="mono">sql_cau_hinh_so_sanh.sql</b> (kèm theo bản cập nhật này)
+        trong <b>Supabase → SQL Editor</b>, sau đó bấm lại mục "Kỳ báo cáo".
+      </div>
+    </div>`;
+  }
+  // Chỉ cho chọn các kỳ ĐANG HIỂN THỊ trong bảng nhập (dua_vao_bieu_bao_cao = true)
+  const kyHien = dsKy.filter(k => k.dua_vao_bieu_bao_cao)
+    .sort((a,b) => (Number(a.thu_tu_hien_thi)||0) - (Number(b.thu_tu_hien_thi)||0));
+  const opts = kyHien.map(k =>
+    `<option value="${k.ky_bao_cao}">${k.ky_bao_cao_tieu_de || k.ky_bao_cao}</option>`).join('');
+
+  const rows = dsSoSanh.map(c => `<tr>
+    <td style="text-align:center;padding:4px 8px">
+      <input class="num-inp" type="number" min="1" value="${c.thu_tu||''}" placeholder="--" style="width:70px"
+        onchange="capNhatSoSanhField(${c.id},'thu_tu',this.value===''?null:parseInt(this.value))">
+    </td>
+    <td>${tenKyAdmin(c.ky_tu)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_tu})</span></td>
+    <td style="text-align:center;font-weight:700;color:var(--blue)">÷</td>
+    <td>${tenKyAdmin(c.ky_mau)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_mau})</span></td>
+    <td style="text-align:center;padding:4px 8px">
+      <input class="num-inp" type="number" min="60" max="400" value="${c.do_rong_cot||128}" placeholder="128"
+        onchange="capNhatSoSanhField(${c.id},'do_rong_cot',parseInt(this.value)||128)">
+    </td>
+    <td style="text-align:center">
+      <label class="sw-wrap" style="justify-content:center">
+        <label class="sw"><input type="checkbox" ${c.hien_thi?'checked':''}
+          onchange="capNhatSoSanhField(${c.id},'hien_thi',this.checked)">
+          <span class="sw-slider"></span></label>
+        <span class="sw-lbl" style="font-size:10px">${c.hien_thi?'✅':'⬜'}</span>
+      </label>
+    </td>
+    <td style="white-space:nowrap">
+      <button class="btn danger" style="padding:4px 8px" onclick="xoaSoSanhAdmin(${c.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+
+  return `<div class="card" style="margin-top:12px">
+    <div class="card-head">
+      <h3>➗ Cột so sánh trong bảng nhập liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(Kỳ A ÷ Kỳ B × 100% — chỉ đọc, tự tính khi nhập)</span></h3>
+    </div>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:8px">
+      <label>Kỳ A (tử số)</label>
+      <select class="inp" id="ss-tu" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
+      <label style="font-weight:700;color:var(--blue)">÷</label>
+      <label>Kỳ B (mẫu số)</label>
+      <select class="inp" id="ss-mau" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
+      <label>× 100% &nbsp; Thứ tự</label>
+      <input class="num-inp" type="number" id="ss-thutu" min="1" placeholder="--" style="width:70px">
+      <button class="btn primary" onclick="themSoSanhAdmin()">➕ Thêm cột so sánh</button>
+    </div>
+    <div style="padding:0 14px 6px;font-size:11px;color:var(--g4);font-style:italic">
+      Chỉ chọn được các kỳ đang bật "Hiện" (đưa vào biểu). Cột so sánh chỉ xuất hiện trong bảng nhập
+      khi CẢ HAI kỳ đều đang hiển thị. Nếu không thấy kỳ cần chọn, hãy mở rộng bộ lọc năm phía trên.
+    </div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead><tr>
+          <th style="width:80px">Thứ tự</th><th>Kỳ A (tử số)</th><th style="width:36px"></th>
+          <th>Kỳ B (mẫu số)</th><th style="width:90px">Rộng(px)</th>
+          <th style="width:70px;text-align:center">Hiện</th><th style="width:60px"></th>
+        </tr></thead>
+        <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--g4)">Chưa có cột so sánh nào</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+async function themSoSanhAdmin() {
+  const tu  = document.getElementById('ss-tu')?.value;
+  const mau = document.getElementById('ss-mau')?.value;
+  const thutu = document.getElementById('ss-thutu')?.value;
+  if (!tu || !mau) { toast('Hãy chọn đủ Kỳ A và Kỳ B.', 'er'); return; }
+  if (tu === mau)  { toast('Kỳ A và Kỳ B phải khác nhau.', 'er'); return; }
+  if (dsSoSanh.some(c => c.ky_tu === tu && c.ky_mau === mau)) { toast('Cột so sánh này đã có.', 'er'); return; }
+  try {
+    await DB.themSoSanh({ ky_tu: tu, ky_mau: mau, thu_tu: thutu ? parseInt(thutu) : null, hien_thi: true, do_rong_cot: 128 });
+    toast('✅ Đã thêm cột so sánh!');
+    await hienKyBaoCao();
+  } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
+}
+
+async function capNhatSoSanhField(id, col, val) {
+  const u = {}; u[col] = val;
+  try {
+    await DB.suaSoSanh(id, u);
+    toast('✅ Đã cập nhật!');
+    const c = dsSoSanh.find(x => x.id === id);
+    if (c) c[col] = val;
+    if (col === 'hien_thi') renderKyBaoCao();
+  } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
+}
+
+function xoaSoSanhAdmin(id) {
+  const c = dsSoSanh.find(x => x.id === id);
+  UTILS.xacNhan('Xóa cột so sánh',
+    `Xóa cột <b>${tenKyAdmin(c?.ky_tu||'')} ÷ ${tenKyAdmin(c?.ky_mau||'')} × 100%</b>?<br>Chỉ xóa cấu hình cột, không ảnh hưởng số liệu.`,
+    async () => {
+      try {
+        await DB.xoaSoSanh(id);
+        toast('✅ Đã xóa cột so sánh!');
+        await hienKyBaoCao();
+      } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
+    });
+}
+
+function doSort(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  renderKyBaoCao();
+}
+
+async function capNhatKyField(ma, col, val) {
+  const u = {}; u[col] = val;
+  try {
+    await DB.capNhatKy(ma, u);
+    toast('✅ Đã cập nhật!');
+    const k = dsKy.find(x => x.ky_bao_cao === ma);
+    if (k) k[col] = val;
+  } catch(e) { toast('Lỗi: '+e.message, 'er'); }
+}
+
+// Tự sinh mã kỳ
+function sinhMaKy() {
+  const thang = document.getElementById('ky-thang').value;
+  const nam   = document.getElementById('ky-nam').value;
+  const loai  = document.getElementById('ky-loai').value;
+  if (!thang || !nam) return;
+  const t = String(thang).padStart(2,'0');
+  const prefix = {
+    'Ước thực hiện': 'uoc',
+    'Ước lũy kế':    'uoclk',
+    'Chính thức':    'ct',
+    'Lũy kế chính thức': 'lkct',
+    'So cùng kỳ':   'sck',
+  }[loai] || 'uoc';
+  document.getElementById('ky-ma').value = `${prefix}_${t}/${nam}`;
+  // Sinh tên đầy đủ
+  const tenLoai = {
+    'Ước thực hiện': `Ước tháng ${thang} năm ${nam}`,
+    'Ước lũy kế':   `Ước lũy kế đến tháng ${thang} năm ${nam}`,
+    'Chính thức':   `Chính thức tháng ${thang} năm ${nam}`,
+    'Lũy kế chính thức': `Lũy kế chính thức đến tháng ${thang} năm ${nam}`,
+    'So cùng kỳ':   `So cùng kỳ tháng ${thang} năm ${nam}`,
+  }[loai] || '';
+  if (!document.getElementById('ky-ten').value || document.getElementById('ky-ten').dataset.auto==='1') {
+    document.getElementById('ky-ten').value = tenLoai;
+    document.getElementById('ky-ten').dataset.auto = '1';
+  }
+}
+
+const ADMIN = {
+  moModalKy(maKy=null) {
+    editKyId = maKy;
+    const k = maKy ? dsKy.find(x=>x.ky_bao_cao===maKy) : null;
+    document.getElementById('ky-modal-title').textContent = k ? 'Sửa kỳ báo cáo' : 'Thêm kỳ báo cáo';
+    document.getElementById('ky-thang').value  = k?.thang_bao_cao || '';
+    document.getElementById('ky-nam').value    = k?.nam_bao_cao   || new Date().getFullYear();
+    document.getElementById('ky-loai').value   = k?.loai_so_lieu  || 'Ước thực hiện';
+    document.getElementById('ky-ma').value     = k?.ky_bao_cao    || '';
+    document.getElementById('ky-ten').value    = k?.ky_bao_cao_tieu_de || '';
+    document.getElementById('ky-ten').dataset.auto = '0';
+    document.getElementById('ky-nguon').value  = k?.nguon_so_lieu || '';
+    document.getElementById('ky-thutu').value  = k?.thu_tu_hien_thi || '';
+    document.getElementById('ky-dorong').value = k?.do_rong_cot  || 120;
+    document.getElementById('err-ky').textContent = '';
+    if (!k) sinhMaKy();
+    UTILS.moModal('modal-ky');
+  },
+
+  async luuKy() {
+    const ma    = document.getElementById('ky-ma').value.trim();
+    const ten   = document.getElementById('ky-ten').value.trim();
+    const thang = parseInt(document.getElementById('ky-thang').value);
+    const nam   = parseInt(document.getElementById('ky-nam').value);
+    const loai  = document.getElementById('ky-loai').value;
+    const nguon = document.getElementById('ky-nguon').value.trim();
+    const thutu = document.getElementById('ky-thutu').value;
+    const dorong= parseInt(document.getElementById('ky-dorong').value)||120;
+    const err   = document.getElementById('err-ky');
+    err.textContent = '';
+    if (!ma||!ten||!thang||!nam) { err.textContent='Vui lòng điền đủ thông tin!'; return; }
+    const row = {
+      ky_bao_cao: ma, ky_bao_cao_tieu_de: ten,
+      thang_bao_cao: thang, nam_bao_cao: nam,
+      loai_so_lieu: loai, nguon_so_lieu: nguon,
+      thu_tu_hien_thi: thutu?parseInt(thutu):null,
+      do_rong_cot: dorong,
+      khoa_nhap_lieu: false, dua_vao_bieu_bao_cao: true
+    };
+    try {
+      if (editKyId) await DB.capNhatKy(editKyId, row);
+      else await DB.themKy(row);
+      UTILS.dongModal('modal-ky');
+      toast('✅ Đã lưu kỳ báo cáo!');
+      await hienKyBaoCao();
+    } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
+  },
+
+  // ── TÀI KHOẢN ──
+  moModalTK(id=null) {
+    editTKId = id;
+    const r = id ? dsTK.find(x=>x.id===id) : null;
+    document.getElementById('tk-modal-title').textContent = r ? 'Sửa tài khoản' : 'Thêm tài khoản';
+    document.getElementById('tk-donvi').value   = r?.don_vi   || '';
+    document.getElementById('tk-hoten').value   = r?.ho_ten   || '';
+    document.getElementById('tk-email').value   = r?.email    || '';
+    document.getElementById('tk-vaitro').value  = r?.vai_tro  || 'editor';
+    document.getElementById('err-tk').textContent = '';
+    UTILS.moModal('modal-tk');
+  },
+
+  async luuTK() {
+    const dv = document.getElementById('tk-donvi').value.trim();
+    const ht = document.getElementById('tk-hoten').value.trim();
+    const em = document.getElementById('tk-email').value.trim();
+    const vt = document.getElementById('tk-vaitro').value;
+    const err = document.getElementById('err-tk');
+    err.textContent = '';
+    if (!dv||!ht) { err.textContent='Vui lòng điền đơn vị và họ tên!'; return; }
+    const row = { don_vi:dv, ho_ten:ht, email:em||null, vai_tro:vt };
+    try {
+      if (editTKId) await DB.suaTaiKhoan(editTKId, row);
+      else await DB.themTaiKhoan({...row, mat_khau:CONFIG.MAT_KHAU_MAC_DINH, trang_thai:true});
+      UTILS.dongModal('modal-tk');
+      toast('✅ Đã lưu tài khoản!');
+      await hienTaiKhoan();
+    } catch(e) { err.textContent='Lỗi: '+e.message; }
+  },
+
+  async luuPQ() {
+    const checked = dsBang.filter(b=>document.getElementById('pq-'+b.bang)?.checked).map(b=>b.bang);
+    try {
+      await DB.luuPhanQuyen(pqTKId, checked);
+      UTILS.dongModal('modal-pq');
+      toast('✅ Đã lưu phân quyền!');
+      await hienPhanQuyen();
+    } catch(e) { toast('Lỗi: '+e.message,'er'); }
+  },
+};
+
+function xoaKy(ma) {
+  UTILS.xacNhan('Xoá kỳ báo cáo',`Xoá kỳ "<strong>${ma}</strong>"?`,
+    async()=>{try{await DB.xoaKy(ma);toast('✅ Đã xoá!');await hienKyBaoCao();}catch(e){toast('Lỗi: '+e.message,'er')}});
+}
+
+// ── TÀI KHOẢN ──
+async function hienTaiKhoan() {
+  setAct('ni-tk');
+  document.getElementById('topbar-t').textContent = 'Quản lý tài khoản';
+  await loadTK();
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsTK.length})</span></h3>
+        <button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th>Đơn vị</th><th>Người phụ trách</th><th>Email</th>
+            <th style="text-align:center">Vai trò</th>
+            <th style="text-align:center">Trạng thái</th>
+            <th style="text-align:center">Mật khẩu</th><th></th>
+          </tr></thead>
+          <tbody>${dsTK.map(r=>`<tr>
+            <td><strong>${r.don_vi}</strong></td>
+            <td>${r.ho_ten}</td>
+            <td class="mono" style="font-size:11px">${r.email||'--'}</td>
+            <td style="text-align:center"><span class="badge ${r.vai_tro==='admin'?'blue':'green'}">${r.vai_tro==='admin'?'⚙️ Admin':'✏️ Editor'}</span></td>
+            <td style="text-align:center">
+              <label class="sw-wrap" style="justify-content:center">
+                <label class="sw"><input type="checkbox" ${r.trang_thai?'checked':''}
+                  onchange="toggleTK(${r.id},'trang_thai',this.checked)">
+                  <span class="sw-slider"></span></label>
+                <span class="sw-lbl">${r.trang_thai?'Hoạt động':'Khoá'}</span>
+              </label>
+            </td>
+            <td style="text-align:center">
+              <span class="badge ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'gray':'green'}">
+                ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'🔑 Mặc định':'✅ Đã đổi'}</span>
+              ${r.id!==user.id?`<button class="btn ghost" style="margin-left:4px;padding:3px 8px;font-size:11px" onclick="resetPass(${r.id},'${r.don_vi}')">Reset</button>`:''}
+            </td>
+            <td style="white-space:nowrap">
+              <button class="btn ghost" style="margin-right:3px" onclick="ADMIN.moModalTK(${r.id})">✏️</button>
+              ${r.id!==user.id?`<button class="btn danger" onclick="xoaTK(${r.id},'${r.don_vi}')">🗑</button>`:''}
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function toggleTK(id,col,val){const u={};u[col]=val;await DB.suaTaiKhoan(id,u);toast('✅');await loadTK();await hienTaiKhoan();}
+function resetPass(id,dv){UTILS.xacNhan('Reset mật khẩu',`Reset mật khẩu <strong>${dv}</strong> về <strong>${CONFIG.MAT_KHAU_MAC_DINH}</strong>?`,async()=>{await DB.suaTaiKhoan(id,{mat_khau:CONFIG.MAT_KHAU_MAC_DINH});toast('✅ Đã reset!');await hienTaiKhoan();})}
+function xoaTK(id,dv){UTILS.xacNhan('Xoá tài khoản',`Xoá <strong>${dv}</strong>?`,async()=>{await DB.xoaTaiKhoan(id);toast('✅ Đã xoá!');await hienTaiKhoan();})}
+
+// ── PHÂN QUYỀN ──
+async function hienPhanQuyen() {
+  setAct('ni-pq');
+  document.getElementById('topbar-t').textContent = 'Phân quyền nhập liệu';
+  await Promise.all([loadTK(), loadBang()]);
+  const pqAll = await DB.layTatCaPhanQuyen();
+  const editors = dsTK.filter(r=>r.vai_tro==='editor');
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>🔑 Phân quyền bảng nhập liệu</h3></div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr><th>Đơn vị</th><th>Người phụ trách</th><th>Bảng được nhập</th><th></th></tr></thead>
+          <tbody>${editors.map(r=>{
+            const pq=(pqAll||[]).filter(p=>p.tai_khoan_id===r.id).map(p=>p.bang);
+            const tenBangs=pq.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
+            return`<tr>
+              <td><strong>${r.don_vi}</strong></td><td>${r.ho_ten}</td>
+              <td>${tenBangs.length?tenBangs.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa phân công</span>'}</td>
+              <td><button class="btn ghost" onclick="moModalPQ(${r.id},'${r.don_vi}')">✏️ Sửa</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+async function moModalPQ(id,donVi){
+  pqTKId=id;
+  document.getElementById('pq-title').textContent='Phân quyền: '+donVi;
+  document.getElementById('pq-sub').textContent='Chọn bảng được phép nhập liệu:';
+  const pq=await DB.layPhanQuyen(id);
+  document.getElementById('pq-list').innerHTML=dsBang.map(b=>`
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;border-bottom:1px solid var(--g2)">
+      <input type="checkbox" id="pq-${b.bang}" ${pq.includes(b.bang)?'checked':''}
+        style="width:15px;height:15px;accent-color:var(--xc)">
+      <span><strong>${b.ten_bang}</strong> <span style="font-size:11px;color:var(--g4)">${b.don_vi_bao_cao||''}</span></span>
+    </label>`).join('');
+  UTILS.moModal('modal-pq');
+}
+
+// ── CHỈ TIÊU ──
+async function hienChiTieu() {
+  setAct('ni-ct');
+  document.getElementById('topbar-t').textContent = 'Danh mục chỉ tiêu';
+  await loadBang();
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>📑 Quản lý chỉ tiêu</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;color:var(--g5)">Chọn bảng:</label>
+          <select id="sel-bang-ct" onchange="taiChiTieu(this.value)"
+            style="padding:6px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px">
+            ${dsBang.map(b=>`<option value="${b.bang}">${b.ten_bang}</option>`).join('')}
+          </select>
+          <button class="btn primary" onclick="moModalThemCT()">➕ Thêm chỉ tiêu</button>
+        </div>
+      </div>
+    </div>
+    <div id="ct-content"><div class="loading"><span class="spin"></span></div></div>`;
+  if (dsBang.length) taiChiTieu(dsBang[0].bang);
+}
+
+async function taiChiTieu(maBang) {
+  const el = document.getElementById('ct-content');
+  el.innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
+  const ct = await DB.layChiTieuTheoBang(maBang);
+  const b = dsBang.find(x=>x.bang===maBang);
+
+  // Helper tạo <select>
+  const mkSel = (id, field, opts, cur, extraStyle='') =>
+    `<select class="ct-sel" style="${extraStyle}" onchange="capNhatCT('${id}','${field}',this.value==='__true'?true:this.value==='__false'?false:this.value)">
+      ${opts.map(o=>`<option value="${o.v}" ${String(cur)===String(o.v)?'selected':''}>${o.l}</option>`).join('')}
+    </select>`;
+
+  const optsKieu   = [{v:'number',l:'Số'},{v:'text',l:'Văn bản'}];
+  const optsTanSuat= [{v:'hang_thang',l:'Hàng tháng'},{v:'hang_quy',l:'Hàng quý'},{v:'nua_nam',l:'Nửa năm'},{v:'cuoi_nam',l:'Cuối năm'},{v:'nam_dac_biet',l:'Năm đặc biệt'}];
+  const optsLaTD   = [{v:'__false',l:'Không'},{v:'__true',l:'Tiêu đề'}];
+
+  // Cột: [key, label, defaultW(px)]
+  const cols = [
+    {k:'ma_ht',  lbl:'Mã HT',        w:70},
+    {k:'ma_bo',  lbl:'Mã Bộ',        w:80},
+    {k:'thu_tu', lbl:'Thứ tự',       w:65},
+    {k:'stt',    lbl:'STT hiển thị', w:75},
+    {k:'ten',    lbl:'Tên chỉ tiêu', w:320},
+    {k:'dvt',    lbl:'ĐVT',          w:55},
+    {k:'kieu',   lbl:'Kiểu DL',      w:90},
+    {k:'nhap',   lbl:'Cho phép nhập',w:105},
+    {k:'tansuat',lbl:'Tần suất',     w:110},
+    {k:'latd',   lbl:'Là tiêu đề',  w:90},
+    {k:'ql',     lbl:'Quản lý',      w:65, noResize:true},
+  ];
+
+  const thead = cols.map(c=>
+    `<th style="width:${c.w}px;min-width:${c.w}px;text-align:${c.k==='ql'?'center':'left'}" data-col="${c.k}">
+      ${c.lbl}${c.noResize?'':'<div class="rh" onmousedown="startResizeCT(event,this.closest(\'th\'))"></div>'}
+    </th>`
+  ).join('');
+
+  const tbody = ct.map(c => {
+    const ind = (c.chi_tieu.match(/^\s+/)?.[0]?.length||0)*3;
+    const isTD = c.la_tieu_de;
+    const trCls = isTD ? 'tr-td' : (c.cho_phep_nhap===false?'tr-locked':'');
+    const tenRut = c.chi_tieu.trim().replace(/'/g,"\\'").substring(0,30);
+    return `<tr class="${trCls}">
+      <td><span class="cell-text mono" style="font-size:11px">${c.id}</span></td>
+      <td><input class="ct-inp mono" value="${c.id_bo||''}" placeholder="--"
+            onchange="capNhatCT('${c.id}','id_bo',this.value.trim()||null)"></td>
+      <td><input class="ct-inp mono" type="number" step="any" value="${c.thu_tu||''}" placeholder="--"
+            onchange="capNhatCT('${c.id}','thu_tu',this.value===''?null:parseFloat(this.value))"></td>
+      <td><input class="ct-inp" value="${c.stt_hien_thi||''}" placeholder="--"
+            onchange="capNhatCT('${c.id}','stt_hien_thi',this.value||null)"></td>
+      <td style="padding-left:${ind+8}px">
+        <input class="ct-inp cell-wrap" value="${c.chi_tieu.trim().replace(/"/g,'&quot;')}"
+          onchange="capNhatCT('${c.id}','chi_tieu',this.value)">
+      </td>
+      <td><input class="ct-inp" value="${c.don_vi||''}" placeholder="--"
+            onchange="capNhatCT('${c.id}','don_vi',this.value||null)"></td>
+      <td>${mkSel(c.id,'kieu_du_lieu',optsKieu,c.kieu_du_lieu||'number')}</td>
+      <td style="text-align:center">
+        <label class="sw-wrap" style="justify-content:center">
+          <label class="sw"><input type="checkbox" ${c.cho_phep_nhap!==false?'checked':''}
+            onchange="capNhatCT('${c.id}','cho_phep_nhap',this.checked)">
+            <span class="sw-slider"></span></label>
+          <span class="sw-lbl">${c.cho_phep_nhap!==false?'🔓':'🔒'}</span>
+        </label>
+      </td>
+      <td>${mkSel(c.id,'tan_suat',optsTanSuat,c.tan_suat||'hang_thang')}</td>
+      <td>${mkSel(c.id,'la_tieu_de',optsLaTD,isTD?'__true':'__false')}</td>
+      <td style="text-align:center;padding:3px 6px">
+        <button onclick="moXoaCT('${c.id}','${tenRut}')"
+          style="padding:3px 8px;background:#fee2e2;color:var(--red);border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--font)"
+          title="Xóa chỉ tiêu này">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h3>${b?.ten_bang} <span style="font-size:11px;font-weight:400;color:var(--g4)">(${ct.length})</span></h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" onclick="batTatTatCa('${maBang}',true)">✅ Mở tất cả</button>
+          <button class="btn ghost" onclick="batTatTatCa('${maBang}',false)">🔒 Khóa tất cả</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="ct-tbl" id="ct-tbl">
+          <thead><tr>${thead}</tr></thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Khởi động kéo thả cột
+  initResizeCT();
+}
+
+function initResizeCT() {
+  // Lưu width mặc định vào dataset để reset khi cần
+  document.querySelectorAll('#ct-tbl thead th').forEach(th => {
+    th.style.width = th.style.width || th.offsetWidth + 'px';
+  });
+}
+
+let _rzTh=null, _rzX=0, _rzW=0;
+function startResizeCT(e, th) {
+  _rzTh=th; _rzX=e.clientX; _rzW=th.offsetWidth;
+  e.preventDefault();
+  document.onmousemove = ev => {
+    if(!_rzTh) return;
+    const newW = Math.max(40, _rzW + ev.clientX - _rzX);
+    _rzTh.style.width = newW+'px';
+    _rzTh.style.minWidth = newW+'px';
+  };
+  document.onmouseup = () => { _rzTh=null; document.onmousemove=null; document.onmouseup=null; };
+}
+
+async function capNhatCT(id, col, val) {
+  try { await DB.capNhatChiTieu(id, {[col]: val}); toast('✅ Đã lưu!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+async function batTatTatCa(maBang,val){
+  try {
+    await sb.from(CONFIG.BANG.CHI_TIEU).update({cho_phep_nhap:val}).eq('bang',maBang).eq('la_tieu_de',false);
+    toast(val?'✅ Đã mở tất cả':'🔒 Đã khóa tất cả');
+    taiChiTieu(maBang);
+  } catch(e){toast('Lỗi: '+e.message,'er')}
+}
+
+// ── THÊM CHỈ TIÊU ──
+function moModalThemCT() {
+  ['ct-id','ct-idbo','ct-ten','ct-dvt','ct-thutu','ct-stt'].forEach(id=>{const e=UTILS.el(id);if(e)e.value='';});
+  if(UTILS.el('ct-kieu'))    UTILS.el('ct-kieu').value='number';
+  if(UTILS.el('ct-tansuat')) UTILS.el('ct-tansuat').value='hang_thang';
+  if(UTILS.el('ct-latd'))    UTILS.el('ct-latd').value='false';
+  UTILS.el('err-ct').textContent='';
+  const maBang=UTILS.el('sel-bang-ct')?.value||'';
+  const tenBang=dsBang.find(b=>b.bang===maBang)?.ten_bang||maBang;
+  document.querySelector('#modal-ct h3').textContent=`➕ Thêm chỉ tiêu — ${tenBang}`;
+  UTILS.moModal('modal-ct');
+  setTimeout(()=>UTILS.el('ct-id')?.focus(),100);
+}
+
+async function luuChiTieuMoi() {
+  const err=UTILS.el('err-ct'); err.textContent='';
+  const maBang=UTILS.el('sel-bang-ct')?.value;
+  if(!maBang){err.textContent='Chưa chọn bảng!';return;}
+  const id=UTILS.el('ct-id').value.trim();
+  const ten=UTILS.el('ct-ten').value.trim();
+  const thutu=UTILS.el('ct-thutu').value;
+  if(!id)   {err.textContent='❌ Mã hệ thống không được để trống.';UTILS.el('ct-id').focus();return;}
+  if(!ten)  {err.textContent='❌ Tên chỉ tiêu không được để trống.';UTILS.el('ct-ten').focus();return;}
+  if(!thutu){err.textContent='❌ Thứ tự không được để trống.';UTILS.el('ct-thutu').focus();return;}
+  const laTD=UTILS.el('ct-latd').value==='true';
+  const row={
+    id, bang:maBang,
+    chi_tieu:ten,
+    don_vi:   UTILS.el('ct-dvt').value.trim()||null,
+    thu_tu:   parseFloat(thutu),
+    stt_hien_thi: UTILS.el('ct-stt').value.trim()||null,
+    id_bo:    UTILS.el('ct-idbo').value.trim()||null,
+    kieu_du_lieu: UTILS.el('ct-kieu').value,
+    tan_suat: UTILS.el('ct-tansuat').value,
+    la_tieu_de:   laTD,
+    cho_phep_nhap:!laTD,
+  };
+  try {
+    const {error}=await sb.from(CONFIG.BANG.CHI_TIEU).insert(row);
+    if(error) throw error;
+    toast('✅ Đã thêm chỉ tiêu mới!');
+    UTILS.dongModal('modal-ct');
+    taiChiTieu(maBang);
+  } catch(e){
+    err.textContent=(e.message?.includes('duplicate')||e.message?.includes('unique'))
+      ?`❌ Mã "${id}" đã tồn tại. Vui lòng dùng mã khác.`
+      :'❌ Lỗi: '+e.message;
+  }
+}
+
+// ── XÓA CHỈ TIÊU (bảo vệ bằng mật khẩu cấp 2) ──
+let _xoaCTId=null, _xoaCTBang=null;
+
+function moXoaCT(id, ten) {
+  _xoaCTId=id;
+  _xoaCTBang=UTILS.el('sel-bang-ct')?.value;
+  UTILS.el('xoa-ct-info').innerHTML=
+    `Chỉ tiêu: <strong>${id}</strong> — "${ten}..."<br>
+     <span style="color:var(--red);font-size:11px">⚠️ Toàn bộ số liệu đã nhập của chỉ tiêu này cũng sẽ bị xóa vĩnh viễn!</span>`;
+  UTILS.el('mk2-inp').value='';
+  UTILS.el('err-xoa-ct').textContent='';
+  UTILS.moModal('modal-xoa-ct');
+  setTimeout(()=>UTILS.el('mk2-inp')?.focus(),100);
+}
+
+async function xacNhanXoaCT() {
+  const err=UTILS.el('err-xoa-ct'); err.textContent='';
+  const mk=UTILS.el('mk2-inp').value;
+  if(!mk){err.textContent='Vui lòng nhập mật khẩu cấp 2.';return;}
+  try {
+    // Kiểm tra mật khẩu cấp 2
+    const {data,error}=await sb
+      .from(CONFIG.BANG.TAI_KHOAN)
+      .select('mat_khau')
+      .eq('don_vi','mật khẩu cấp 2')
+      .single();
+    if(error||!data) {err.textContent='❌ Không tìm thấy tài khoản bảo vệ. Liên hệ quản trị.';return;}
+    if(mk!==data.mat_khau){err.textContent='❌ Mật khẩu cấp 2 không đúng.';UTILS.el('mk2-inp').value='';UTILS.el('mk2-inp').focus();return;}
+    // Xóa
+    const {error:e2}=await sb.from(CONFIG.BANG.CHI_TIEU).delete().eq('id',_xoaCTId);
+    if(e2) throw e2;
+    toast('🗑️ Đã xóa chỉ tiêu '+_xoaCTId);
+    UTILS.dongModal('modal-xoa-ct');
+    if(_xoaCTBang) taiChiTieu(_xoaCTBang);
+  } catch(e){err.textContent='❌ Lỗi: '+e.message;}
+}
+
+// ── QUẢN LÝ BẢNG ──
+async function hienQuanLyBang() {
+  setAct('ni-bang');
+  document.getElementById('topbar-t').textContent = 'Quản lý bảng báo cáo';
+  await loadBang();
+  // Nạp danh sách Google Sheet (null = bảng chưa tồn tại trong Supabase)
+  try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = null; }
+  renderQuanLyBang();
+  document.getElementById('content').insertAdjacentHTML('beforeend', renderGSheetCard());
+  document.getElementById('content').insertAdjacentHTML('beforeend', renderGanGSCard());
+}
+
+// ── GẮN GOOGLE SHEET VÀO BẢNG BÁO CÁO (danh_sach_bang.gsheet_url) ──
+// Bảng được gắn sheet sẽ hiển thị sheet thay cho bảng nhập liệu.
+// Lưu link GỐC người dùng dán; hệ thống tự chuyển sang dạng nhúng khi hiển thị.
+function renderGanGSCard() {
+  const coUrl   = dsBang.filter(b => b.gsheet_url);
+  const chuaUrl = dsBang.filter(b => !b.gsheet_url);
+  const rows = coUrl.map(b => {
+    const opts = `<option value="">— Gỡ khỏi bảng —</option>` +
+      dsBang.map(x => `<option value="${x.bang}" ${x.bang===b.bang?'selected':''}>${x.ten_bang}</option>`).join('');
+    return `<tr>
+      <td style="min-width:150px"><strong>${b.ten_bang}</strong></td>
+      <td style="min-width:220px;max-width:340px">
+        <span class="mono" style="display:block;font-size:11px;color:var(--g4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${b.gsheet_url}">${b.gsheet_url}</span></td>
+      <td style="min-width:170px">
+        <select class="ct-sel" style="font-size:12px;padding:5px 8px" onchange="GSB.doi('${b.bang}', this.value)">${opts}</select></td>
+      <td style="white-space:nowrap;text-align:right">
+        <a href="${b.gsheet_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
+        <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GSB.go('${b.bang}', this.dataset.ten)" data-ten="${(b.ten_bang||'').replace(/"/g,'&quot;')}">🗑</button></td>
+    </tr>`;
+  }).join('');
+  return `<div class="card" style="margin-top:12px">
+    <div class="card-head">
+      <h3>🔗 Gắn Google Sheet vào bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${coUrl.length} bảng đang gắn)</span></h3>
+      <button class="btn primary" onclick="GSB.them()">+ Gắn Sheet vào bảng</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead><tr><th>Bảng báo cáo</th><th>Link Google Sheet</th><th>Chuyển sang bảng</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--g4)">Chưa có bảng nào gắn Google Sheet.</td></tr>`}</tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--g4);padding:8px 16px 12px">
+      💡 Bảng được gắn sheet sẽ <strong>hiển thị sheet thay cho bảng nhập liệu</strong> ở trang nhập và trang xem.
+      Dán link dạng nào cũng được (<code>/edit</code>, chia sẻ, <code>pubhtml</code>…) — hệ thống tự chuyển sang dạng nhúng.
+      Sheet phải chia sẻ công khai (Anyone with the link → Viewer).
+      ${chuaUrl.length===0?'<br>⚠️ Mọi bảng đều đã gắn sheet — gỡ bớt trước khi gắn mới.':''}
+    </div>
+  </div>`;
+}
+
+const GSB = {
+  them(){
+    const chuaUrl = dsBang.filter(b => !b.gsheet_url);
+    if(!chuaUrl.length){ toast('Mọi bảng đều đã gắn sheet. Gỡ bớt trước.','er'); return; }
+    UTILS.xacNhan('🔗 Gắn Google Sheet vào bảng',
+      `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">LINK GOOGLE SHEET *</label>
+          <input id="gsb-url" type="text" placeholder="Dán link Google Sheet (dạng nào cũng được)…"
+            style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:12px;outline:none"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">GẮN VÀO BẢNG *</label>
+          <select id="gsb-bang" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none">
+            <option value="">— Chọn bảng —</option>
+            ${chuaUrl.map(b=>`<option value="${b.bang}">${b.ten_bang}</option>`).join('')}
+          </select></div>
+        <div style="font-size:11px;color:var(--g4)">💡 Sheet phải chia sẻ công khai (Anyone with the link → Viewer).</div>
+      </div>`,
+      async ()=>{
+        const url  = document.getElementById('gsb-url')?.value.trim();
+        const bang = document.getElementById('gsb-bang')?.value;
+        if(!url || !bang){ toast('Vui lòng dán link và chọn bảng!','er'); return; }
+        if(!url.includes('docs.google.com/spreadsheets')){ toast('Link phải là Google Sheets.','er'); return; }
+        try{
+          await DB.capNhatBang(bang, { gsheet_url: url });   // lưu link GỐC
+          toast('✅ Đã gắn Google Sheet!');
+          await hienQuanLyBang();
+        }catch(e){ toast('Lỗi: '+e.message,'er'); }
+      });
+  },
+  async doi(bangCu, bangMoi){
+    const b = dsBang.find(x=>x.bang===bangCu);
+    const url = b?.gsheet_url;
+    if(bangMoi===bangCu) return;
+    try{
+      await DB.capNhatBang(bangCu, { gsheet_url: null });
+      if(bangMoi){
+        await DB.capNhatBang(bangMoi, { gsheet_url: url });
+        toast('✅ Đã chuyển sheet sang bảng khác!');
+      }else{
+        toast('✅ Đã gỡ sheet khỏi bảng!');
+      }
+      await hienQuanLyBang();
+    }catch(e){ toast('Lỗi: '+e.message,'er'); await hienQuanLyBang(); }
+  },
+  go(bang, ten){
+    UTILS.xacNhan('🗑 Gỡ Google Sheet', `Gỡ link Google Sheet khỏi bảng <strong>${ten}</strong>?<br>
+      <span style="font-size:12px;color:var(--g4)">(Bảng sẽ quay lại chế độ nhập liệu bình thường; sheet gốc không bị ảnh hưởng)</span>`,
+      async ()=>{
+        try{ await DB.capNhatBang(bang, { gsheet_url: null }); toast('✅ Đã gỡ!'); await hienQuanLyBang(); }
+        catch(e){ toast('Lỗi: '+e.message,'er'); }
+      });
+  },
+};
+
+// ── QUẢN LÝ GOOGLE SHEET ──
+let dsGS = [];
+function renderGSheetCard() {
+  let body;
+  if (dsGS === null) {
+    body = `<div style="color:var(--red);font-size:12px;padding:4px 0">⚠️ Chưa có bảng <code>danh_sach_gsheet</code> trong Supabase. Chạy SQL sau một lần rồi tải lại trang:</div>
+      <pre style="background:var(--g1);border-radius:6px;padding:10px;margin-top:6px;font-size:11px;overflow-x:auto">CREATE TABLE danh_sach_gsheet (
+  id        SERIAL PRIMARY KEY,
+  ten_sheet TEXT NOT NULL,
+  mo_ta     TEXT,
+  embed_url TEXT NOT NULL,
+  thu_tu    INTEGER DEFAULT 1,
+  chieu_cao INTEGER DEFAULT 520,
+  hien_thi  BOOLEAN DEFAULT TRUE,
+  tao_luc   TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE danh_sach_gsheet ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "read_all"  ON danh_sach_gsheet FOR SELECT USING (true);
+CREATE POLICY "write_all" ON danh_sach_gsheet USING (true) WITH CHECK (true);</pre>`;
+  } else {
+    const rows = dsGS.map(s=>`<tr>
+      <td style="text-align:center;padding:4px 8px">
+        <input class="num-inp" type="number" min="1" value="${s.thu_tu||''}"
+          onchange="GS.capNhat(${s.id},'thu_tu',parseInt(this.value)||1)"></td>
+      <td><input type="text" value="${(s.ten_sheet||'').replace(/"/g,'&quot;')}"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'ten_sheet',this.value)"></td>
+      <td><input type="text" value="${(s.mo_ta||'').replace(/"/g,'&quot;')}" placeholder="Mô tả ngắn"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'mo_ta',this.value)"></td>
+      <td><input type="text" value="${(s.embed_url||'').replace(/"/g,'&quot;')}" placeholder="https://docs.google.com/spreadsheets/d/…"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono,monospace);font-size:11px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'embed_url',this.value)"></td>
+      <td style="text-align:center;padding:4px 6px">
+        <input class="num-inp" type="number" min="200" max="2000" value="${s.chieu_cao||520}"
+          onchange="GS.capNhat(${s.id},'chieu_cao',parseInt(this.value)||520)"></td>
+      <td style="text-align:center">
+        <label class="sw"><input type="checkbox" ${s.hien_thi?'checked':''}
+          onchange="GS.capNhat(${s.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
+      <td style="white-space:nowrap">
+        <a href="${s.embed_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
+        <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GS.xoa(${s.id},this.dataset.ten)" data-ten="${(s.ten_sheet||'').replace(/"/g,'&quot;')}">🗑</button></td>
+    </tr>`).join('');
+    body = `<div style="overflow-x:auto"><table class="dt">
+      <thead><tr>
+        <th style="width:60px;text-align:center">Thứ tự</th>
+        <th style="min-width:160px">Tên sheet</th>
+        <th style="min-width:140px">Mô tả</th>
+        <th style="min-width:220px">Link Google Sheet</th>
+        <th style="text-align:center;width:80px">Cao (px)</th>
+        <th style="text-align:center;width:70px">Hiển thị</th>
+        <th style="width:80px"></th>
+      </tr></thead>
+      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--g4)">Chưa có Google Sheet nào. Nhấn "+ Thêm Sheet" để bắt đầu.</td></tr>'}</tbody>
+    </table></div>
+    <div style="font-size:11px;color:var(--g4);margin-top:8px">💡 Sheet hiển thị sẽ xuất hiện trong nhóm "📈 Dữ liệu Google Sheet" ở trang nhập liệu. Link dạng <code>/edit</code> sẽ tự chuyển sang chế độ nhúng khi hiển thị.</div>`;
+  }
+  return `<div class="card" style="margin-top:12px">
+    <div class="card-head">
+      <h3>📈 Google Sheet nhúng <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsGS===null?'chưa cài':dsGS.length+' sheet'})</span></h3>
+      ${dsGS===null?'':'<button class="btn primary" onclick="GS.moThem()">+ Thêm Sheet</button>'}
+    </div>
+    ${body}
+  </div>`;
+}
+
+const GS = {
+  moThem(){
+    UTILS.xacNhan('+ Thêm Google Sheet',
+      `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN SHEET *</label>
+          <input id="gs-ten" type="text" placeholder="VD: Sơ đồ Gantt cụm ngành" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÔ TẢ</label>
+          <input id="gs-mota" type="text" placeholder="Mô tả ngắn (không bắt buộc)" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">LINK GOOGLE SHEET *</label>
+          <input id="gs-url" type="text" placeholder="https://docs.google.com/spreadsheets/d/…" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:12px;outline:none"></div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1"><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THỨ TỰ</label>
+            <input id="gs-thutu" type="number" min="1" value="${(dsGS?.length||0)+1}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
+          <div style="flex:1"><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">CAO (px)</label>
+            <input id="gs-cao" type="number" min="200" max="2000" value="520" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
+        </div>
+      </div>`,
+      async ()=>{
+        const ten=document.getElementById('gs-ten')?.value.trim();
+        const mota=document.getElementById('gs-mota')?.value.trim();
+        const url=document.getElementById('gs-url')?.value.trim();
+        const thutu=parseInt(document.getElementById('gs-thutu')?.value)||1;
+        const cao=parseInt(document.getElementById('gs-cao')?.value)||520;
+        if(!ten||!url){ toast('Vui lòng nhập Tên sheet và Link!','er'); return; }
+        if(!url.includes('docs.google.com/spreadsheets')){ toast('Link phải là Google Sheets.','er'); return; }
+        try{
+          await DB.themGSheet({ten_sheet:ten, mo_ta:mota||null, embed_url:url, thu_tu:thutu, chieu_cao:cao, hien_thi:true});
+          toast('✅ Đã thêm Google Sheet!');
+          await hienQuanLyBang();
+        }catch(e){ toast('Lỗi: '+e.message,'er'); }
+      });
+  },
+  async capNhat(id, col, val){
+    const u={}; u[col]=val;
+    try{ await DB.suaGSheet(id,u); toast('✅ Đã lưu!'); }
+    catch(e){ toast('Lỗi: '+e.message,'er'); }
+  },
+  xoa(id, ten){
+    UTILS.xacNhan('Xoá Google Sheet', `Xoá "<strong>${ten}</strong>" khỏi danh sách?`, async ()=>{
+      try{ await DB.xoaGSheet(id); toast('✅ Đã xoá!'); await hienQuanLyBang(); }
+      catch(e){ toast('Lỗi: '+e.message,'er'); }
+    });
+  },
+};
+
+function renderQuanLyBang() {
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
+        <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th style="width:60px;text-align:center">Thứ tự</th>
+            <th style="width:80px">Mã bảng</th>
+            <th>Tên bảng</th>
+            <th>Đơn vị báo cáo</th>
+            <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
+            <th style="text-align:center;width:70px">Rộng ĐVT</th>
+            <th style="text-align:center;width:80px">Rộng ghi chú</th>
+            <th style="width:80px">Bảng DB</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${dsBang.map(b=>`<tr>
+            <td style="text-align:center;padding:4px 8px">
+              <input class="num-inp" type="number" min="1" value="${b.thu_tu||''}" placeholder="--"
+                onchange="luuDoRongBang('${b.bang}','thu_tu',parseInt(this.value)||null)">
+            </td>
+            <td class="mono" style="font-size:12px">${b.bang}</td>
+            <td>
+              <input type="text" value="${b.ten_bang||''}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','ten_bang',this.value)">
+            </td>
+            <td>
+              <input type="text" value="${b.don_vi_bao_cao||''}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="40" max="150" value="${b.do_rong_dvt||70}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_dvt',parseInt(this.value)||70)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="300" value="${b.do_rong_ghichu||140}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
+            </td>
+            <td class="mono" style="font-size:10px;color:var(--g4)">${(CONFIG.BANG.CSDL_PREFIX+b.bang).toLowerCase()}</td>
+            <td style="white-space:nowrap">
+              <button class="btn danger" style="padding:4px 8px" onclick="xoaBang('${b.bang}','${b.ten_bang}')">🗑 Xoá</button>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#6d4c00">
+      ⚠️ <strong>Trước khi thêm bảng:</strong> chạy SQL tạo bảng dữ liệu trong Supabase trước:<br>
+      <code style="background:#fef3c7;padding:2px 6px;border-radius:3px;font-size:11px">
+        CREATE TABLE csdl_bang_06 (LIKE csdl_bang_01 INCLUDING ALL);
+      </code>
+    </div>`;
+}
+
+// Modal thêm bảng mới
+function moModalThemBang() {
+  // Tính mã bảng tiếp theo
+  const soBang = dsBang.length + 1;
+  const maMoi  = `Bang_${String(soBang).padStart(2,'0')}`;
+  const thuTu  = soBang;
+
+  UTILS.xacNhan(
+    '+ Thêm bảng báo cáo mới',
+    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ BẢNG</label>
+        <input id="nb-ma" type="text" value="${maMoi}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none">
+        <div style="font-size:11px;color:var(--g4);margin-top:3px">Bảng DB sẽ là: <strong id="nb-db-preview">${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()}</strong></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN BẢNG</label>
+        <input id="nb-ten" type="text" placeholder="VD: Lâm nghiệp" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">ĐƠN VỊ BÁO CÁO</label>
+        <input id="nb-dv" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 10px;font-size:11px;color:#856404">
+        ⚠️ Phải tạo bảng DB trong Supabase trước:<br>
+        <code id="nb-sql-preview">CREATE TABLE ${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()} (LIKE csdl_bang_01 INCLUDING ALL);</code>
+      </div>
+    </div>`,
+    async () => {
+      const ma  = document.getElementById('nb-ma')?.value.trim();
+      const ten = document.getElementById('nb-ten')?.value.trim();
+      const dv  = document.getElementById('nb-dv')?.value.trim();
+      if (!ma || !ten) { toast('Vui lòng điền Mã bảng và Tên bảng!','er'); return; }
+      try {
+        await sb.from(CONFIG.BANG.DANH_SACH_BANG).insert({
+          bang: ma, ten_bang: ten, don_vi_bao_cao: dv||'',
+          thu_tu: thuTu, do_rong_ten: 280, do_rong_dvt: 70, do_rong_ghichu: 140
+        });
+        toast('✅ Đã thêm bảng ' + ten + '!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+e.message,'er'); }
+    }
+  );
+  // Cập nhật preview khi gõ mã
+  setTimeout(()=>{
+    const inp = document.getElementById('nb-ma');
+    if(inp) inp.addEventListener('input', ()=>{
+      const v = inp.value.trim();
+      const db = (CONFIG.BANG.CSDL_PREFIX+v).toLowerCase();
+      const prev = document.getElementById('nb-db-preview');
+      const sql  = document.getElementById('nb-sql-preview');
+      if(prev) prev.textContent = db;
+      if(sql)  sql.textContent  = `CREATE TABLE ${db} (LIKE csdl_bang_01 INCLUDING ALL);`;
+    });
+  }, 100);
+}
+
+async function xoaBang(maBang, tenBang) {
+  UTILS.xacNhan(
+    '🗑 Xoá bảng báo cáo',
+    `<p>Xoá bảng <strong>${tenBang}</strong> (<code>${maBang}</code>) khỏi danh sách?</p>
+     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
+       ⚠️ Thao tác này chỉ xoá khỏi danh sách — <strong>không xoá bảng dữ liệu</strong> trong Supabase và <strong>không xoá chỉ tiêu</strong>.<br>
+       Để xoá hoàn toàn, cần chạy SQL trong Supabase.
+     </div>`,
+    async () => {
+      try {
+        await sb.from(CONFIG.BANG.DANH_SACH_BANG).delete().eq('bang', maBang);
+        toast('✅ Đã xoá bảng ' + tenBang + ' khỏi danh sách!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+e.message,'er'); }
+    }
+  );
+}
+
+async function luuTenBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('✅ Đã lưu!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+// ── TIÊU ĐỀ BẢNG ──
+async function hienTieuDeBang() {
+  setAct('ni-tdb');
+  document.getElementById('topbar-t').textContent = 'Tiêu đề bảng báo cáo';
+  await loadBang();
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>🏷️ Tiêu đề các bảng báo cáo</h3></div>
+      <div style="padding:14px 16px">
+        <p style="font-size:12px;color:var(--g4);margin-bottom:14px">Dòng 1: tiêu đề chính (in đậm). Dòng 2: tiêu đề phụ (số công văn).</p>
+        ${dsBang.map(b=>`
+          <div style="border:1.5px solid var(--g2);border-radius:var(--r);padding:14px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:700;color:var(--xd);margin-bottom:10px">📋 ${b.ten_bang}</div>
+            <div style="display:grid;gap:8px">
+              <div class="fg"><label>Tiêu đề chính (dòng 1)</label>
+                <input id="td1-${b.bang}" class="inp" value="${b.tieu_de_chinh||b.ten_bang||''}" placeholder="VD: BẢNG THỦY SẢN"></div>
+              <div class="fg"><label>Tiêu đề phụ (dòng 2)</label>
+                <input id="td2-${b.bang}" class="inp" value="${b.tieu_de_phu||''}" placeholder="(Đính kèm Công văn số … của …)"></div>
+              <div><button class="btn primary" onclick="luuTieuDe('${b.bang}')">💾 Lưu</button></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+async function luuDoRongBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('📐 Đã lưu độ rộng!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+async function luuTieuDe(maBang) {
+  const td1 = document.getElementById('td1-'+maBang)?.value.trim()||'';
+  const td2 = document.getElementById('td2-'+maBang)?.value.trim()||'';
+  try { await DB.capNhatBang(maBang,{tieu_de_chinh:td1,tieu_de_phu:td2}); toast('✅ Đã lưu tiêu đề!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+// ── ĐỔI MẬT KHẨU ──
+function hienDoiPass() {
+  document.getElementById('topbar-t').textContent = 'Đổi mật khẩu';
+  document.getElementById('content').innerHTML = `
+    <div style="max-width:400px;margin:0 auto">
+      <div class="card">
+        <div class="card-head"><h3>🔐 Đổi mật khẩu</h3></div>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="fg"><label>Đơn vị</label><input class="inp" value="${user.don_vi}" disabled style="background:var(--g1)"></div>
+          <div class="fg"><label>Mật khẩu hiện tại</label><input class="inp" type="password" id="dp-cu" placeholder="••••••••"></div>
+          <div class="fg"><label>Mật khẩu mới (≥4 ký tự)</label><input class="inp" type="password" id="dp-moi" placeholder="••••••••"></div>
+          <div class="fg"><label>Nhập lại mật khẩu mới</label><input class="inp" type="password" id="dp-moi2" placeholder="••••••••"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" onclick="luuPassAdmin()">💾 Lưu mật khẩu</button>
+        </div>
+        <div class="err-txt" id="err-dp" style="padding:0 16px 12px"></div>
+      </div>
+    </div>`;
+}
+async function luuPassAdmin() {
+  const cu=document.getElementById('dp-cu').value, moi=document.getElementById('dp-moi').value, moi2=document.getElementById('dp-moi2').value;
+  const err=document.getElementById('err-dp'); err.textContent=''; err.style.color='var(--red)';
+  if(cu!==(user.mat_khau||CONFIG.MAT_KHAU_MAC_DINH)){err.textContent='Mật khẩu hiện tại không đúng.';return}
+  if(moi.length<4){err.textContent='Mật khẩu mới phải có ít nhất 4 ký tự.';return}
+  if(moi!==moi2){err.textContent='Mật khẩu nhập lại không khớp.';return}
+  if(moi===CONFIG.MAT_KHAU_MAC_DINH){err.textContent='Không được dùng lại mật khẩu mặc định.';return}
+  try {
+    await DB.doiMatKhau(user.id, moi);
+    user.mat_khau=moi; UTILS.luuSession(user);
+    err.style.color='var(--xc)'; err.textContent='✅ Đổi mật khẩu thành công!';
+    ['dp-cu','dp-moi','dp-moi2'].forEach(id=>document.getElementById(id).value='');
+  } catch(e){err.textContent='Lỗi: '+e.message}
+}
+</script>
+</body>
+</html>
