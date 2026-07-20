@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6a — xembaocao.html v2, tạo 2026/07/19 20:26 (GMT+7) -->
+<!-- Phiên bản file: Bước 6a — xembaocao.html v2, tạo 2026/07/19 20:26 (GMT+7), sửa 2026/07/20 06:12 (GMT+7): chọn nhanh về đúng nguyên tắc V1 -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -241,7 +241,7 @@ table.t tr:not(.tr-h):hover td{background:#f0fdf4}table.t tr:not(.tr-h):hover td
 
 <script>
 const XEM = {
-  user:null, dsBang:[], allCot:[], dsLoai:[], namLoc:'all',
+  user:null, dsBang:[], allCot:[], namLoc:'all',
   bangHT:null, bObj:null, ct:[], idx:{}, daXem:false,
   checkedCot:new Set(),            // các cột đang tick trong danh sách (chưa thêm)
   selectedCot:[], comparisons:[],  // đã thêm vào biểu; comparisons = [{tu, mau}] (id cột)
@@ -260,10 +260,9 @@ const XEM = {
     UTILS.el('sb-role').textContent = this.user.vai_tro==='admin' ? '⚙️ Quản trị viên' : '👁️ Xem báo cáo';
 
     try{
-      [this.dsBang, this.allCot, this.dsLoai] = await Promise.all([
+      [this.dsBang, this.allCot] = await Promise.all([
         this.user.vai_tro==='admin' ? DB.layTatCaBang() : DB.layBangDuocPhep(this.user.id),
-        DB.layTatCaCot(),   // toàn bộ cột (mọi năm), sẽ lọc theo năm ở giao diện
-        DB.layLoaiSoLieu()
+        DB.layTatCaCot()   // toàn bộ cột (mọi năm), sẽ lọc theo năm ở giao diện
       ]);
     }catch(e){
       UTILS.el('sb-nav').innerHTML = `<div style="padding:12px;color:#ffb4a2;font-size:12px">Lỗi tải dữ liệu: ${e.message}</div>`;
@@ -358,12 +357,11 @@ const XEM = {
     UTILS.el('content').innerHTML = `
       <div class="sec">
         <div class="qs-bar">
-          <span class="qs-lbl">⚡ Thêm nhanh 1 cột:</span>
+          <span class="qs-lbl">⚡ Chọn nhanh kỳ báo cáo:</span>
           <span>Tháng</span> <select class="sel" id="qs-thang"></select>
           <span>Năm</span> <select class="sel" id="qs-nam"></select>
-          <span>Loại</span> <select class="sel" id="qs-loai"></select>
-          <button class="btn-add" onclick="XEM.themNhanh()">➕ Thêm</button>
-          <span class="qs-hint">Tìm đúng cột theo tháng/năm/loại đã có sẵn — không đoán mã chuỗi. Riêng loại "Kế hoạch" có thể trả về nhiều cột của cùng năm.</span>
+          <button class="btn-add" onclick="XEM.apDungChonNhanh()">Áp dụng</button>
+          <span class="qs-hint">Tự chọn: CT tháng trước · Ước tháng · Ước lũy kế · CT &amp; Lũy kế cùng kỳ năm trước + 2 so sánh (kỳ thiếu sẽ bỏ qua)</span>
         </div>
         <div class="ctrl-row" style="align-items:center;gap:14px;margin-bottom:12px">
           <div class="ctrl-block">
@@ -412,7 +410,7 @@ const XEM = {
 
     UTILS.el('topbar-actions').innerHTML = `<button class="btn-sm gr" onclick="XEM.xuatExcel()">📥 Xuất Excel</button>`;
     this.buildNamOptions();
-    this.buildThemNhanhOptions();
+    this.buildChonNhanh();
     this.buildKyList();
     this.buildCmpSelects();
     this.renderChips();
@@ -427,43 +425,67 @@ const XEM = {
 
   doiNam(v){ this.namLoc = v; this.buildKyList(); },
 
-  // Điền dropdown "Thêm nhanh 1 cột": tháng 1-12, năm theo dữ liệu, loại theo dm_loai_so_lieu
-  // Mặc định = tháng/năm mới nhất đang có cột.
-  buildThemNhanhOptions(){
-    const selT = UTILS.el('qs-thang'), selN = UTILS.el('qs-nam'), selL = UTILS.el('qs-loai');
+  // ── CHỌN NHANH — GIỮ NGUYÊN NGUYÊN TẮC V1: người dùng chỉ chọn Tháng x +
+  // Năm yyyy, hệ thống TỰ chọn trọn BỘ KỲ CHUẨN của báo cáo tháng + 2 so sánh:
+  //   CT (x-1)/yyyy (x=1 → CT 12/(yyyy-1)) · Ước x/yyyy · Ước lũy kế x/yyyy
+  //   · CT x/(yyyy-1) · Lũy kế CT x/(yyyy-1)
+  //   So sánh: Ước ÷ CT cùng kỳ năm trước; Ước LK ÷ LKCT năm trước.
+  //   Kỳ nào thiếu thì bỏ qua. THAY THẾ lựa chọn hiện tại và hiển thị ngay.
+  // KHÁC V1 về kỹ thuật (kết quả giữ nguyên): V1 phải dò MÃ CHUỖI kỳ
+  // ({prefix}_{MM}/{yyyy}) vì loại chỉ là text tự do; V2 cot_bao_cao có trường
+  // thật (loai, thang, nam) nên khớp thẳng, không cần đoán mã.
+
+  // Điền dropdown chọn nhanh: tháng 1-12, năm theo dữ liệu; mặc định = cột
+  // mới nhất (bỏ cột Kế hoạch khi tính mặc định — KH mang năm tương lai,
+  // lấy làm mặc định sẽ trỏ tới tháng chưa có số liệu).
+  buildChonNhanh(){
+    const selT = UTILS.el('qs-thang'), selN = UTILS.el('qs-nam');
     if(!selT) return;
     const nams = [...new Set(this.allCot.map(k=>Number(k.nam)))].sort((a,b)=>b-a);
     selN.innerHTML = nams.map(n=>`<option value="${n}">${n}</option>`).join('');
     selT.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
-    selL.innerHTML = this.dsLoai.map(l=>`<option value="${l.ma}">${l.ten}</option>`).join('');
-    if(nams.length){
-      const yMax = nams[0];
-      const tMax = Math.max(...this.allCot.filter(k=>Number(k.nam)===yMax).map(k=>Number(k.thang)||1));
+    const thuong = this.allCot.filter(k=>k.loai!=='kh');
+    const namsT = [...new Set(thuong.map(k=>Number(k.nam)))].sort((a,b)=>b-a);
+    if(namsT.length){
+      const yMax = namsT[0];
+      const tMax = Math.max(...thuong.filter(k=>Number(k.nam)===yMax).map(k=>Number(k.thang)||1));
       selN.value = String(yMax); selT.value = String(tMax);
     }
   },
 
-  // Nút "Thêm" của khối chọn nhanh: tìm ĐÚNG cột theo (tháng, năm, loại) — không đoán mã.
-  async themNhanh(){
-    const thang = Number(UTILS.el('qs-thang').value);
-    const nam   = Number(UTILS.el('qs-nam').value);
-    const loai  = UTILS.el('qs-loai').value;
-    if(!loai){ UTILS.toast('Chưa có loại số liệu nào để chọn.','er'); return; }
-    let ds;
-    try{ ds = await DB.timCot(thang, nam, loai); }
-    catch(e){ UTILS.toast('Lỗi tìm cột: '+e.message,'er'); return; }
-    if(!ds.length){
-      const tenLoai = this.dsLoai.find(l=>l.ma===loai)?.ten || loai;
-      UTILS.toast(`Không tìm thấy cột "${tenLoai}" cho tháng ${thang}/${nam}.`,'er');
-      return;
-    }
-    // Cột tìm được có thể chưa có trong allCot (vd vừa tạo sau khi trang đã tải) → gộp thêm.
-    ds.forEach(c=>{ if(!this.allCot.some(x=>x.id===c.id)) this.allCot.push(c); });
-    const idsMoi = ds.map(c=>c.id);
-    this.selectedCot = this._thuTuTang([...this.selectedCot, ...idsMoi]);
+  // Tìm MỘT cột theo (loại, tháng, năm); trùng nhiều (hiếm) → lấy thứ tự lớn nhất.
+  _timCotTheo(loai, thang, nam){
+    const ds = this.allCot.filter(c=>c.loai===loai
+      && Number(c.thang)===thang && Number(c.nam)===nam);
+    if(!ds.length) return null;
+    return ds.reduce((a,b)=> this._khoaThuTu(a)>=this._khoaThuTu(b)?a:b).id;
+  },
+
+  timBoCotMacDinh(x, yyyy){
+    const ct1   = (x>1) ? this._timCotTheo('ct', x-1, yyyy) : this._timCotTheo('ct', 12, yyyy-1);
+    const uoc   = this._timCotTheo('uoc',   x, yyyy);
+    const uoclk = this._timCotTheo('uoclk', x, yyyy);
+    const ct0   = this._timCotTheo('ct',    x, yyyy-1);
+    const lk0   = this._timCotTheo('lkct',  x, yyyy-1);
+    const cot = this._thuTuTang([ct1, uoc, uoclk, ct0, lk0].filter(v=>v!==null));
+    const ss = [];
+    if(uoc!==null   && ct0!==null) ss.push({tu:uoc,   mau:ct0});
+    if(uoclk!==null && lk0!==null) ss.push({tu:uoclk, mau:lk0});
+    ss.sort((a,b)=> this._khoaThuTu(this._cotObj(a.tu)) - this._khoaThuTu(this._cotObj(b.tu)));
+    return {cot, ss};
+  },
+
+  async apDungChonNhanh(){
+    const x = Number(UTILS.el('qs-thang').value), yyyy = Number(UTILS.el('qs-nam').value);
+    const {cot, ss} = this.timBoCotMacDinh(x, yyyy);
+    if(!cot.length){ UTILS.toast(`Không tìm thấy kỳ nào phù hợp cho tháng ${x}/${yyyy}.`,'er'); return; }
+    this.selectedCot = cot;          // thay thế lựa chọn hiện tại
+    this.comparisons = ss;
+    this.checkedCot.clear();
     this.buildKyList(); this.buildCmpSelects(); this.renderChips();
-    UTILS.toast(`✅ Đã thêm ${ds.length} cột vào biểu.`,'ok');
-    if(this.daXem) await this.taiDuLieu();
+    UTILS.toast(`⚡ Đã chọn ${cot.length} kỳ + ${ss.length} so sánh cho tháng ${x}/${yyyy}${cot.length<5?' (kỳ thiếu đã bỏ qua)':''}.`,'ok');
+    this.daXem = true;
+    await this.taiDuLieu();
   },
 
   cotTheoNam(){
