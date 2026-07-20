@@ -1,9 +1,11 @@
+<!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
+<!-- Phiên bản file: Bước 6b — admin.html v2, tạo 2026/07/20 23:18 (GMT+7) -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản trị – BC định kỳ NN và MT</title>
+<title>Quản trị – BC định kỳ NN và MT (V2)</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -144,7 +146,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
         <div class="r" id="sb-role"></div>
       </div>
     </div>
-    <nav class="sb-nav" id="sb-nav"></nav>
+    <nav class="sb-nav" id="sb-nav"><div class="loading"><span class="spin"></span> Đang tải...</div></nav>
     <div class="sb-foot">
       <button class="sb-btn" onclick="window.close()">✕ Đóng trang này</button>
     </div>
@@ -156,7 +158,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Modal xác nhận -->
+<!-- Modal xác nhận (dùng chung cho các hộp thoại động: thêm loại, tạo kỳ mới, thêm bảng, gắn GSheet…) -->
 <div class="modal-bg" id="modal-xn">
   <div class="mbox">
     <h3 id="xn-title">Xác nhận</h3><p id="xn-msg"></p>
@@ -167,46 +169,38 @@ table.ct-tbl tr.tr-locked{opacity:.55}
   </div>
 </div>
 
-<!-- Modal thêm/sửa kỳ -->
-<div class="modal-bg" id="modal-ky">
+<!-- Modal thêm/sửa cột báo cáo (kỳ × loại) -->
+<div class="modal-bg" id="modal-cot">
   <div class="mbox">
-    <h3 id="ky-modal-title">Thêm kỳ báo cáo</h3>
-    <p>Mã kỳ tự động sinh — bạn có thể chỉnh lại.</p>
+    <h3 id="cot-modal-title">Thêm cột báo cáo</h3>
+    <p>Mã cột và tiêu đề tự sinh — bạn có thể chỉnh lại.</p>
     <div class="mrow">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="fg"><label>Tháng</label>
-          <input class="inp" id="ky-thang" type="number" min="1" max="12" placeholder="3"
-            oninput="sinhMaKy()"></div>
+        <div class="fg" id="cot-thang-wrap"><label>Tháng</label>
+          <input class="inp" id="cot-thang" type="number" min="1" max="12" placeholder="7" oninput="ADMIN.sinhCotAuto()"></div>
         <div class="fg"><label>Năm</label>
-          <input class="inp" id="ky-nam" type="number" placeholder="2026"
-            oninput="sinhMaKy()"></div>
+          <input class="inp" id="cot-nam" type="number" placeholder="2026" oninput="ADMIN.sinhCotAuto()"></div>
       </div>
       <div class="fg"><label>Loại số liệu</label>
-        <select class="inp" id="ky-loai" onchange="sinhMaKy()">
-          <option value="Ước thực hiện">Ước thực hiện</option>
-          <option value="Ước lũy kế">Ước lũy kế</option>
-          <option value="Chính thức">Chính thức</option>
-          <option value="Lũy kế chính thức">Lũy kế chính thức</option>
-          <option value="So cùng kỳ">So cùng kỳ</option>
-        </select></div>
-      <div class="fg"><label>Mã kỳ <span style="color:var(--g4);font-weight:400">(tự sinh, có thể sửa)</span></label>
-        <input class="inp mono" id="ky-ma" type="text" placeholder="uoc_03/2026"></div>
-      <div class="fg"><label>Tên kỳ đầy đủ</label>
-        <input class="inp" id="ky-ten" type="text" placeholder="Ước tháng 3 năm 2026"></div>
-      <div class="fg"><label>Nguồn số liệu mặc định</label>
-        <input class="inp" id="ky-nguon" type="text" placeholder="Dữ liệu ngành"></div>
+        <select class="inp" id="cot-loai" onchange="ADMIN.sinhCotAuto()"></select></div>
+      <div class="fg" id="cot-hauto-wrap" style="display:none"><label>Hậu tố mã kế hoạch <span style="color:var(--g4);font-weight:400">(tuỳ chọn, vd T7/2026)</span></label>
+        <input class="inp mono" id="cot-hauto" type="text" placeholder="T7/2026" oninput="ADMIN.sinhCotAuto()"></div>
+      <div class="fg"><label>Mã cột <span style="color:var(--g4);font-weight:400">(tự sinh, có thể sửa)</span></label>
+        <input class="inp mono" id="cot-ma" type="text" placeholder="uoc_07/2026"></div>
+      <div class="fg"><label>Tiêu đề cột</label>
+        <input class="inp" id="cot-ten" type="text" placeholder="Ước tháng 7 năm 2026" oninput="this.dataset.auto='0'"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="fg"><label>Thứ tự hiển thị</label>
-          <input class="inp" id="ky-thutu" type="number" placeholder="1" min="1"></div>
+          <input class="inp" id="cot-thutu" type="number" placeholder="1" min="1"></div>
         <div class="fg"><label>Độ rộng cột (px)</label>
-          <input class="inp" id="ky-dorong" type="number" placeholder="120" min="60" max="300"></div>
+          <input class="inp" id="cot-dorong" type="number" placeholder="120" min="60" max="400"></div>
       </div>
     </div>
     <div class="mbtns">
-      <button class="btn-p" onclick="ADMIN.luuKy()">💾 Lưu kỳ</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-ky')">Huỷ</button>
+      <button class="btn-p" onclick="ADMIN.luuCot()">💾 Lưu cột</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-cot')">Huỷ</button>
     </div>
-    <div class="err-txt" id="err-ky" style="margin-top:8px"></div>
+    <div class="err-txt" id="err-cot" style="margin-top:8px"></div>
   </div>
 </div>
 
@@ -214,14 +208,21 @@ table.ct-tbl tr.tr-locked{opacity:.55}
 <div class="modal-bg" id="modal-tk">
   <div class="mbox">
     <h3 id="tk-modal-title">Thêm tài khoản</h3>
-    <p>Mật khẩu mặc định: <strong id="mk-mac-admin"></strong></p>
+    <p id="tk-modal-sub">Tài khoản mới sẽ đăng nhập bằng email + mật khẩu bên dưới.</p>
     <div class="mrow">
+      <div class="fg" id="tk-email-wrap"><label>Email đăng nhập</label>
+        <input class="inp mono" id="tk-email" type="email" placeholder="donvi@snnmt.gov.vn"></div>
+      <div class="fg" id="tk-mk-wrap">
+        <label>Mật khẩu ban đầu (≥6 ký tự)</label>
+        <div style="display:flex;gap:6px">
+          <input class="inp mono" id="tk-mk" type="text" placeholder="••••••••" style="flex:1">
+          <button type="button" class="btn ghost" onclick="ADMIN.sinhMKNgauNhien()">🎲 Sinh</button>
+        </div>
+      </div>
       <div class="fg"><label>Tên đơn vị / phòng ban</label>
         <input class="inp" id="tk-donvi" placeholder="Chi cục Thủy sản"></div>
       <div class="fg"><label>Họ tên người phụ trách</label>
         <input class="inp" id="tk-hoten" placeholder="Nguyễn Văn A"></div>
-      <div class="fg"><label>Email (tuỳ chọn)</label>
-        <input class="inp" id="tk-email" type="email" placeholder="a@sonmt.gov.vn"></div>
       <div class="fg"><label>Vai trò</label>
         <select class="inp" id="tk-vaitro">
           <option value="editor">Người nhập liệu (Editor)</option>
@@ -301,29 +302,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
   </div>
 </div>
 
-<!-- Modal xóa chỉ tiêu — yêu cầu mật khẩu cấp 2 -->
-<div class="modal-bg" id="modal-xoa-ct">
-  <div class="mbox" style="max-width:420px;width:95%">
-    <h3 style="color:var(--red)">🗑️ Xác nhận xóa chỉ tiêu</h3>
-    <p id="xoa-ct-info" style="margin:10px 0 14px;font-size:13px;line-height:1.6"></p>
-    <div class="mrow">
-      <div class="fg">
-        <label>Mật khẩu cấp 2 <span style="color:var(--red)">*</span></label>
-        <input class="inp" type="password" id="mk2-inp" placeholder="Nhập mật khẩu bảo vệ..."
-          onkeydown="if(event.key==='Enter')xacNhanXoaCT()">
-      </div>
-    </div>
-    <div class="mbtns">
-      <button class="btn-p" style="background:var(--red)" onclick="xacNhanXoaCT()">🗑️ Xác nhận xóa</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-xoa-ct')">Huỷ</button>
-    </div>
-    <div class="err-txt" id="err-xoa-ct" style="margin-top:8px"></div>
-  </div>
-</div>
-
 <script>
-// Tham chiếu UTILS.xacNhan
-const xacNhan = (t,m,cb) => UTILS.xacNhan(t,m,cb);
 const toast = (m,t) => UTILS.toast(m,t);
 
 // ── Sidebar mobile ──
@@ -336,137 +315,241 @@ function closeSidebar(){
   document.getElementById('sb-overlay')?.classList.remove('on');
 }
 
-let user=null, dsKy=[], dsTK=[], dsBang=[], editKyId=null, editTKId=null, pqTKId=null;
-let sortCol='', sortDir=1; // sort kỳ báo cáo
-let dsSoSanh=[], coBangSoSanh=true; // cấu hình cột so sánh (Kỳ A ÷ Kỳ B × 100%)
+let user=null;
+let dsBang=[], dsLoai=[], dsCot=[], dsHoSo=[], dsSoSanh=[], dsGS=[];
+let editCotId=null, editHoSoId=null, pqUserId=null;
+let sortCol='', sortDir=1;
+let filterNamBD='', filterNamKT='';
 
-// ── INIT ──
+// ── INIT ── (trang này CHỈ dành cho admin — RLS cũng chặn ghi mọi danh mục
+// nếu vai_tro khác 'admin', đây chỉ là lớp UX chặn sớm)
 window.addEventListener('load', async () => {
-  const sv = UTILS.laySession();
-  if (!sv) { alert('Vui lòng đăng nhập từ trang chính!'); window.close(); return; }
-  user = sv;
-  document.getElementById('sb-name').textContent = user.don_vi;
-  document.getElementById('sb-role').textContent = user.vai_tro==='admin'?'⚙️ Quản trị viên':'✏️ Người nhập liệu';
-  document.getElementById('mk-mac-admin').textContent = CONFIG.MAT_KHAU_MAC_DINH;
-
-  if (user.vai_tro === 'admin') {
-    buildMenuAdmin();
-    await Promise.all([loadKy(), loadTK(), loadBang()]);
-    hienKyBaoCao();
-  } else {
-    buildMenuUser();
-    hienDoiPass();
+  DB.onAuthChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
+  const nguoiDung = await UTILS.kiemTraDangNhap();
+  if (!nguoiDung) { location.replace('index.html'); return; }
+  if (nguoiDung.vai_tro !== 'admin') {
+    alert('Trang quản trị chỉ dành cho quản trị viên.');
+    location.replace('index.html');
+    return;
   }
+  user = nguoiDung;
+  document.title = 'Quản trị – ' + (CONFIG.TEN_CO_QUAN || '');
+  document.getElementById('sb-name').textContent = user.don_vi || user.ho_ten || '';
+  document.getElementById('sb-role').textContent = '⚙️ Quản trị viên';
+  buildMenu();
+  try {
+    [dsBang, dsLoai] = await Promise.all([DB.layTatCaBang(), DB.layLoaiSoLieu()]);
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
+    return;
+  }
+  capNhatBadgeMoKhoa();
+  hienCotBaoCao();
 });
 
-function buildMenuAdmin() {
+function buildMenu() {
   document.getElementById('sb-nav').innerHTML = `
-    <div class="nlbl">Quản lý</div>
-    <div class="ni act" id="ni-ky" onclick="hienKyBaoCao()"><span class="i">📅</span> Kỳ báo cáo</div>
-    <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
-    <div class="ni" id="ni-pq" onclick="hienPhanQuyen()"><span class="i">🔑</span> Phân quyền</div>
+    <div class="nlbl">Danh mục</div>
+    <div class="ni act" id="ni-cot" onclick="hienCotBaoCao()"><span class="i">📅</span> Cột báo cáo</div>
+    <div class="ni" id="ni-loai" onclick="hienLoaiSoLieu()"><span class="i">📋</span> Loại số liệu</div>
     <div class="ni" id="ni-ct" onclick="hienChiTieu()"><span class="i">📑</span> Chỉ tiêu</div>
     <div class="ni" id="ni-bang" onclick="hienQuanLyBang()"><span class="i">🗂️</span> Quản lý bảng</div>
     <div class="ni" id="ni-tdb" onclick="hienTieuDeBang()"><span class="i">🏷️</span> Tiêu đề bảng</div>
-    <div class="nlbl">Tài khoản</div>
-    <div class="ni" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
-}
-function buildMenuUser() {
-  document.getElementById('sb-nav').innerHTML = `
-    <div class="nlbl">Tài khoản</div>
-    <div class="ni act" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
+    <div class="nlbl">Vận hành</div>
+    <div class="ni" id="ni-mk" onclick="hienDuyetMoKhoa()"><span class="i">🔓</span> Duyệt mở khóa<span id="badge-mk"></span></div>
+    <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
+    <div class="ni" id="ni-pq" onclick="hienPhanQuyen()"><span class="i">🔑</span> Phân quyền</div>`;
 }
 function setAct(id) { closeSidebar(); document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act')); document.getElementById(id)?.classList.add('act'); }
 
-async function loadKy(namBD, namKT) { dsKy = await DB.layTatCaKy(namBD, namKT); }
-async function loadTK() { dsTK = await DB.layTatCaTaiKhoan(); }
 async function loadBang() { dsBang = await DB.layTatCaBang(); }
+async function loadLoai() { dsLoai = await DB.layLoaiSoLieu(); }
+async function loadCot(namBD, namKT) { dsCot = await DB.layTatCaCot(namBD, namKT); }
+async function loadHoSo() { dsHoSo = await DB.layTatCaHoSo(); }
 
-// ── KỲ BÁO CÁO ──
-let filterNamBD = '', filterNamKT = '';
+async function capNhatBadgeMoKhoa() {
+  try {
+    const { count } = await sb.from('yeu_cau_mo_khoa').select('id', { count: 'exact', head: true }).eq('trang_thai', 'cho_duyet');
+    const el = document.getElementById('badge-mk');
+    if (el) el.textContent = count ? ` (${count})` : '';
+  } catch (e) { /* không chặn giao diện nếu lỗi đếm */ }
+}
 
-async function hienKyBaoCao() {
-  setAct('ni-ky');
-  document.getElementById('topbar-t').textContent = 'Quản lý kỳ báo cáo';
+// ════════════════════════════════════════════════════════════
+// LOẠI SỐ LIỆU (dm_loai_so_lieu) — chiều thứ 3, MỚI ở V2
+// ════════════════════════════════════════════════════════════
+async function hienLoaiSoLieu() {
+  setAct('ni-loai');
+  document.getElementById('topbar-t').textContent = 'Danh mục loại số liệu';
+  await loadLoai();
+  renderLoaiSoLieu();
+}
+
+function renderLoaiSoLieu() {
+  const rows = dsLoai.map(l => `<tr>
+    <td class="mono" style="font-size:12px">${l.ma}</td>
+    <td><input class="ct-inp" value="${(l.ten||'').replace(/"/g,'&quot;')}" onchange="capNhatLoai('${l.ma}','ten',this.value)"></td>
+    <td><input class="ct-inp mono" value="${(l.mau_tieu_de||'').replace(/"/g,'&quot;')}" placeholder="VD: Ước tháng {t} năm {n}" onchange="capNhatLoai('${l.ma}','mau_tieu_de',this.value)"></td>
+    <td style="text-align:center;padding:4px 6px">
+      <input class="num-inp" type="number" value="${l.thu_tu||''}" placeholder="--" onchange="capNhatLoai('${l.ma}','thu_tu',this.value===''?null:parseInt(this.value))">
+    </td>
+    <td style="text-align:center">
+      <label class="sw-wrap" style="justify-content:center">
+        <label class="sw"><input type="checkbox" ${l.co_ban?'checked':''} onchange="capNhatLoai('${l.ma}','co_ban',this.checked)">
+          <span class="sw-slider"></span></label>
+        <span class="sw-lbl">${l.co_ban?'✅':'⬜'}</span>
+      </label>
+    </td>
+    <td style="text-align:center"><button class="btn danger" style="padding:4px 8px" onclick="xoaLoaiAdmin('${l.ma}','${(l.ten||'').replace(/'/g,"\\'")}')">🗑</button></td>
+  </tr>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h3>📋 Loại số liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsLoai.length} loại — cột "Cơ bản" bật thì tự sinh khi bấm "Tạo kỳ mới")</span></h3>
+        <button class="btn primary" onclick="themLoaiMoi()">+ Thêm loại</button>
+      </div>
+      <div style="overflow-x:auto"><table class="dt">
+        <thead><tr>
+          <th style="width:90px">Mã</th><th>Tên</th><th>Khuôn tiêu đề cột <span style="font-weight:400">({t}=tháng, {n}=năm)</span></th>
+          <th style="width:80px;text-align:center">Thứ tự</th><th style="width:80px;text-align:center">Cơ bản</th><th style="width:50px"></th>
+        </tr></thead>
+        <tbody>${rows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--g4)">Chưa có loại số liệu nào</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+
+async function capNhatLoai(ma, col, val) {
+  try { await DB.suaLoai(ma, {[col]: val}); toast('✅ Đã lưu!'); const l=dsLoai.find(x=>x.ma===ma); if(l) l[col]=val; }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+function xoaLoaiAdmin(ma, ten) {
+  UTILS.xacNhan('🗑 Xoá loại số liệu', `Xoá loại <strong>${ten}</strong> (<code>${ma}</code>)?<br><span style="font-size:12px;color:var(--g4)">Sẽ thất bại nếu loại này đang được dùng ở cột báo cáo nào đó.</span>`,
+    async () => {
+      try { await DB.xoaLoai(ma); toast('✅ Đã xoá!'); await hienLoaiSoLieu(); }
+      catch(e) { toast('Lỗi: '+(/foreign key|violates/.test(e.message)?'Không thể xoá: loại này đang được dùng ở cột báo cáo.':e.message), 'er'); }
+    });
+}
+
+function themLoaiMoi() {
+  UTILS.xacNhan('+ Thêm loại số liệu mới',
+    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ (không dấu, không khoảng trắng) *</label>
+        <input id="loai-ma" type="text" placeholder="vd: cd_thuysan" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN *</label>
+        <input id="loai-ten" type="text" placeholder="VD: Chuyên đề thủy sản" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">KHUÔN TIÊU ĐỀ CỘT</label>
+        <input id="loai-mau" type="text" placeholder="VD: Chuyên đề thủy sản tháng {t}/{n}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:12px;outline:none"></div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div style="flex:1"><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THỨ TỰ</label>
+          <input id="loai-thutu" type="number" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--g5);padding-bottom:10px">
+          <input type="checkbox" id="loai-coban" style="width:15px;height:15px;accent-color:var(--xc)"> Cơ bản (tự sinh khi tạo kỳ mới)</label>
+      </div>
+    </div>`,
+    async () => {
+      const ma = document.getElementById('loai-ma')?.value.trim();
+      const ten = document.getElementById('loai-ten')?.value.trim();
+      const mau = document.getElementById('loai-mau')?.value.trim();
+      const thutu = document.getElementById('loai-thutu')?.value;
+      const coban = document.getElementById('loai-coban')?.checked;
+      if (!ma || !ten) { toast('Vui lòng nhập Mã và Tên!','er'); return; }
+      try {
+        await DB.themLoai({ ma, ten, mau_tieu_de: mau||null, thu_tu: thutu?parseInt(thutu):null, co_ban: !!coban });
+        toast('✅ Đã thêm loại số liệu!');
+        await hienLoaiSoLieu();
+      } catch(e) { toast('Lỗi: '+(/duplicate/.test(e.message)?'Mã này đã tồn tại.':e.message),'er'); }
+    });
+}
+
+// ════════════════════════════════════════════════════════════
+// CỘT BÁO CÁO (cot_bao_cao = kỳ × loại — thay ky_bao_cao V1)
+// ════════════════════════════════════════════════════════════
+async function hienCotBaoCao() {
+  setAct('ni-cot');
+  document.getElementById('topbar-t').textContent = 'Quản lý cột báo cáo (kỳ × loại)';
   const namHienTai = new Date().getFullYear();
   if (!filterNamBD) filterNamBD = namHienTai - 1;
   if (!filterNamKT) filterNamKT = namHienTai + 1;
-  await loadKy(filterNamBD, filterNamKT);
-  // Bảng cau_hinh_so_sanh có thể chưa được tạo → hiện hướng dẫn thay vì lỗi
-  try { dsSoSanh = await DB.laySoSanh(false); coBangSoSanh = true; }
-  catch(e) { dsSoSanh = []; coBangSoSanh = false; }
-  renderKyBaoCao();
+  await loadCot(filterNamBD, filterNamKT);
+  if (!dsLoai.length) await loadLoai();
+  try { dsSoSanh = await DB.laySoSanh(false); } catch(e) { dsSoSanh = []; }
+  renderCotBaoCao();
 }
 
-function renderKyBaoCao() {
-  let ds = [...dsKy];
-  // Sort
+function renderCotBaoCao() {
+  let ds = [...dsCot];
   if (sortCol) {
     ds.sort((a,b) => {
       let va = a[sortCol], vb = b[sortCol];
       if (va === null || va === undefined) va = '';
       if (vb === null || vb === undefined) vb = '';
-      return String(va).localeCompare(String(vb), 'vi') * sortDir;
+      return String(va).localeCompare(String(vb), 'vi', {numeric:true}) * sortDir;
     });
   }
 
   const cols = [
-    { key:'thu_tu_hien_thi', label:'Thứ tự', w:'110px' },
-    { key:'ky_bao_cao',      label:'Mã kỳ',  w:'160px' },
-    { key:'ky_bao_cao_tieu_de', label:'Tên kỳ', w:'' },
-    { key:'thang_bao_cao',   label:'Tháng',  w:'60px' },
-    { key:'nam_bao_cao',     label:'Năm',    w:'65px' },
-    { key:'loai_so_lieu',    label:'Loại',   w:'120px' },
-    { key:'do_rong_cot',     label:'Rộng(px)',w:'80px' },
+    { key:'thu_tu_hien_thi', label:'Thứ tự', w:'90px' },
+    { key:'ma_cot',          label:'Mã cột', w:'150px' },
+    { key:'tieu_de',         label:'Tiêu đề', w:'' },
+    { key:'thang',           label:'Tháng', w:'55px' },
+    { key:'nam',             label:'Năm', w:'60px' },
+    { key:'loai',            label:'Loại', w:'150px' },
+    { key:'do_rong_cot',     label:'Rộng(px)', w:'80px' },
   ];
-
   const thead = cols.map(c => {
     const cls = sortCol===c.key ? (sortDir===1?'sort-asc':'sort-desc') : '';
     return `<th class="${cls}" style="${c.w?'width:'+c.w:''}" onclick="doSort('${c.key}')">${c.label}<span class="sort-icon"></span></th>`;
   }).join('') + '<th style="text-align:center">Nhập</th><th style="text-align:center">Hiện</th><th></th>';
 
-  const tbody = ds.map(k => `<tr>
+  const tbody = ds.map(k => {
+    const loaiObj = dsLoai.find(l=>l.ma===k.loai);
+    return `<tr>
     <td style="text-align:center;padding:4px 8px">
-      <input class="num-inp" type="number" min="1" value="${k.thu_tu_hien_thi||''}" placeholder="--"
-        style="width:90px"
-        onchange="capNhatKyField('${k.ky_bao_cao}','thu_tu_hien_thi',this.value===''?null:parseInt(this.value))">
+      <input class="num-inp" type="number" min="1" value="${k.thu_tu_hien_thi||''}" placeholder="--" style="width:70px"
+        onchange="capNhatCotField(${k.id},'thu_tu_hien_thi',this.value===''?null:parseInt(this.value))">
     </td>
-    <td class="mono">${k.ky_bao_cao}</td>
-    <td>${k.ky_bao_cao_tieu_de||''}</td>
-    <td style="text-align:center">${k.thang_bao_cao}</td>
-    <td style="text-align:center">${k.nam_bao_cao}</td>
-    <td><span class="badge ${k.loai_so_lieu==='Chính thức'||k.loai_so_lieu==='Lũy kế chính thức'?'green':'blue'}">${k.loai_so_lieu||'--'}</span></td>
+    <td class="mono" style="font-size:11px">${k.ma_cot}</td>
+    <td><input class="ct-inp" value="${(k.tieu_de||'').replace(/"/g,'&quot;')}" onchange="capNhatCotField(${k.id},'tieu_de',this.value)"></td>
+    <td style="text-align:center">${k.thang}</td>
+    <td style="text-align:center">${k.nam}</td>
+    <td><span class="badge ${loaiObj?.co_ban?'green':'blue'}">${loaiObj?.ten||k.loai}</span></td>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="60" max="400" value="${k.do_rong_cot||120}" placeholder="120"
-        onchange="capNhatKyField('${k.ky_bao_cao}','do_rong_cot',parseInt(this.value)||120)">
+        onchange="capNhatCotField(${k.id},'do_rong_cot',parseInt(this.value)||120)">
     </td>
     <td style="text-align:center">
       <label class="sw-wrap" style="justify-content:center">
         <label class="sw"><input type="checkbox" ${!k.khoa_nhap_lieu?'checked':''}
-          onchange="capNhatKyField('${k.ky_bao_cao}','khoa_nhap_lieu',!this.checked)">
+          onchange="capNhatCotField(${k.id},'khoa_nhap_lieu',!this.checked)">
           <span class="sw-slider"></span></label>
         <span class="sw-lbl" style="font-size:10px">${!k.khoa_nhap_lieu?'🔓':'🔒'}</span>
       </label>
     </td>
     <td style="text-align:center">
       <label class="sw-wrap" style="justify-content:center">
-        <label class="sw"><input type="checkbox" ${k.dua_vao_bieu_bao_cao?'checked':''}
-          onchange="capNhatKyField('${k.ky_bao_cao}','dua_vao_bieu_bao_cao',this.checked)">
+        <label class="sw"><input type="checkbox" ${k.dua_vao_bieu?'checked':''}
+          onchange="capNhatCotField(${k.id},'dua_vao_bieu',this.checked)">
           <span class="sw-slider"></span></label>
-        <span class="sw-lbl" style="font-size:10px">${k.dua_vao_bieu_bao_cao?'✅':'⬜'}</span>
+        <span class="sw-lbl" style="font-size:10px">${k.dua_vao_bieu?'✅':'⬜'}</span>
       </label>
     </td>
     <td style="white-space:nowrap">
-      <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalKy('${k.ky_bao_cao}')">✏️</button>
-      <button class="btn danger" style="padding:4px 8px" onclick="xoaKy('${k.ky_bao_cao}')">🗑</button>
+      <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalCot(${k.id})">✏️</button>
+      <button class="btn danger" style="padding:4px 8px" onclick="xoaCotAdmin(${k.id})">🗑</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-head">
-        <h3>📅 Kỳ báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${ds.length} kỳ)</span></h3>
-        <button class="btn primary" onclick="ADMIN.moModalKy()">+ Thêm kỳ mới</button>
+        <h3>📅 Cột báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${ds.length} cột)</span></h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn primary" onclick="taoKyMoiHangLoat()">⚡ Tạo kỳ mới</button>
+          <button class="btn ghost" onclick="ADMIN.moModalCot()">+ Thêm cột khác</button>
+        </div>
       </div>
       <div class="filter-bar">
         <label>Lọc năm:</label>
@@ -474,51 +557,36 @@ function renderKyBaoCao() {
         <input type="number" id="f-nam-bd" value="${filterNamBD}" style="width:70px" oninput="filterNamBD=this.value">
         <label>đến</label>
         <input type="number" id="f-nam-kt" value="${filterNamKT}" style="width:70px" oninput="filterNamKT=this.value">
-        <button class="btn ghost" onclick="hienKyBaoCao()">Lọc</button>
-        <button class="btn ghost" onclick="filterNamBD='';filterNamKT='';hienKyBaoCao()">Tất cả</button>
+        <button class="btn ghost" onclick="hienCotBaoCao()">Lọc</button>
+        <button class="btn ghost" onclick="filterNamBD='';filterNamKT='';hienCotBaoCao()">Tất cả</button>
       </div>
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>${thead}</tr></thead>
-          <tbody>${tbody||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--g4)">Không có kỳ báo cáo nào</td></tr>'}</tbody>
+          <tbody>${tbody||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--g4)">Không có cột báo cáo nào trong khoảng năm đã lọc</td></tr>'}</tbody>
         </table>
       </div>
     </div>
     ${renderCardSoSanh()}`;
 }
 
-// ── CỘT SO SÁNH TRONG BẢNG NHẬP LIỆU (index.html) ──
-// Cột = Kỳ A ÷ Kỳ B × 100%, chỉ đọc, tự tính lại khi số liệu nhập thay đổi.
-function tenKyAdmin(ma) {
-  const k = dsKy.find(x => x.ky_bao_cao === ma);
-  return k ? (k.ky_bao_cao_tieu_de || ma) : ma;
+function tenCotAdmin(id) {
+  const c = dsCot.find(x=>x.id===id);
+  return c ? (c.tieu_de || c.ma_cot) : ('#'+id);
 }
 
 function renderCardSoSanh() {
-  if (!coBangSoSanh) {
-    return `<div class="card" style="margin-top:12px">
-      <div class="card-head"><h3>➗ Cột so sánh trong bảng nhập liệu</h3></div>
-      <div style="padding:14px;font-size:13px;color:var(--g5)">
-        ⚠️ Chưa tạo bảng <b class="mono">cau_hinh_so_sanh</b> trong Supabase.<br>
-        Hãy chạy file <b class="mono">sql_cau_hinh_so_sanh.sql</b> (kèm theo bản cập nhật này)
-        trong <b>Supabase → SQL Editor</b>, sau đó bấm lại mục "Kỳ báo cáo".
-      </div>
-    </div>`;
-  }
-  // Chỉ cho chọn các kỳ ĐANG HIỂN THỊ trong bảng nhập (dua_vao_bieu_bao_cao = true)
-  const kyHien = dsKy.filter(k => k.dua_vao_bieu_bao_cao)
-    .sort((a,b) => (Number(a.thu_tu_hien_thi)||0) - (Number(b.thu_tu_hien_thi)||0));
-  const opts = kyHien.map(k =>
-    `<option value="${k.ky_bao_cao}">${k.ky_bao_cao_tieu_de || k.ky_bao_cao}</option>`).join('');
+  const cotHien = dsCot.filter(k=>k.dua_vao_bieu).sort((a,b)=>(Number(a.thu_tu_hien_thi)||0)-(Number(b.thu_tu_hien_thi)||0));
+  const opts = cotHien.map(k=>`<option value="${k.id}">${k.tieu_de||k.ma_cot}</option>`).join('');
 
   const rows = dsSoSanh.map(c => `<tr>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="1" value="${c.thu_tu||''}" placeholder="--" style="width:70px"
         onchange="capNhatSoSanhField(${c.id},'thu_tu',this.value===''?null:parseInt(this.value))">
     </td>
-    <td>${tenKyAdmin(c.ky_tu)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_tu})</span></td>
+    <td>${tenCotAdmin(c.cot_tu)}</td>
     <td style="text-align:center;font-weight:700;color:var(--blue)">÷</td>
-    <td>${tenKyAdmin(c.ky_mau)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_mau})</span></td>
+    <td>${tenCotAdmin(c.cot_mau)}</td>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="60" max="400" value="${c.do_rong_cot||128}" placeholder="128"
         onchange="capNhatSoSanhField(${c.id},'do_rong_cot',parseInt(this.value)||128)">
@@ -538,27 +606,27 @@ function renderCardSoSanh() {
 
   return `<div class="card" style="margin-top:12px">
     <div class="card-head">
-      <h3>➗ Cột so sánh trong bảng nhập liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(Kỳ A ÷ Kỳ B × 100% — chỉ đọc, tự tính khi nhập)</span></h3>
+      <h3>➗ Cột so sánh trong bảng nhập liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(Cột A ÷ Cột B × 100% — chỉ đọc, tự tính khi nhập)</span></h3>
     </div>
     <div class="filter-bar" style="flex-wrap:wrap;gap:8px">
-      <label>Kỳ A (tử số)</label>
-      <select class="inp" id="ss-tu" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
+      <label>Cột A (tử số)</label>
+      <select class="inp" id="ss-tu" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có cột hiển thị</option>'}</select>
       <label style="font-weight:700;color:var(--blue)">÷</label>
-      <label>Kỳ B (mẫu số)</label>
-      <select class="inp" id="ss-mau" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
+      <label>Cột B (mẫu số)</label>
+      <select class="inp" id="ss-mau" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có cột hiển thị</option>'}</select>
       <label>× 100% &nbsp; Thứ tự</label>
       <input class="num-inp" type="number" id="ss-thutu" min="1" placeholder="--" style="width:70px">
       <button class="btn primary" onclick="themSoSanhAdmin()">➕ Thêm cột so sánh</button>
     </div>
     <div style="padding:0 14px 6px;font-size:11px;color:var(--g4);font-style:italic">
-      Chỉ chọn được các kỳ đang bật "Hiện" (đưa vào biểu). Cột so sánh chỉ xuất hiện trong bảng nhập
-      khi CẢ HAI kỳ đều đang hiển thị. Nếu không thấy kỳ cần chọn, hãy mở rộng bộ lọc năm phía trên.
+      Chỉ chọn được các cột đang bật "Hiện" (đưa vào biểu). Cột so sánh chỉ xuất hiện trong bảng nhập
+      khi CẢ HAI cột đều đang hiển thị.
     </div>
     <div style="overflow-x:auto">
       <table class="dt">
         <thead><tr>
-          <th style="width:80px">Thứ tự</th><th>Kỳ A (tử số)</th><th style="width:36px"></th>
-          <th>Kỳ B (mẫu số)</th><th style="width:90px">Rộng(px)</th>
+          <th style="width:80px">Thứ tự</th><th>Cột A (tử số)</th><th style="width:36px"></th>
+          <th>Cột B (mẫu số)</th><th style="width:90px">Rộng(px)</th>
           <th style="width:70px;text-align:center">Hiện</th><th style="width:60px"></th>
         </tr></thead>
         <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--g4)">Chưa có cột so sánh nào</td></tr>'}</tbody>
@@ -571,168 +639,224 @@ async function themSoSanhAdmin() {
   const tu  = document.getElementById('ss-tu')?.value;
   const mau = document.getElementById('ss-mau')?.value;
   const thutu = document.getElementById('ss-thutu')?.value;
-  if (!tu || !mau) { toast('Hãy chọn đủ Kỳ A và Kỳ B.', 'er'); return; }
-  if (tu === mau)  { toast('Kỳ A và Kỳ B phải khác nhau.', 'er'); return; }
-  if (dsSoSanh.some(c => c.ky_tu === tu && c.ky_mau === mau)) { toast('Cột so sánh này đã có.', 'er'); return; }
+  if (!tu || !mau) { toast('Hãy chọn đủ Cột A và Cột B.', 'er'); return; }
+  if (tu === mau)  { toast('Cột A và Cột B phải khác nhau.', 'er'); return; }
+  if (dsSoSanh.some(c => String(c.cot_tu) === tu && String(c.cot_mau) === mau)) { toast('Cột so sánh này đã có.', 'er'); return; }
   try {
-    await DB.themSoSanh({ ky_tu: tu, ky_mau: mau, thu_tu: thutu ? parseInt(thutu) : null, hien_thi: true, do_rong_cot: 128 });
+    await DB.themSoSanh({ cot_tu: parseInt(tu), cot_mau: parseInt(mau), thu_tu: thutu ? parseInt(thutu) : null, hien_thi: true, do_rong_cot: 128 });
     toast('✅ Đã thêm cột so sánh!');
-    await hienKyBaoCao();
+    await hienCotBaoCao();
   } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
 }
 
 async function capNhatSoSanhField(id, col, val) {
-  const u = {}; u[col] = val;
   try {
-    await DB.suaSoSanh(id, u);
+    await DB.suaSoSanh(id, {[col]: val});
     toast('✅ Đã cập nhật!');
     const c = dsSoSanh.find(x => x.id === id);
     if (c) c[col] = val;
-    if (col === 'hien_thi') renderKyBaoCao();
+    if (col === 'hien_thi') renderCotBaoCao();
   } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
 }
 
 function xoaSoSanhAdmin(id) {
   const c = dsSoSanh.find(x => x.id === id);
   UTILS.xacNhan('Xóa cột so sánh',
-    `Xóa cột <b>${tenKyAdmin(c?.ky_tu||'')} ÷ ${tenKyAdmin(c?.ky_mau||'')} × 100%</b>?<br>Chỉ xóa cấu hình cột, không ảnh hưởng số liệu.`,
+    `Xóa cột <b>${tenCotAdmin(c?.cot_tu)} ÷ ${tenCotAdmin(c?.cot_mau)} × 100%</b>?<br>Chỉ xóa cấu hình cột, không ảnh hưởng số liệu.`,
     async () => {
-      try {
-        await DB.xoaSoSanh(id);
-        toast('✅ Đã xóa cột so sánh!');
-        await hienKyBaoCao();
-      } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
+      try { await DB.xoaSoSanh(id); toast('✅ Đã xóa cột so sánh!'); await hienCotBaoCao(); }
+      catch(e) { toast('Lỗi: ' + e.message, 'er'); }
     });
 }
 
 function doSort(col) {
   if (sortCol === col) sortDir *= -1;
   else { sortCol = col; sortDir = 1; }
-  renderKyBaoCao();
+  renderCotBaoCao();
 }
 
-async function capNhatKyField(ma, col, val) {
-  const u = {}; u[col] = val;
-  try {
-    await DB.capNhatKy(ma, u);
-    toast('✅ Đã cập nhật!');
-    const k = dsKy.find(x => x.ky_bao_cao === ma);
-    if (k) k[col] = val;
-  } catch(e) { toast('Lỗi: '+e.message, 'er'); }
+async function capNhatCotField(id, col, val) {
+  try { await DB.capNhatCot(id, {[col]: val}); toast('✅ Đã cập nhật!'); const c = dsCot.find(x=>x.id===id); if (c) c[col] = val; }
+  catch(e) { toast('Lỗi: '+e.message, 'er'); }
 }
 
-// Tự sinh mã kỳ
-function sinhMaKy() {
-  const thang = document.getElementById('ky-thang').value;
-  const nam   = document.getElementById('ky-nam').value;
-  const loai  = document.getElementById('ky-loai').value;
-  if (!thang || !nam) return;
-  const t = String(thang).padStart(2,'0');
-  const prefix = {
-    'Ước thực hiện': 'uoc',
-    'Ước lũy kế':    'uoclk',
-    'Chính thức':    'ct',
-    'Lũy kế chính thức': 'lkct',
-    'So cùng kỳ':   'sck',
-  }[loai] || 'uoc';
-  document.getElementById('ky-ma').value = `${prefix}_${t}/${nam}`;
-  // Sinh tên đầy đủ
-  const tenLoai = {
-    'Ước thực hiện': `Ước tháng ${thang} năm ${nam}`,
-    'Ước lũy kế':   `Ước lũy kế đến tháng ${thang} năm ${nam}`,
-    'Chính thức':   `Chính thức tháng ${thang} năm ${nam}`,
-    'Lũy kế chính thức': `Lũy kế chính thức đến tháng ${thang} năm ${nam}`,
-    'So cùng kỳ':   `So cùng kỳ tháng ${thang} năm ${nam}`,
-  }[loai] || '';
-  if (!document.getElementById('ky-ten').value || document.getElementById('ky-ten').dataset.auto==='1') {
-    document.getElementById('ky-ten').value = tenLoai;
-    document.getElementById('ky-ten').dataset.auto = '1';
-  }
+function xoaCotAdmin(id) {
+  const c = dsCot.find(x=>x.id===id);
+  UTILS.xacNhan('🗑 Xoá cột báo cáo',
+    `Xoá cột <strong>${c?.tieu_de||c?.ma_cot}</strong>?<br><span style="color:var(--red);font-size:12px">⚠️ Toàn bộ số liệu đã nhập của cột này sẽ bị xoá vĩnh viễn!</span>`,
+    async () => {
+      try { await DB.xoaCot(id); dsCot = dsCot.filter(x=>x.id!==id); toast('✅ Đã xoá!'); renderCotBaoCao(); }
+      catch(e) { toast('Lỗi: '+e.message, 'er'); }
+    });
+}
+
+// "Tạo kỳ mới" — tự sinh cột cho MỌI loại đang co_ban=true ở (tháng, năm) chọn.
+async function taoKyMoiHangLoat() {
+  UTILS.xacNhan('⚡ Tạo kỳ mới (tự sinh loại cơ bản)',
+    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+      <div style="font-size:12px;color:var(--g5)">Hệ thống sẽ tự tạo cột cho mọi loại số liệu đang đánh dấu "Cơ bản" (xem mục Loại số liệu), bỏ qua loại nào đã có cột ở tháng/năm này.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THÁNG *</label>
+          <input id="tkm-thang" type="number" min="1" max="12" placeholder="7" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">NĂM *</label>
+          <input id="tkm-nam" type="number" placeholder="${new Date().getFullYear()}" value="${new Date().getFullYear()}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
+      </div>
+    </div>`,
+    async () => {
+      const thang = parseInt(document.getElementById('tkm-thang')?.value);
+      const nam = parseInt(document.getElementById('tkm-nam')?.value);
+      if (!thang || thang<1 || thang>12 || !nam) { toast('Vui lòng nhập đủ Tháng (1-12) và Năm!','er'); return; }
+      const loaiCoBan = dsLoai.filter(l=>l.co_ban);
+      if (!loaiCoBan.length) { toast('Chưa có loại số liệu nào đánh dấu "Cơ bản".','er'); return; }
+      let soTao=0, soBoQua=0, loi=[];
+      for (const loai of loaiCoBan) {
+        try {
+          const daCo = await DB.timCot(thang, nam, loai.ma);
+          if (daCo && daCo.length) { soBoQua++; continue; }
+          const maCot = UTILS.sinhMaCot(loai.ma, thang, nam);
+          const tieuDe = UTILS.sinhTieuDe(loai.mau_tieu_de, thang, nam) || maCot;
+          const moi = await DB.themCot({ ma_cot:maCot, thang, nam, loai:loai.ma, tieu_de:tieuDe, khoa_nhap_lieu:false, dua_vao_bieu:true, do_rong_cot:120 });
+          dsCot.push(moi);
+          soTao++;
+        } catch(e) { loi.push(loai.ten+': '+e.message); }
+      }
+      if (loi.length) toast(`⚠️ Tạo ${soTao} cột, bỏ qua ${soBoQua}. Lỗi: `+loi.join('; '), 'er');
+      else toast(`✅ Đã tạo ${soTao} cột mới cho ${thang}/${nam}`+(soBoQua?` (bỏ qua ${soBoQua} cột đã có)`:'')+'!');
+      renderCotBaoCao();
+    });
 }
 
 const ADMIN = {
-  moModalKy(maKy=null) {
-    editKyId = maKy;
-    const k = maKy ? dsKy.find(x=>x.ky_bao_cao===maKy) : null;
-    document.getElementById('ky-modal-title').textContent = k ? 'Sửa kỳ báo cáo' : 'Thêm kỳ báo cáo';
-    document.getElementById('ky-thang').value  = k?.thang_bao_cao || '';
-    document.getElementById('ky-nam').value    = k?.nam_bao_cao   || new Date().getFullYear();
-    document.getElementById('ky-loai').value   = k?.loai_so_lieu  || 'Ước thực hiện';
-    document.getElementById('ky-ma').value     = k?.ky_bao_cao    || '';
-    document.getElementById('ky-ten').value    = k?.ky_bao_cao_tieu_de || '';
-    document.getElementById('ky-ten').dataset.auto = '0';
-    document.getElementById('ky-nguon').value  = k?.nguon_so_lieu || '';
-    document.getElementById('ky-thutu').value  = k?.thu_tu_hien_thi || '';
-    document.getElementById('ky-dorong').value = k?.do_rong_cot  || 120;
-    document.getElementById('err-ky').textContent = '';
-    if (!k) sinhMaKy();
-    UTILS.moModal('modal-ky');
+  // ── CỘT BÁO CÁO (thêm/sửa 1 cột riêng lẻ — kể cả loại không "cơ bản" hoặc kế hoạch) ──
+  moModalCot(cotId=null) {
+    editCotId = cotId;
+    const c = cotId ? dsCot.find(x=>x.id===cotId) : null;
+    document.getElementById('cot-modal-title').textContent = c ? 'Sửa cột báo cáo' : 'Thêm cột báo cáo';
+    document.getElementById('cot-loai').innerHTML = dsLoai.map(l=>`<option value="${l.ma}">${l.ten}</option>`).join('');
+    document.getElementById('cot-thang').value = c?.thang || (new Date().getMonth()+1);
+    document.getElementById('cot-nam').value   = c?.nam   || new Date().getFullYear();
+    document.getElementById('cot-loai').value  = c?.loai  || (dsLoai[0]?.ma || '');
+    document.getElementById('cot-hauto').value = '';
+    document.getElementById('cot-ma').value    = c?.ma_cot  || '';
+    document.getElementById('cot-ten').value   = c?.tieu_de || '';
+    document.getElementById('cot-ten').dataset.auto = c ? '0' : '1';
+    document.getElementById('cot-thutu').value  = c?.thu_tu_hien_thi || '';
+    document.getElementById('cot-dorong').value = c?.do_rong_cot || 120;
+    document.getElementById('err-cot').textContent = '';
+    ADMIN.sinhCotAuto();
+    UTILS.moModal('modal-cot');
   },
 
-  async luuKy() {
-    const ma    = document.getElementById('ky-ma').value.trim();
-    const ten   = document.getElementById('ky-ten').value.trim();
-    const thang = parseInt(document.getElementById('ky-thang').value);
-    const nam   = parseInt(document.getElementById('ky-nam').value);
-    const loai  = document.getElementById('ky-loai').value;
-    const nguon = document.getElementById('ky-nguon').value.trim();
-    const thutu = document.getElementById('ky-thutu').value;
-    const dorong= parseInt(document.getElementById('ky-dorong').value)||120;
-    const err   = document.getElementById('err-ky');
+  sinhCotAuto() {
+    const loai = document.getElementById('cot-loai').value;
+    const isKH = loai === 'kh';
+    document.getElementById('cot-hauto-wrap').style.display = isKH ? '' : 'none';
+    document.getElementById('cot-thang-wrap').style.display = isKH ? 'none' : '';
+    const thang = isKH ? 1 : (parseInt(document.getElementById('cot-thang').value) || null);
+    const nam = parseInt(document.getElementById('cot-nam').value) || null;
+    const hauTo = document.getElementById('cot-hauto').value.trim();
+    if (!nam || (!isKH && !thang)) return;
+    document.getElementById('cot-ma').value = UTILS.sinhMaCot(loai, thang, nam, hauTo);
+    const loaiObj = dsLoai.find(l=>l.ma===loai);
+    const tieuDeSinh = UTILS.sinhTieuDe(loaiObj?.mau_tieu_de, thang, nam);
+    const tenEl = document.getElementById('cot-ten');
+    if (tenEl.dataset.auto === '1' && tieuDeSinh) tenEl.value = tieuDeSinh;
+  },
+
+  async luuCot() {
+    const loai = document.getElementById('cot-loai').value;
+    const isKH = loai === 'kh';
+    const thang = isKH ? 1 : parseInt(document.getElementById('cot-thang').value);
+    const nam = parseInt(document.getElementById('cot-nam').value);
+    const maCot = document.getElementById('cot-ma').value.trim();
+    const tieuDe = document.getElementById('cot-ten').value.trim();
+    const thutu = document.getElementById('cot-thutu').value;
+    const dorong = parseInt(document.getElementById('cot-dorong').value) || 120;
+    const err = document.getElementById('err-cot');
     err.textContent = '';
-    if (!ma||!ten||!thang||!nam) { err.textContent='Vui lòng điền đủ thông tin!'; return; }
-    const row = {
-      ky_bao_cao: ma, ky_bao_cao_tieu_de: ten,
-      thang_bao_cao: thang, nam_bao_cao: nam,
-      loai_so_lieu: loai, nguon_so_lieu: nguon,
-      thu_tu_hien_thi: thutu?parseInt(thutu):null,
-      do_rong_cot: dorong,
-      khoa_nhap_lieu: false, dua_vao_bieu_bao_cao: true
-    };
+    if (!maCot || !tieuDe || !nam || (!isKH && !thang)) { err.textContent = 'Vui lòng điền đủ thông tin!'; return; }
+    const row = { ma_cot:maCot, thang, nam, loai, tieu_de:tieuDe, thu_tu_hien_thi: thutu?parseInt(thutu):null, do_rong_cot: dorong };
     try {
-      if (editKyId) await DB.capNhatKy(editKyId, row);
-      else await DB.themKy(row);
-      UTILS.dongModal('modal-ky');
-      toast('✅ Đã lưu kỳ báo cáo!');
-      await hienKyBaoCao();
-    } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
+      if (editCotId) {
+        await DB.capNhatCot(editCotId, row);
+        const i = dsCot.findIndex(x=>x.id===editCotId);
+        if (i>-1) dsCot[i] = {...dsCot[i], ...row};
+      } else {
+        const moi = await DB.themCot({...row, khoa_nhap_lieu:false, dua_vao_bieu:true});
+        dsCot.push(moi);
+      }
+      UTILS.dongModal('modal-cot');
+      toast('✅ Đã lưu cột báo cáo!');
+      renderCotBaoCao();
+    } catch(e) {
+      err.textContent = 'Lỗi: ' + (/duplicate|unique/.test(e.message) ? 'Đã tồn tại cột (tháng, năm, loại) này.' : e.message);
+    }
   },
 
   // ── TÀI KHOẢN ──
   moModalTK(id=null) {
-    editTKId = id;
-    const r = id ? dsTK.find(x=>x.id===id) : null;
+    editHoSoId = id;
+    const r = id ? dsHoSo.find(x=>x.id===id) : null;
     document.getElementById('tk-modal-title').textContent = r ? 'Sửa tài khoản' : 'Thêm tài khoản';
-    document.getElementById('tk-donvi').value   = r?.don_vi   || '';
-    document.getElementById('tk-hoten').value   = r?.ho_ten   || '';
-    document.getElementById('tk-email').value   = r?.email    || '';
-    document.getElementById('tk-vaitro').value  = r?.vai_tro  || 'editor';
+    document.getElementById('tk-modal-sub').textContent = r
+      ? 'Không đổi được email/mật khẩu ở đây — dùng Supabase Dashboard (Authentication → Users).'
+      : 'Tài khoản mới sẽ đăng nhập bằng email + mật khẩu bên dưới.';
+    document.getElementById('tk-email-wrap').style.display = r ? 'none' : '';
+    document.getElementById('tk-mk-wrap').style.display = r ? 'none' : '';
+    document.getElementById('tk-email').value = '';
+    document.getElementById('tk-mk').value = '';
+    document.getElementById('tk-donvi').value  = r?.don_vi  || '';
+    document.getElementById('tk-hoten').value  = r?.ho_ten  || '';
+    document.getElementById('tk-vaitro').value = r?.vai_tro || 'editor';
     document.getElementById('err-tk').textContent = '';
+    document.getElementById('err-tk').style.color = 'var(--red)';
     UTILS.moModal('modal-tk');
   },
 
-  async luuTK() {
-    const dv = document.getElementById('tk-donvi').value.trim();
-    const ht = document.getElementById('tk-hoten').value.trim();
-    const em = document.getElementById('tk-email').value.trim();
-    const vt = document.getElementById('tk-vaitro').value;
-    const err = document.getElementById('err-tk');
-    err.textContent = '';
-    if (!dv||!ht) { err.textContent='Vui lòng điền đơn vị và họ tên!'; return; }
-    const row = { don_vi:dv, ho_ten:ht, email:em||null, vai_tro:vt };
-    try {
-      if (editTKId) await DB.suaTaiKhoan(editTKId, row);
-      else await DB.themTaiKhoan({...row, mat_khau:CONFIG.MAT_KHAU_MAC_DINH, trang_thai:true});
-      UTILS.dongModal('modal-tk');
-      toast('✅ Đã lưu tài khoản!');
-      await hienTaiKhoan();
-    } catch(e) { err.textContent='Lỗi: '+e.message; }
+  sinhMKNgauNhien() {
+    document.getElementById('tk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
   },
 
+  async luuTK() {
+    const err = document.getElementById('err-tk');
+    err.textContent = ''; err.style.color = 'var(--red)';
+    const donvi = document.getElementById('tk-donvi').value.trim();
+    const hoten = document.getElementById('tk-hoten').value.trim();
+    const vaitro = document.getElementById('tk-vaitro').value;
+    if (!donvi || !hoten) { err.textContent = 'Vui lòng điền đơn vị và họ tên!'; return; }
+
+    if (editHoSoId) {
+      try {
+        await DB.suaHoSo(editHoSoId, { don_vi:donvi, ho_ten:hoten, vai_tro:vaitro });
+        UTILS.dongModal('modal-tk');
+        toast('✅ Đã lưu tài khoản!');
+        await hienTaiKhoan();
+      } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
+      return;
+    }
+
+    const email = document.getElementById('tk-email').value.trim();
+    const mk = document.getElementById('tk-mk').value;
+    if (!email) { err.textContent = 'Vui lòng nhập email!'; return; }
+    if (!mk || mk.length < 6) { err.textContent = 'Mật khẩu phải có ít nhất 6 ký tự!'; return; }
+    try {
+      await DB.taoTaiKhoan(email, mk, { don_vi:donvi, ho_ten:hoten, vai_tro:vaitro });
+      err.style.color = 'var(--xc)';
+      err.innerHTML = `✅ Đã tạo tài khoản <strong>${email}</strong> — mật khẩu ban đầu: <strong class="mono">${mk}</strong><br>
+        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Bấm "Huỷ" để đóng khi đã chép xong.</span>`;
+      await loadHoSo();
+      await hienTaiKhoan();
+    } catch(e) {
+      err.style.color = 'var(--red)';
+      err.textContent = 'Lỗi: ' + (/already registered|duplicate/.test(e.message) ? 'Email này đã có tài khoản.' : e.message);
+    }
+  },
+
+  // ── PHÂN QUYỀN ──
   async luuPQ() {
     const checked = dsBang.filter(b=>document.getElementById('pq-'+b.bang)?.checked).map(b=>b.bang);
     try {
-      await DB.luuPhanQuyen(pqTKId, checked);
+      await DB.luuPhanQuyen(pqUserId, checked);
       UTILS.dongModal('modal-pq');
       toast('✅ Đã lưu phân quyền!');
       await hienPhanQuyen();
@@ -740,51 +864,122 @@ const ADMIN = {
   },
 };
 
-function xoaKy(ma) {
-  UTILS.xacNhan('Xoá kỳ báo cáo',`Xoá kỳ "<strong>${ma}</strong>"?`,
-    async()=>{try{await DB.xoaKy(ma);toast('✅ Đã xoá!');await hienKyBaoCao();}catch(e){toast('Lỗi: '+e.message,'er')}});
+// ════════════════════════════════════════════════════════════
+// DUYỆT MỞ KHÓA (yeu_cau_mo_khoa — bổ sung Bước 5)
+// ════════════════════════════════════════════════════════════
+async function hienDuyetMoKhoa() {
+  setAct('ni-mk');
+  document.getElementById('topbar-t').textContent = 'Duyệt yêu cầu mở khóa';
+  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
+  if (!dsBang.length) await loadBang();
+  let dsCho = [], dsDaXuLy = [];
+  try {
+    const { data, error } = await sb.from('yeu_cau_mo_khoa')
+      .select('*, ho_so:user_id(don_vi,ho_ten)')
+      .order('tao_luc', { ascending: false });
+    if (error) throw error;
+    dsCho = (data||[]).filter(r=>r.trang_thai==='cho_duyet');
+    dsDaXuLy = (data||[]).filter(r=>r.trang_thai!=='cho_duyet').slice(0,20);
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
+    return;
+  }
+  const tenBang = mb => dsBang.find(b=>b.bang===mb)?.ten_bang || mb;
+  const gioVN = t => t ? new Date(t).toLocaleString('vi-VN') : '';
+
+  const rowsCho = dsCho.map(r => `<tr>
+    <td><strong>${tenBang(r.bang)}</strong></td>
+    <td>${r.ho_so?.don_vi||'--'} <span style="color:var(--g4);font-size:11px">${r.ho_so?.ho_ten||''}</span></td>
+    <td style="font-size:12px">${(r.ly_do||'--').replace(/</g,'&lt;')}</td>
+    <td style="font-size:11px;color:var(--g4)">${gioVN(r.tao_luc)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn primary" style="padding:4px 10px;margin-right:4px" onclick="xuLyMoKhoa(${r.id},true)">✅ Đồng ý</button>
+      <button class="btn danger" style="padding:4px 10px" onclick="xuLyMoKhoa(${r.id},false)">❌ Từ chối</button>
+    </td>
+  </tr>`).join('');
+
+  const rowsDaXuLy = dsDaXuLy.map(r => `<tr>
+    <td>${tenBang(r.bang)}</td>
+    <td>${r.ho_so?.don_vi||'--'}</td>
+    <td><span class="badge ${r.trang_thai==='da_mo'?'green':'red'}">${r.trang_thai==='da_mo'?'✅ Đã mở':'❌ Từ chối'}</span></td>
+    <td style="font-size:11px;color:var(--g4)">${gioVN(r.xu_ly_luc)}</td>
+  </tr>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>🔓 Yêu cầu đang chờ duyệt <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsCho.length})</span></h3></div>
+      <div style="overflow-x:auto"><table class="dt">
+        <thead><tr><th>Bảng</th><th>Đơn vị đề nghị</th><th>Lý do</th><th>Thời gian</th><th></th></tr></thead>
+        <tbody>${rowsCho||'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--g4)">Không có yêu cầu nào đang chờ.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-head"><h3>📜 Lịch sử xử lý gần đây</h3></div>
+      <div style="overflow-x:auto"><table class="dt">
+        <thead><tr><th>Bảng</th><th>Đơn vị</th><th>Kết quả</th><th>Thời gian xử lý</th></tr></thead>
+        <tbody>${rowsDaXuLy||'<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--g4)">Chưa có.</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
 }
 
-// ── TÀI KHOẢN ──
+function xuLyMoKhoa(id, dongY) {
+  UTILS.xacNhan(dongY ? '✅ Đồng ý mở khóa' : '❌ Từ chối yêu cầu',
+    dongY ? 'Mở khóa lại toàn bộ chỉ tiêu của bảng này để đơn vị nhập tiếp?' : 'Từ chối yêu cầu này?',
+    async () => {
+      try {
+        await DB.duyetMoKhoa(id, dongY);
+        toast(dongY ? '✅ Đã mở khóa!' : 'Đã từ chối.');
+        await hienDuyetMoKhoa();
+        await capNhatBadgeMoKhoa();
+      } catch(e) { toast('Lỗi: '+e.message,'er'); }
+    });
+}
+
+// ════════════════════════════════════════════════════════════
+// TÀI KHOẢN (ho_so, 1-1 với Supabase Auth)
+// ════════════════════════════════════════════════════════════
 async function hienTaiKhoan() {
   setAct('ni-tk');
   document.getElementById('topbar-t').textContent = 'Quản lý tài khoản';
-  await loadTK();
+  await loadHoSo();
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-head">
-        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsTK.length})</span></h3>
+        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsHoSo.length})</span></h3>
         <button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>
+      </div>
+      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
+        💡 Email đăng nhập không hiển thị được qua API phân quyền client (Supabase Auth không lộ ra ngoài
+        cho vai trò authenticated thường). Tra email trong Dashboard → Authentication → Users, hoặc theo
+        quy ước <code>đơn_vị@snnmt.gov.vn</code>. Đổi mật khẩu cho người khác cũng chỉ làm được ở Dashboard.
       </div>
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>
-            <th>Đơn vị</th><th>Người phụ trách</th><th>Email</th>
+            <th>Đơn vị</th><th>Người phụ trách</th>
             <th style="text-align:center">Vai trò</th>
-            <th style="text-align:center">Trạng thái</th>
-            <th style="text-align:center">Mật khẩu</th><th></th>
+            <th style="text-align:center">Trạng thái</th><th></th>
           </tr></thead>
-          <tbody>${dsTK.map(r=>`<tr>
-            <td><strong>${r.don_vi}</strong></td>
-            <td>${r.ho_ten}</td>
-            <td class="mono" style="font-size:11px">${r.email||'--'}</td>
-            <td style="text-align:center"><span class="badge ${r.vai_tro==='admin'?'blue':'green'}">${r.vai_tro==='admin'?'⚙️ Admin':'✏️ Editor'}</span></td>
+          <tbody>${dsHoSo.map(r=>`<tr>
+            <td><strong>${r.don_vi||'--'}</strong></td>
+            <td>${r.ho_ten||'--'}</td>
+            <td style="text-align:center">
+              <select class="ct-sel" style="width:auto" ${r.id===user.id?'disabled':''} onchange="doiVaiTro('${r.id}', this.value)">
+                <option value="editor" ${r.vai_tro==='editor'?'selected':''}>✏️ Editor</option>
+                <option value="admin" ${r.vai_tro==='admin'?'selected':''}>⚙️ Admin</option>
+              </select>
+            </td>
             <td style="text-align:center">
               <label class="sw-wrap" style="justify-content:center">
                 <label class="sw"><input type="checkbox" ${r.trang_thai?'checked':''}
-                  onchange="toggleTK(${r.id},'trang_thai',this.checked)">
+                  ${r.id===user.id?'disabled':''}
+                  onchange="toggleHoSo('${r.id}',this.checked)">
                   <span class="sw-slider"></span></label>
                 <span class="sw-lbl">${r.trang_thai?'Hoạt động':'Khoá'}</span>
               </label>
             </td>
-            <td style="text-align:center">
-              <span class="badge ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'gray':'green'}">
-                ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'🔑 Mặc định':'✅ Đã đổi'}</span>
-              ${r.id!==user.id?`<button class="btn ghost" style="margin-left:4px;padding:3px 8px;font-size:11px" onclick="resetPass(${r.id},'${r.don_vi}')">Reset</button>`:''}
-            </td>
             <td style="white-space:nowrap">
-              <button class="btn ghost" style="margin-right:3px" onclick="ADMIN.moModalTK(${r.id})">✏️</button>
-              ${r.id!==user.id?`<button class="btn danger" onclick="xoaTK(${r.id},'${r.don_vi}')">🗑</button>`:''}
+              <button class="btn ghost" onclick="ADMIN.moModalTK('${r.id}')">✏️ Sửa</button>
             </td>
           </tr>`).join('')}</tbody>
         </table>
@@ -792,17 +987,29 @@ async function hienTaiKhoan() {
     </div>`;
 }
 
-async function toggleTK(id,col,val){const u={};u[col]=val;await DB.suaTaiKhoan(id,u);toast('✅');await loadTK();await hienTaiKhoan();}
-function resetPass(id,dv){UTILS.xacNhan('Reset mật khẩu',`Reset mật khẩu <strong>${dv}</strong> về <strong>${CONFIG.MAT_KHAU_MAC_DINH}</strong>?`,async()=>{await DB.suaTaiKhoan(id,{mat_khau:CONFIG.MAT_KHAU_MAC_DINH});toast('✅ Đã reset!');await hienTaiKhoan();})}
-function xoaTK(id,dv){UTILS.xacNhan('Xoá tài khoản',`Xoá <strong>${dv}</strong>?`,async()=>{await DB.xoaTaiKhoan(id);toast('✅ Đã xoá!');await hienTaiKhoan();})}
+async function doiVaiTro(id, vt) {
+  if (id === user.id) { toast('Không thể tự đổi vai trò của chính mình.', 'er'); await hienTaiKhoan(); return; }
+  UTILS.xacNhan('Đổi vai trò', `Đổi vai trò thành <strong>${vt==='admin'?'Quản trị viên':'Editor'}</strong>?`,
+    async () => {
+      try { await DB.suaHoSo(id, {vai_tro:vt}); toast('✅ Đã đổi vai trò!'); await hienTaiKhoan(); }
+      catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
+    });
+}
 
-// ── PHÂN QUYỀN ──
+async function toggleHoSo(id, val) {
+  try { await DB.suaHoSo(id, {trang_thai:val}); toast(val?'✅ Đã mở lại!':'🔒 Đã khoá!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
+}
+
+// ════════════════════════════════════════════════════════════
+// PHÂN QUYỀN (phan_quyen_bang — khóa theo uuid)
+// ════════════════════════════════════════════════════════════
 async function hienPhanQuyen() {
   setAct('ni-pq');
   document.getElementById('topbar-t').textContent = 'Phân quyền nhập liệu';
-  await Promise.all([loadTK(), loadBang()]);
+  await Promise.all([loadHoSo(), loadBang()]);
   const pqAll = await DB.layTatCaPhanQuyen();
-  const editors = dsTK.filter(r=>r.vai_tro==='editor');
+  const editors = dsHoSo.filter(r=>r.vai_tro==='editor');
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-head"><h3>🔑 Phân quyền bảng nhập liệu</h3></div>
@@ -810,24 +1017,25 @@ async function hienPhanQuyen() {
         <table class="dt">
           <thead><tr><th>Đơn vị</th><th>Người phụ trách</th><th>Bảng được nhập</th><th></th></tr></thead>
           <tbody>${editors.map(r=>{
-            const pq=(pqAll||[]).filter(p=>p.tai_khoan_id===r.id).map(p=>p.bang);
-            const tenBangs=pq.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
-            return`<tr>
-              <td><strong>${r.don_vi}</strong></td><td>${r.ho_ten}</td>
+            const pq = (pqAll||[]).filter(p=>p.user_id===r.id).map(p=>p.bang);
+            const tenBangs = pq.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
+            return `<tr>
+              <td><strong>${r.don_vi||'--'}</strong></td><td>${r.ho_ten||'--'}</td>
               <td>${tenBangs.length?tenBangs.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa phân công</span>'}</td>
-              <td><button class="btn ghost" onclick="moModalPQ(${r.id},'${r.don_vi}')">✏️ Sửa</button></td>
+              <td><button class="btn ghost" onclick="moModalPQ('${r.id}','${(r.don_vi||'').replace(/'/g,"\\'")}')">✏️ Sửa</button></td>
             </tr>`;
           }).join('')}</tbody>
         </table>
       </div>
     </div>`;
 }
-async function moModalPQ(id,donVi){
-  pqTKId=id;
-  document.getElementById('pq-title').textContent='Phân quyền: '+donVi;
-  document.getElementById('pq-sub').textContent='Chọn bảng được phép nhập liệu:';
-  const pq=await DB.layPhanQuyen(id);
-  document.getElementById('pq-list').innerHTML=dsBang.map(b=>`
+
+async function moModalPQ(id, donVi) {
+  pqUserId = id;
+  document.getElementById('pq-title').textContent = 'Phân quyền: ' + donVi;
+  document.getElementById('pq-sub').textContent = 'Chọn bảng được phép nhập liệu:';
+  const pq = await DB.layPhanQuyen(id);
+  document.getElementById('pq-list').innerHTML = dsBang.map(b=>`
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;border-bottom:1px solid var(--g2)">
       <input type="checkbox" id="pq-${b.bang}" ${pq.includes(b.bang)?'checked':''}
         style="width:15px;height:15px;accent-color:var(--xc)">
@@ -836,7 +1044,9 @@ async function moModalPQ(id,donVi){
   UTILS.moModal('modal-pq');
 }
 
-// ── CHỈ TIÊU ──
+// ════════════════════════════════════════════════════════════
+// CHỈ TIÊU
+// ════════════════════════════════════════════════════════════
 async function hienChiTieu() {
   setAct('ni-ct');
   document.getElementById('topbar-t').textContent = 'Danh mục chỉ tiêu';
@@ -865,7 +1075,6 @@ async function taiChiTieu(maBang) {
   const ct = await DB.layChiTieuTheoBang(maBang);
   const b = dsBang.find(x=>x.bang===maBang);
 
-  // Helper tạo <select>
   const mkSel = (id, field, opts, cur, extraStyle='') =>
     `<select class="ct-sel" style="${extraStyle}" onchange="capNhatCT('${id}','${field}',this.value==='__true'?true:this.value==='__false'?false:this.value)">
       ${opts.map(o=>`<option value="${o.v}" ${String(cur)===String(o.v)?'selected':''}>${o.l}</option>`).join('')}
@@ -875,7 +1084,6 @@ async function taiChiTieu(maBang) {
   const optsTanSuat= [{v:'hang_thang',l:'Hàng tháng'},{v:'hang_quy',l:'Hàng quý'},{v:'nua_nam',l:'Nửa năm'},{v:'cuoi_nam',l:'Cuối năm'},{v:'nam_dac_biet',l:'Năm đặc biệt'}];
   const optsLaTD   = [{v:'__false',l:'Không'},{v:'__true',l:'Tiêu đề'}];
 
-  // Cột: [key, label, defaultW(px)]
   const cols = [
     {k:'ma_ht',  lbl:'Mã HT',        w:70},
     {k:'ma_bo',  lbl:'Mã Bộ',        w:80},
@@ -927,7 +1135,7 @@ async function taiChiTieu(maBang) {
       <td>${mkSel(c.id,'tan_suat',optsTanSuat,c.tan_suat||'hang_thang')}</td>
       <td>${mkSel(c.id,'la_tieu_de',optsLaTD,isTD?'__true':'__false')}</td>
       <td style="text-align:center;padding:3px 6px">
-        <button onclick="moXoaCT('${c.id}','${tenRut}')"
+        <button onclick="xoaChiTieuAdmin('${c.id}','${tenRut}','${maBang}')"
           style="padding:3px 8px;background:#fee2e2;color:var(--red);border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--font)"
           title="Xóa chỉ tiêu này">🗑️</button>
       </td>
@@ -951,12 +1159,10 @@ async function taiChiTieu(maBang) {
       </div>
     </div>`;
 
-  // Khởi động kéo thả cột
   initResizeCT();
 }
 
 function initResizeCT() {
-  // Lưu width mặc định vào dataset để reset khi cần
   document.querySelectorAll('#ct-tbl thead th').forEach(th => {
     th.style.width = th.style.width || th.offsetWidth + 'px';
   });
@@ -979,15 +1185,16 @@ async function capNhatCT(id, col, val) {
   try { await DB.capNhatChiTieu(id, {[col]: val}); toast('✅ Đã lưu!'); }
   catch(e) { toast('Lỗi: '+e.message,'er'); }
 }
+
 async function batTatTatCa(maBang,val){
   try {
-    await sb.from(CONFIG.BANG.CHI_TIEU).update({cho_phep_nhap:val}).eq('bang',maBang).eq('la_tieu_de',false);
+    const { error } = await sb.from(CONFIG.BANG.CHI_TIEU).update({cho_phep_nhap:val}).eq('bang',maBang).eq('la_tieu_de',false);
+    if (error) throw error;
     toast(val?'✅ Đã mở tất cả':'🔒 Đã khóa tất cả');
     taiChiTieu(maBang);
   } catch(e){toast('Lỗi: '+e.message,'er')}
 }
 
-// ── THÊM CHỈ TIÊU ──
 function moModalThemCT() {
   ['ct-id','ct-idbo','ct-ten','ct-dvt','ct-thutu','ct-stt'].forEach(id=>{const e=UTILS.el(id);if(e)e.value='';});
   if(UTILS.el('ct-kieu'))    UTILS.el('ct-kieu').value='number';
@@ -1025,8 +1232,7 @@ async function luuChiTieuMoi() {
     cho_phep_nhap:!laTD,
   };
   try {
-    const {error}=await sb.from(CONFIG.BANG.CHI_TIEU).insert(row);
-    if(error) throw error;
+    await DB.themChiTieu(row);
     toast('✅ Đã thêm chỉ tiêu mới!');
     UTILS.dongModal('modal-ct');
     taiChiTieu(maBang);
@@ -1037,58 +1243,151 @@ async function luuChiTieuMoi() {
   }
 }
 
-// ── XÓA CHỈ TIÊU (bảo vệ bằng mật khẩu cấp 2) ──
-let _xoaCTId=null, _xoaCTBang=null;
-
-function moXoaCT(id, ten) {
-  _xoaCTId=id;
-  _xoaCTBang=UTILS.el('sel-bang-ct')?.value;
-  UTILS.el('xoa-ct-info').innerHTML=
-    `Chỉ tiêu: <strong>${id}</strong> — "${ten}..."<br>
-     <span style="color:var(--red);font-size:11px">⚠️ Toàn bộ số liệu đã nhập của chỉ tiêu này cũng sẽ bị xóa vĩnh viễn!</span>`;
-  UTILS.el('mk2-inp').value='';
-  UTILS.el('err-xoa-ct').textContent='';
-  UTILS.moModal('modal-xoa-ct');
-  setTimeout(()=>UTILS.el('mk2-inp')?.focus(),100);
+// Xóa chỉ tiêu — V2: chỉ cần xacNhan (RLS thật đã chặn ghi/xóa chỉ tiêu cho
+// non-admin ở tầng CSDL; bỏ "mật khẩu cấp 2" của V1 vì không còn cần thiết).
+function xoaChiTieuAdmin(id, ten, maBang) {
+  UTILS.xacNhan('🗑️ Xoá chỉ tiêu',
+    `Chỉ tiêu: <strong>${id}</strong> — "${ten}"<br>
+     <span style="color:var(--red);font-size:11px">⚠️ Toàn bộ số liệu đã nhập của chỉ tiêu này cũng sẽ bị xoá vĩnh viễn!</span>`,
+    async () => {
+      try { await DB.xoaChiTieu(id); toast('🗑️ Đã xoá chỉ tiêu '+id); taiChiTieu(maBang); }
+      catch(e) { toast('Lỗi: '+e.message,'er'); }
+    });
 }
 
-async function xacNhanXoaCT() {
-  const err=UTILS.el('err-xoa-ct'); err.textContent='';
-  const mk=UTILS.el('mk2-inp').value;
-  if(!mk){err.textContent='Vui lòng nhập mật khẩu cấp 2.';return;}
-  try {
-    // Kiểm tra mật khẩu cấp 2
-    const {data,error}=await sb
-      .from(CONFIG.BANG.TAI_KHOAN)
-      .select('mat_khau')
-      .eq('don_vi','mật khẩu cấp 2')
-      .single();
-    if(error||!data) {err.textContent='❌ Không tìm thấy tài khoản bảo vệ. Liên hệ quản trị.';return;}
-    if(mk!==data.mat_khau){err.textContent='❌ Mật khẩu cấp 2 không đúng.';UTILS.el('mk2-inp').value='';UTILS.el('mk2-inp').focus();return;}
-    // Xóa
-    const {error:e2}=await sb.from(CONFIG.BANG.CHI_TIEU).delete().eq('id',_xoaCTId);
-    if(e2) throw e2;
-    toast('🗑️ Đã xóa chỉ tiêu '+_xoaCTId);
-    UTILS.dongModal('modal-xoa-ct');
-    if(_xoaCTBang) taiChiTieu(_xoaCTBang);
-  } catch(e){err.textContent='❌ Lỗi: '+e.message;}
-}
-
-// ── QUẢN LÝ BẢNG ──
+// ════════════════════════════════════════════════════════════
+// QUẢN LÝ BẢNG (danh_sach_bang) — V2: không cần CREATE TABLE thủ công
+// ════════════════════════════════════════════════════════════
 async function hienQuanLyBang() {
   setAct('ni-bang');
   document.getElementById('topbar-t').textContent = 'Quản lý bảng báo cáo';
   await loadBang();
-  // Nạp danh sách Google Sheet (null = bảng chưa tồn tại trong Supabase)
-  try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = null; }
+  try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = []; }
   renderQuanLyBang();
   document.getElementById('content').insertAdjacentHTML('beforeend', renderGSheetCard());
   document.getElementById('content').insertAdjacentHTML('beforeend', renderGanGSCard());
 }
 
+function renderQuanLyBang() {
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
+        <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th style="width:60px;text-align:center">Thứ tự</th>
+            <th style="width:90px">Mã bảng</th>
+            <th>Tên bảng</th>
+            <th>Đơn vị báo cáo</th>
+            <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
+            <th style="text-align:center;width:70px">Rộng ĐVT</th>
+            <th style="text-align:center;width:80px">Rộng ghi chú</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${dsBang.map(b=>`<tr>
+            <td style="text-align:center;padding:4px 8px">
+              <input class="num-inp" type="number" min="1" value="${b.thu_tu||''}" placeholder="--"
+                onchange="luuDoRongBang('${b.bang}','thu_tu',parseInt(this.value)||null)">
+            </td>
+            <td class="mono" style="font-size:12px">${b.bang}</td>
+            <td>
+              <input type="text" value="${(b.ten_bang||'').replace(/"/g,'&quot;')}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','ten_bang',this.value)">
+            </td>
+            <td>
+              <input type="text" value="${(b.don_vi_bao_cao||'').replace(/"/g,'&quot;')}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="40" max="150" value="${b.do_rong_dvt||70}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_dvt',parseInt(this.value)||70)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="300" value="${b.do_rong_ghichu||140}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
+            </td>
+            <td style="white-space:nowrap">
+              <button class="btn danger" style="padding:4px 8px" onclick="xoaBangAdmin('${b.bang}','${(b.ten_bang||'').replace(/'/g,"\\'")}')">🗑 Xoá</button>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#1b5e20">
+      ✅ <strong>V2:</strong> thêm bảng báo cáo mới không cần tạo bảng CSDL riêng — mọi số liệu đều nằm
+      trong bảng <code>so_lieu</code> chung. Chỉ cần thêm dòng ở đây rồi sang mục "Chỉ tiêu" để thêm chỉ tiêu.
+    </div>`;
+}
+
+function moModalThemBang() {
+  const soBang = dsBang.length + 1;
+  const maMoi  = `bang_${String(soBang).padStart(2,'0')}`;
+  UTILS.xacNhan(
+    '+ Thêm bảng báo cáo mới',
+    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ BẢNG *</label>
+        <input id="nb-ma" type="text" value="${maMoi}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN BẢNG *</label>
+        <input id="nb-ten" type="text" placeholder="VD: Lâm nghiệp" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">ĐƠN VỊ BÁO CÁO</label>
+        <input id="nb-dv" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+    </div>`,
+    async () => {
+      const ma  = document.getElementById('nb-ma')?.value.trim();
+      const ten = document.getElementById('nb-ten')?.value.trim();
+      const dv  = document.getElementById('nb-dv')?.value.trim();
+      if (!ma || !ten) { toast('Vui lòng điền Mã bảng và Tên bảng!','er'); return; }
+      try {
+        await DB.themBang({ bang: ma, ten_bang: ten, don_vi_bao_cao: dv||'', thu_tu: soBang, do_rong_ten:280, do_rong_dvt:70, do_rong_ghichu:140 });
+        toast('✅ Đã thêm bảng ' + ten + '!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+(/duplicate/.test(e.message)?'Mã bảng đã tồn tại.':e.message),'er'); }
+    }
+  );
+}
+
+function xoaBangAdmin(maBang, tenBang) {
+  UTILS.xacNhan(
+    '🗑 Xoá bảng báo cáo',
+    `<p>Xoá bảng <strong>${tenBang}</strong> (<code>${maBang}</code>) khỏi danh sách?</p>
+     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
+       ⚠️ Sẽ thất bại nếu bảng còn chỉ tiêu — hãy xoá/chuyển hết chỉ tiêu của bảng này trước.
+     </div>`,
+    async () => {
+      try {
+        await DB.xoaBang(maBang);
+        toast('✅ Đã xoá bảng ' + tenBang + '!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+(/foreign key|violates/.test(e.message)?'Không thể xoá: bảng còn chỉ tiêu.':e.message),'er'); }
+    }
+  );
+}
+
+async function luuTenBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('✅ Đã lưu!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+async function luuDoRongBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('📐 Đã lưu độ rộng!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
 // ── GẮN GOOGLE SHEET VÀO BẢNG BÁO CÁO (danh_sach_bang.gsheet_url) ──
-// Bảng được gắn sheet sẽ hiển thị sheet thay cho bảng nhập liệu.
-// Lưu link GỐC người dùng dán; hệ thống tự chuyển sang dạng nhúng khi hiển thị.
 function renderGanGSCard() {
   const coUrl   = dsBang.filter(b => b.gsheet_url);
   const chuaUrl = dsBang.filter(b => !b.gsheet_url);
@@ -1148,7 +1447,7 @@ const GSB = {
         if(!url || !bang){ toast('Vui lòng dán link và chọn bảng!','er'); return; }
         if(!url.includes('docs.google.com/spreadsheets')){ toast('Link phải là Google Sheets.','er'); return; }
         try{
-          await DB.capNhatBang(bang, { gsheet_url: url });   // lưu link GỐC
+          await DB.capNhatBang(bang, { gsheet_url: url });
           toast('✅ Đã gắn Google Sheet!');
           await hienQuanLyBang();
         }catch(e){ toast('Lỗi: '+e.message,'er'); }
@@ -1179,53 +1478,41 @@ const GSB = {
   },
 };
 
-// ── QUẢN LÝ GOOGLE SHEET ──
-let dsGS = [];
+// ── QUẢN LÝ GOOGLE SHEET NHÚNG (danh_sach_gsheet) ──
 function renderGSheetCard() {
-  let body;
-  if (dsGS === null) {
-    body = `<div style="color:var(--red);font-size:12px;padding:4px 0">⚠️ Chưa có bảng <code>danh_sach_gsheet</code> trong Supabase. Chạy SQL sau một lần rồi tải lại trang:</div>
-      <pre style="background:var(--g1);border-radius:6px;padding:10px;margin-top:6px;font-size:11px;overflow-x:auto">CREATE TABLE danh_sach_gsheet (
-  id        SERIAL PRIMARY KEY,
-  ten_sheet TEXT NOT NULL,
-  mo_ta     TEXT,
-  embed_url TEXT NOT NULL,
-  thu_tu    INTEGER DEFAULT 1,
-  chieu_cao INTEGER DEFAULT 520,
-  hien_thi  BOOLEAN DEFAULT TRUE,
-  tao_luc   TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE danh_sach_gsheet ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "read_all"  ON danh_sach_gsheet FOR SELECT USING (true);
-CREATE POLICY "write_all" ON danh_sach_gsheet USING (true) WITH CHECK (true);</pre>`;
-  } else {
-    const rows = dsGS.map(s=>`<tr>
-      <td style="text-align:center;padding:4px 8px">
-        <input class="num-inp" type="number" min="1" value="${s.thu_tu||''}"
-          onchange="GS.capNhat(${s.id},'thu_tu',parseInt(this.value)||1)"></td>
-      <td><input type="text" value="${(s.ten_sheet||'').replace(/"/g,'&quot;')}"
-          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
-          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-          onchange="GS.capNhat(${s.id},'ten_sheet',this.value)"></td>
-      <td><input type="text" value="${(s.mo_ta||'').replace(/"/g,'&quot;')}" placeholder="Mô tả ngắn"
-          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
-          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-          onchange="GS.capNhat(${s.id},'mo_ta',this.value)"></td>
-      <td><input type="text" value="${(s.embed_url||'').replace(/"/g,'&quot;')}" placeholder="https://docs.google.com/spreadsheets/d/…"
-          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono,monospace);font-size:11px;outline:none"
-          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-          onchange="GS.capNhat(${s.id},'embed_url',this.value)"></td>
-      <td style="text-align:center;padding:4px 6px">
-        <input class="num-inp" type="number" min="200" max="2000" value="${s.chieu_cao||520}"
-          onchange="GS.capNhat(${s.id},'chieu_cao',parseInt(this.value)||520)"></td>
-      <td style="text-align:center">
-        <label class="sw"><input type="checkbox" ${s.hien_thi?'checked':''}
-          onchange="GS.capNhat(${s.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
-      <td style="white-space:nowrap">
-        <a href="${s.embed_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
-        <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GS.xoa(${s.id},this.dataset.ten)" data-ten="${(s.ten_sheet||'').replace(/"/g,'&quot;')}">🗑</button></td>
-    </tr>`).join('');
-    body = `<div style="overflow-x:auto"><table class="dt">
+  const rows = dsGS.map(s=>`<tr>
+    <td style="text-align:center;padding:4px 8px">
+      <input class="num-inp" type="number" min="1" value="${s.thu_tu||''}"
+        onchange="GS.capNhat(${s.id},'thu_tu',parseInt(this.value)||1)"></td>
+    <td><input type="text" value="${(s.ten_sheet||'').replace(/"/g,'&quot;')}"
+        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+        onchange="GS.capNhat(${s.id},'ten_sheet',this.value)"></td>
+    <td><input type="text" value="${(s.mo_ta||'').replace(/"/g,'&quot;')}" placeholder="Mô tả ngắn"
+        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+        onchange="GS.capNhat(${s.id},'mo_ta',this.value)"></td>
+    <td><input type="text" value="${(s.embed_url||'').replace(/"/g,'&quot;')}" placeholder="https://docs.google.com/spreadsheets/d/…"
+        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono,monospace);font-size:11px;outline:none"
+        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+        onchange="GS.capNhat(${s.id},'embed_url',this.value)"></td>
+    <td style="text-align:center;padding:4px 6px">
+      <input class="num-inp" type="number" min="200" max="2000" value="${s.chieu_cao||520}"
+        onchange="GS.capNhat(${s.id},'chieu_cao',parseInt(this.value)||520)"></td>
+    <td style="text-align:center">
+      <label class="sw"><input type="checkbox" ${s.hien_thi?'checked':''}
+        onchange="GS.capNhat(${s.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
+    <td style="white-space:nowrap">
+      <a href="${s.embed_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
+      <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GS.xoa(${s.id},this.dataset.ten)" data-ten="${(s.ten_sheet||'').replace(/"/g,'&quot;')}">🗑</button></td>
+  </tr>`).join('');
+
+  return `<div class="card" style="margin-top:12px">
+    <div class="card-head">
+      <h3>📈 Google Sheet nhúng <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsGS.length} sheet)</span></h3>
+      <button class="btn primary" onclick="GS.moThem()">+ Thêm Sheet</button>
+    </div>
+    <div style="overflow-x:auto"><table class="dt">
       <thead><tr>
         <th style="width:60px;text-align:center">Thứ tự</th>
         <th style="min-width:160px">Tên sheet</th>
@@ -1237,14 +1524,7 @@ CREATE POLICY "write_all" ON danh_sach_gsheet USING (true) WITH CHECK (true);</p
       </tr></thead>
       <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--g4)">Chưa có Google Sheet nào. Nhấn "+ Thêm Sheet" để bắt đầu.</td></tr>'}</tbody>
     </table></div>
-    <div style="font-size:11px;color:var(--g4);margin-top:8px">💡 Sheet hiển thị sẽ xuất hiện trong nhóm "📈 Dữ liệu Google Sheet" ở trang nhập liệu. Link dạng <code>/edit</code> sẽ tự chuyển sang chế độ nhúng khi hiển thị.</div>`;
-  }
-  return `<div class="card" style="margin-top:12px">
-    <div class="card-head">
-      <h3>📈 Google Sheet nhúng <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsGS===null?'chưa cài':dsGS.length+' sheet'})</span></h3>
-      ${dsGS===null?'':'<button class="btn primary" onclick="GS.moThem()">+ Thêm Sheet</button>'}
-    </div>
-    ${body}
+    <div style="font-size:11px;color:var(--g4);margin-top:8px">💡 Sheet hiển thị sẽ xuất hiện trong nhóm "📈 Dữ liệu Google Sheet" ở trang nhập liệu. Link dạng <code>/edit</code> sẽ tự chuyển sang chế độ nhúng khi hiển thị.</div>
   </div>`;
 }
 
@@ -1293,151 +1573,9 @@ const GS = {
   },
 };
 
-function renderQuanLyBang() {
-  document.getElementById('content').innerHTML = `
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-head">
-        <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
-        <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="dt">
-          <thead><tr>
-            <th style="width:60px;text-align:center">Thứ tự</th>
-            <th style="width:80px">Mã bảng</th>
-            <th>Tên bảng</th>
-            <th>Đơn vị báo cáo</th>
-            <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
-            <th style="text-align:center;width:70px">Rộng ĐVT</th>
-            <th style="text-align:center;width:80px">Rộng ghi chú</th>
-            <th style="width:80px">Bảng DB</th>
-            <th></th>
-          </tr></thead>
-          <tbody>${dsBang.map(b=>`<tr>
-            <td style="text-align:center;padding:4px 8px">
-              <input class="num-inp" type="number" min="1" value="${b.thu_tu||''}" placeholder="--"
-                onchange="luuDoRongBang('${b.bang}','thu_tu',parseInt(this.value)||null)">
-            </td>
-            <td class="mono" style="font-size:12px">${b.bang}</td>
-            <td>
-              <input type="text" value="${b.ten_bang||''}"
-                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
-                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-                onchange="luuTenBang('${b.bang}','ten_bang',this.value)">
-            </td>
-            <td>
-              <input type="text" value="${b.don_vi_bao_cao||''}"
-                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
-                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-                onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="40" max="150" value="${b.do_rong_dvt||70}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_dvt',parseInt(this.value)||70)">
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="80" max="300" value="${b.do_rong_ghichu||140}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
-            </td>
-            <td class="mono" style="font-size:10px;color:var(--g4)">${(CONFIG.BANG.CSDL_PREFIX+b.bang).toLowerCase()}</td>
-            <td style="white-space:nowrap">
-              <button class="btn danger" style="padding:4px 8px" onclick="xoaBang('${b.bang}','${b.ten_bang}')">🗑 Xoá</button>
-            </td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </div>
-    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#6d4c00">
-      ⚠️ <strong>Trước khi thêm bảng:</strong> chạy SQL tạo bảng dữ liệu trong Supabase trước:<br>
-      <code style="background:#fef3c7;padding:2px 6px;border-radius:3px;font-size:11px">
-        CREATE TABLE csdl_bang_06 (LIKE csdl_bang_01 INCLUDING ALL);
-      </code>
-    </div>`;
-}
-
-// Modal thêm bảng mới
-function moModalThemBang() {
-  // Tính mã bảng tiếp theo
-  const soBang = dsBang.length + 1;
-  const maMoi  = `Bang_${String(soBang).padStart(2,'0')}`;
-  const thuTu  = soBang;
-
-  UTILS.xacNhan(
-    '+ Thêm bảng báo cáo mới',
-    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ BẢNG</label>
-        <input id="nb-ma" type="text" value="${maMoi}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none">
-        <div style="font-size:11px;color:var(--g4);margin-top:3px">Bảng DB sẽ là: <strong id="nb-db-preview">${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()}</strong></div>
-      </div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN BẢNG</label>
-        <input id="nb-ten" type="text" placeholder="VD: Lâm nghiệp" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">ĐƠN VỊ BÁO CÁO</label>
-        <input id="nb-dv" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 10px;font-size:11px;color:#856404">
-        ⚠️ Phải tạo bảng DB trong Supabase trước:<br>
-        <code id="nb-sql-preview">CREATE TABLE ${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()} (LIKE csdl_bang_01 INCLUDING ALL);</code>
-      </div>
-    </div>`,
-    async () => {
-      const ma  = document.getElementById('nb-ma')?.value.trim();
-      const ten = document.getElementById('nb-ten')?.value.trim();
-      const dv  = document.getElementById('nb-dv')?.value.trim();
-      if (!ma || !ten) { toast('Vui lòng điền Mã bảng và Tên bảng!','er'); return; }
-      try {
-        await sb.from(CONFIG.BANG.DANH_SACH_BANG).insert({
-          bang: ma, ten_bang: ten, don_vi_bao_cao: dv||'',
-          thu_tu: thuTu, do_rong_ten: 280, do_rong_dvt: 70, do_rong_ghichu: 140
-        });
-        toast('✅ Đã thêm bảng ' + ten + '!');
-        await loadBang();
-        renderQuanLyBang();
-      } catch(e) { toast('Lỗi: '+e.message,'er'); }
-    }
-  );
-  // Cập nhật preview khi gõ mã
-  setTimeout(()=>{
-    const inp = document.getElementById('nb-ma');
-    if(inp) inp.addEventListener('input', ()=>{
-      const v = inp.value.trim();
-      const db = (CONFIG.BANG.CSDL_PREFIX+v).toLowerCase();
-      const prev = document.getElementById('nb-db-preview');
-      const sql  = document.getElementById('nb-sql-preview');
-      if(prev) prev.textContent = db;
-      if(sql)  sql.textContent  = `CREATE TABLE ${db} (LIKE csdl_bang_01 INCLUDING ALL);`;
-    });
-  }, 100);
-}
-
-async function xoaBang(maBang, tenBang) {
-  UTILS.xacNhan(
-    '🗑 Xoá bảng báo cáo',
-    `<p>Xoá bảng <strong>${tenBang}</strong> (<code>${maBang}</code>) khỏi danh sách?</p>
-     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
-       ⚠️ Thao tác này chỉ xoá khỏi danh sách — <strong>không xoá bảng dữ liệu</strong> trong Supabase và <strong>không xoá chỉ tiêu</strong>.<br>
-       Để xoá hoàn toàn, cần chạy SQL trong Supabase.
-     </div>`,
-    async () => {
-      try {
-        await sb.from(CONFIG.BANG.DANH_SACH_BANG).delete().eq('bang', maBang);
-        toast('✅ Đã xoá bảng ' + tenBang + ' khỏi danh sách!');
-        await loadBang();
-        renderQuanLyBang();
-      } catch(e) { toast('Lỗi: '+e.message,'er'); }
-    }
-  );
-}
-
-async function luuTenBang(maBang, col, val) {
-  const u={}; u[col]=val;
-  try { await DB.capNhatBang(maBang, u); toast('✅ Đã lưu!'); }
-  catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
-
-// ── TIÊU ĐỀ BẢNG ──
+// ════════════════════════════════════════════════════════════
+// TIÊU ĐỀ BẢNG
+// ════════════════════════════════════════════════════════════
 async function hienTieuDeBang() {
   setAct('ni-tdb');
   document.getElementById('topbar-t').textContent = 'Tiêu đề bảng báo cáo';
@@ -1461,52 +1599,12 @@ async function hienTieuDeBang() {
       </div>
     </div>`;
 }
-async function luuDoRongBang(maBang, col, val) {
-  const u={}; u[col]=val;
-  try { await DB.capNhatBang(maBang, u); toast('📐 Đã lưu độ rộng!'); }
-  catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
 
 async function luuTieuDe(maBang) {
   const td1 = document.getElementById('td1-'+maBang)?.value.trim()||'';
   const td2 = document.getElementById('td2-'+maBang)?.value.trim()||'';
   try { await DB.capNhatBang(maBang,{tieu_de_chinh:td1,tieu_de_phu:td2}); toast('✅ Đã lưu tiêu đề!'); }
   catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
-
-// ── ĐỔI MẬT KHẨU ──
-function hienDoiPass() {
-  document.getElementById('topbar-t').textContent = 'Đổi mật khẩu';
-  document.getElementById('content').innerHTML = `
-    <div style="max-width:400px;margin:0 auto">
-      <div class="card">
-        <div class="card-head"><h3>🔐 Đổi mật khẩu</h3></div>
-        <div class="form-grid" style="grid-template-columns:1fr">
-          <div class="fg"><label>Đơn vị</label><input class="inp" value="${user.don_vi}" disabled style="background:var(--g1)"></div>
-          <div class="fg"><label>Mật khẩu hiện tại</label><input class="inp" type="password" id="dp-cu" placeholder="••••••••"></div>
-          <div class="fg"><label>Mật khẩu mới (≥4 ký tự)</label><input class="inp" type="password" id="dp-moi" placeholder="••••••••"></div>
-          <div class="fg"><label>Nhập lại mật khẩu mới</label><input class="inp" type="password" id="dp-moi2" placeholder="••••••••"></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn primary" onclick="luuPassAdmin()">💾 Lưu mật khẩu</button>
-        </div>
-        <div class="err-txt" id="err-dp" style="padding:0 16px 12px"></div>
-      </div>
-    </div>`;
-}
-async function luuPassAdmin() {
-  const cu=document.getElementById('dp-cu').value, moi=document.getElementById('dp-moi').value, moi2=document.getElementById('dp-moi2').value;
-  const err=document.getElementById('err-dp'); err.textContent=''; err.style.color='var(--red)';
-  if(cu!==(user.mat_khau||CONFIG.MAT_KHAU_MAC_DINH)){err.textContent='Mật khẩu hiện tại không đúng.';return}
-  if(moi.length<4){err.textContent='Mật khẩu mới phải có ít nhất 4 ký tự.';return}
-  if(moi!==moi2){err.textContent='Mật khẩu nhập lại không khớp.';return}
-  if(moi===CONFIG.MAT_KHAU_MAC_DINH){err.textContent='Không được dùng lại mật khẩu mặc định.';return}
-  try {
-    await DB.doiMatKhau(user.id, moi);
-    user.mat_khau=moi; UTILS.luuSession(user);
-    err.style.color='var(--xc)'; err.textContent='✅ Đổi mật khẩu thành công!';
-    ['dp-cu','dp-moi','dp-moi2'].forEach(id=>document.getElementById(id).value='');
-  } catch(e){err.textContent='Lỗi: '+e.message}
 }
 </script>
 </body>
