@@ -44,11 +44,18 @@ function taoBuilder(bang) {
   return b;
 }
 
+global.RPC_NHAT_KY = [];         // MỚI Bước 6d: nhật ký lời gọi .rpc(ten, tham_so)
+global.RPC_PHAN_HOI = {};        // RPC_PHAN_HOI[ten] = {data, error}
 global.supabase = {
   createClient(url, key, opts) {
     return {
       _opts: opts || null,
       from: (bang) => taoBuilder(bang),
+      rpc: (ten, thamSo) => {
+        RPC_NHAT_KY.push({ ten, thamSo });
+        const ph = RPC_PHAN_HOI[ten] || { data: null, error: null };
+        return Promise.resolve({ data: ph.data, error: ph.error || null });
+      },
       auth: {
         async signInWithPassword({ email }) {
           NHAT_KY.push({ bang: '@auth.signIn', ops: [[email]] });
@@ -176,12 +183,16 @@ const timGoi = (bang) => NHAT_KY.filter(g => g.bang === bang);
   const goiHT = timGoi('cot_bao_cao').at(-1);
   ok(goiHT.ops.some(o => o[0]==='eq' && o[1]==='dua_vao_bieu' && o[2]===true), 'layCotHienThi lọc dua_vao_bieu=true');
 
-  console.log('== 10. DB.taoTaiKhoan (client phụ không lưu phiên) ==');
-  NHAT_KY.length = 0;
-  const u = await DB.taoTaiKhoan('Moi@snnmt.gov.vn', 'Mk@12345', { don_vi: 'CC B', ho_ten: 'CV 2', vai_tro: 'sai_vai_tro' });
-  const goiSU = timGoi('@auth.signUp').at(-1).ops[0][0];
-  ok(u.id === 'uuid-moi' && goiSU.email === 'moi@snnmt.gov.vn', 'signUp email lowercase, trả user mới');
-  ok(goiSU.options.data.vai_tro === 'editor', "vai trò lạ bị ép về 'editor' (an toàn)");
+  console.log('== 10. DB.taoTaiKhoan (RPC tao_tai_khoan — đổi ở Bước 6c/6d, không còn auth.signUp) ==');
+  RPC_NHAT_KY.length = 0;
+  RPC_PHAN_HOI['tao_tai_khoan'] = { data: 'uuid-moi', error: null };
+  const u = await DB.taoTaiKhoan('Moi@snnmt.gov.vn', 'Mk@123456', { don_vi_id: 4, ho_ten: 'CV 2', vai_tro: 'editor' });
+  const goiTao = RPC_NHAT_KY.at(-1);
+  ok(u === 'uuid-moi', 'taoTaiKhoan trả về uuid RPC trả về (không còn trả object user như signUp)');
+  ok(goiTao.ten === 'tao_tai_khoan', 'gọi đúng RPC tao_tai_khoan');
+  ok(goiTao.thamSo.p_email === 'moi@snnmt.gov.vn', 'email lowercase + trim trước khi gửi RPC');
+  ok(goiTao.thamSo.p_don_vi_id === 4, 'truyền đúng p_don_vi_id (thay cho don_vi text V1/6b)');
+  ok(goiTao.thamSo.p_vai_tro === 'editor', 'truyền đúng p_vai_tro (RPC phía CSDL tự kiểm hợp lệ, xem test_buoc_6d.js nhóm G)');
 
   console.log('== 11. UTILS session cache (localStorage, key u2) ==');
   UTILS.luuSession({ id: 'uuid-123', vai_tro: 'admin' });

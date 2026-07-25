@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6a — xembaocao.html v2, tạo 2026/07/19 20:26 (GMT+7), sửa 2026/07/20 06:12 (GMT+7): chọn nhanh về đúng nguyên tắc V1 -->
+<!-- Phiên bản file: Bước 6d — xembaocao.html v3, cập nhật 2026/07/25 14:04 (GMT+7): lọc bảng theo bảng-được-xem của đơn vị -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -257,11 +257,11 @@ const XEM = {
 
     document.title = 'Xem báo cáo – ' + (CONFIG.TEN_CO_QUAN||'');
     UTILS.el('sb-name').textContent = this.user.don_vi || this.user.ho_ten || '';
-    UTILS.el('sb-role').textContent = this.user.vai_tro==='admin' ? '⚙️ Quản trị viên' : '👁️ Xem báo cáo';
+    UTILS.el('sb-role').textContent = UTILS.laAdmin(this.user) ? UTILS.nhanVaiTro(this.user.vai_tro) : '👁️ Xem báo cáo';
 
     try{
       [this.dsBang, this.allCot] = await Promise.all([
-        this.user.vai_tro==='admin' ? DB.layTatCaBang() : DB.layBangDuocPhep(this.user.id),
+        UTILS.laAdmin(this.user) ? DB.layTatCaBang() : DB.layBangDuocXem(this.user.don_vi_id),
         DB.layTatCaCot()   // toàn bộ cột (mọi năm), sẽ lọc theo năm ở giao diện
       ]);
     }catch(e){

@@ -1,3 +1,5 @@
+// Phiên bản ứng dụng: V2 — nâng cấp bảo mật
+// Phiên bản file: Bước 6d — config.js, cập nhật 2026/07/25 14:04 (GMT+7)
 // ============================================================
 // CONFIG.JS — V2 (project Supabase MỚI, độc lập hoàn toàn với V1)
 // Publishable key AN TOÀN để đặt trong frontend — RLS mới là
@@ -24,8 +26,11 @@ const CONFIG = {
     COT_BAO_CAO:     'cot_bao_cao',
     SO_LIEU:         'so_lieu',
     HO_SO:           'ho_so',
-    PHAN_QUYEN_BANG: 'phan_quyen_bang',
+    PHAN_QUYEN_BANG: 'phan_quyen_bang',    // NGƯNG DÙNG từ Bước 6c — giữ tạm, xem DON_VI/QUYEN_DOC_BANG
     GSHEET:          'danh_sach_gsheet',
     SO_SANH:         'cau_hinh_so_sanh',
+    DON_VI:          'don_vi',             // MỚI Bước 6c: đơn vị/phòng ban
+    QUYEN_DOC_BANG:  'quyen_doc_bang',      // MỚI Bước 6c: quyền đọc bổ sung (đơn vị × bảng)
+    LICH_SU_SO_LIEU: 'lich_su_so_lieu',     // MỚI Bước 6c: nhật ký sửa số liệu
   },
 };

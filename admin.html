@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6b — admin.html v2, tạo 2026/07/20 23:18 (GMT+7) -->
+<!-- Phiên bản file: Bước 6d — admin.html v3, cập nhật 2026/07/25 14:04 (GMT+7) -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -213,20 +213,21 @@ table.ct-tbl tr.tr-locked{opacity:.55}
       <div class="fg" id="tk-email-wrap"><label>Email đăng nhập</label>
         <input class="inp mono" id="tk-email" type="email" placeholder="donvi@snnmt.gov.vn"></div>
       <div class="fg" id="tk-mk-wrap">
-        <label>Mật khẩu ban đầu (≥6 ký tự)</label>
+        <label>Mật khẩu ban đầu (≥8 ký tự)</label>
         <div style="display:flex;gap:6px">
           <input class="inp mono" id="tk-mk" type="text" placeholder="••••••••" style="flex:1">
           <button type="button" class="btn ghost" onclick="ADMIN.sinhMKNgauNhien()">🎲 Sinh</button>
         </div>
       </div>
-      <div class="fg"><label>Tên đơn vị / phòng ban</label>
-        <input class="inp" id="tk-donvi" placeholder="Chi cục Thủy sản"></div>
+      <div class="fg"><label>Đơn vị / phòng ban</label>
+        <select class="inp" id="tk-donvi"></select></div>
       <div class="fg"><label>Họ tên người phụ trách</label>
         <input class="inp" id="tk-hoten" placeholder="Nguyễn Văn A"></div>
       <div class="fg"><label>Vai trò</label>
         <select class="inp" id="tk-vaitro">
           <option value="editor">Người nhập liệu (Editor)</option>
-          <option value="admin">Quản trị viên (Admin)</option>
+          <option value="admin_han_che">Quản trị hạn chế (không xoá, không đụng tài khoản)</option>
+          <option value="admin">Quản trị viên toàn quyền</option>
         </select></div>
     </div>
     <div class="mbtns">
@@ -237,13 +238,39 @@ table.ct-tbl tr.tr-locked{opacity:.55}
   </div>
 </div>
 
-<!-- Modal phân quyền -->
+<!-- Modal đặt lại mật khẩu (chỉ admin toàn quyền) -->
+<div class="modal-bg" id="modal-dlmk">
+  <div class="mbox">
+    <h3>🔑 Đặt lại mật khẩu</h3>
+    <p>Tài khoản: <strong class="mono" id="dlmk-email"></strong></p>
+    <div class="mrow">
+      <div class="fg">
+        <label>Mật khẩu mới (≥8 ký tự)</label>
+        <div style="display:flex;gap:6px">
+          <input class="inp mono" id="dlmk-mk" type="text" placeholder="••••••••" style="flex:1">
+          <button type="button" class="btn ghost" onclick="ADMIN.sinhMKDatLai()">🎲 Sinh</button>
+        </div>
+      </div>
+    </div>
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;font-size:12px;color:#92400e;margin-bottom:12px">
+      ⚠️ Sẽ huỷ phiên đăng nhập hiện tại của người này (nếu đang mở) và buộc họ đổi mật khẩu ngay lần vào tiếp theo.
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="ADMIN.luuDatLaiMK()">💾 Đặt lại</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-dlmk" style="margin-top:8px"></div>
+  </div>
+</div>
+
+
+<!-- Modal gán bảng xem thêm (đơn vị) -->
 <div class="modal-bg" id="modal-pq">
   <div class="mbox">
-    <h3 id="pq-title">Phân quyền bảng</h3><p id="pq-sub"></p>
+    <h3 id="pq-title">Bảng xem thêm</h3><p id="pq-sub"></p>
     <div id="pq-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
     <div class="mbtns">
-      <button class="btn-p" onclick="ADMIN.luuPQ()">💾 Lưu phân quyền</button>
+      <button class="btn-p" onclick="ADMIN.luuPQ()">💾 Lưu</button>
       <button class="btn-g" onclick="UTILS.dongModal('modal-pq')">Đóng</button>
     </div>
   </div>
@@ -317,7 +344,8 @@ function closeSidebar(){
 
 let user=null;
 let dsBang=[], dsLoai=[], dsCot=[], dsHoSo=[], dsSoSanh=[], dsGS=[];
-let editCotId=null, editHoSoId=null, pqUserId=null;
+let dsDonVi=[], dsTaiKhoan=[], dsQuyenDoc=[];
+let editCotId=null, editHoSoId=null, xemDonViId=null;
 let sortCol='', sortDir=1;
 let filterNamBD='', filterNamKT='';
 
@@ -327,7 +355,7 @@ window.addEventListener('load', async () => {
   DB.onAuthChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
   const nguoiDung = await UTILS.kiemTraDangNhap();
   if (!nguoiDung) { location.replace('index.html'); return; }
-  if (nguoiDung.vai_tro !== 'admin') {
+  if (!UTILS.laAdmin(nguoiDung)) {
     alert('Trang quản trị chỉ dành cho quản trị viên.');
     location.replace('index.html');
     return;
@@ -335,7 +363,7 @@ window.addEventListener('load', async () => {
   user = nguoiDung;
   document.title = 'Quản trị – ' + (CONFIG.TEN_CO_QUAN || '');
   document.getElementById('sb-name').textContent = user.don_vi || user.ho_ten || '';
-  document.getElementById('sb-role').textContent = '⚙️ Quản trị viên';
+  document.getElementById('sb-role').textContent = UTILS.nhanVaiTro(user.vai_tro);
   buildMenu();
   try {
     [dsBang, dsLoai] = await Promise.all([DB.layTatCaBang(), DB.layLoaiSoLieu()]);
@@ -355,10 +383,11 @@ function buildMenu() {
     <div class="ni" id="ni-ct" onclick="hienChiTieu()"><span class="i">📑</span> Chỉ tiêu</div>
     <div class="ni" id="ni-bang" onclick="hienQuanLyBang()"><span class="i">🗂️</span> Quản lý bảng</div>
     <div class="ni" id="ni-tdb" onclick="hienTieuDeBang()"><span class="i">🏷️</span> Tiêu đề bảng</div>
+    <div class="ni" id="ni-donvi" onclick="hienDonVi()"><span class="i">🏢</span> Đơn vị</div>
     <div class="nlbl">Vận hành</div>
     <div class="ni" id="ni-mk" onclick="hienDuyetMoKhoa()"><span class="i">🔓</span> Duyệt mở khóa<span id="badge-mk"></span></div>
     <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
-    <div class="ni" id="ni-pq" onclick="hienPhanQuyen()"><span class="i">🔑</span> Phân quyền</div>`;
+    <div class="ni" id="ni-ls" onclick="hienLichSu()"><span class="i">📜</span> Nhật ký sửa số liệu</div>`;
 }
 function setAct(id) { closeSidebar(); document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act')); document.getElementById(id)?.classList.add('act'); }
 
@@ -366,6 +395,8 @@ async function loadBang() { dsBang = await DB.layTatCaBang(); }
 async function loadLoai() { dsLoai = await DB.layLoaiSoLieu(); }
 async function loadCot(namBD, namKT) { dsCot = await DB.layTatCaCot(namBD, namKT); }
 async function loadHoSo() { dsHoSo = await DB.layTatCaHoSo(); }
+async function loadDonVi() { dsDonVi = await DB.layTatCaDonVi(); }
+async function loadTaiKhoan() { dsTaiKhoan = await DB.dsTaiKhoanDayDu(); }
 
 async function capNhatBadgeMoKhoa() {
   try {
@@ -537,7 +568,7 @@ function renderCotBaoCao() {
     </td>
     <td style="white-space:nowrap">
       <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalCot(${k.id})">✏️</button>
-      <button class="btn danger" style="padding:4px 8px" onclick="xoaCotAdmin(${k.id})">🗑</button>
+      ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaCotAdmin(${k.id})">🗑</button>` : ''}
     </td>
   </tr>`;
   }).join('');
@@ -796,16 +827,17 @@ const ADMIN = {
   // ── TÀI KHOẢN ──
   moModalTK(id=null) {
     editHoSoId = id;
-    const r = id ? dsHoSo.find(x=>x.id===id) : null;
+    const r = id ? dsTaiKhoan.find(x=>x.id===id) : null;
     document.getElementById('tk-modal-title').textContent = r ? 'Sửa tài khoản' : 'Thêm tài khoản';
     document.getElementById('tk-modal-sub').textContent = r
-      ? 'Không đổi được email/mật khẩu ở đây — dùng Supabase Dashboard (Authentication → Users).'
+      ? 'Không đổi được email/mật khẩu ở đây — dùng nút "🔑 Đặt lại MK" ở danh sách.'
       : 'Tài khoản mới sẽ đăng nhập bằng email + mật khẩu bên dưới.';
     document.getElementById('tk-email-wrap').style.display = r ? 'none' : '';
     document.getElementById('tk-mk-wrap').style.display = r ? 'none' : '';
     document.getElementById('tk-email').value = '';
     document.getElementById('tk-mk').value = '';
-    document.getElementById('tk-donvi').value  = r?.don_vi  || '';
+    document.getElementById('tk-donvi').innerHTML = `<option value="">— Chưa gán —</option>` +
+      dsDonVi.map(d=>`<option value="${d.id}" ${r?.don_vi_id===d.id?'selected':''}>${d.ten}</option>`).join('');
     document.getElementById('tk-hoten').value  = r?.ho_ten  || '';
     document.getElementById('tk-vaitro').value = r?.vai_tro || 'editor';
     document.getElementById('err-tk').textContent = '';
@@ -820,16 +852,17 @@ const ADMIN = {
   async luuTK() {
     const err = document.getElementById('err-tk');
     err.textContent = ''; err.style.color = 'var(--red)';
-    const donvi = document.getElementById('tk-donvi').value.trim();
+    const donViId = document.getElementById('tk-donvi').value ? parseInt(document.getElementById('tk-donvi').value) : null;
     const hoten = document.getElementById('tk-hoten').value.trim();
     const vaitro = document.getElementById('tk-vaitro').value;
-    if (!donvi || !hoten) { err.textContent = 'Vui lòng điền đơn vị và họ tên!'; return; }
+    if (!hoten) { err.textContent = 'Vui lòng điền họ tên!'; return; }
 
     if (editHoSoId) {
       try {
-        await DB.suaHoSo(editHoSoId, { don_vi:donvi, ho_ten:hoten, vai_tro:vaitro });
+        await DB.suaHoSo(editHoSoId, { don_vi_id:donViId, ho_ten:hoten, vai_tro:vaitro });
         UTILS.dongModal('modal-tk');
         toast('✅ Đã lưu tài khoản!');
+        await loadTaiKhoan();
         await hienTaiKhoan();
       } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
       return;
@@ -838,28 +871,62 @@ const ADMIN = {
     const email = document.getElementById('tk-email').value.trim();
     const mk = document.getElementById('tk-mk').value;
     if (!email) { err.textContent = 'Vui lòng nhập email!'; return; }
-    if (!mk || mk.length < 6) { err.textContent = 'Mật khẩu phải có ít nhất 6 ký tự!'; return; }
+    if (!mk || mk.length < 8) { err.textContent = 'Mật khẩu phải có ít nhất 8 ký tự!'; return; }
     try {
-      await DB.taoTaiKhoan(email, mk, { don_vi:donvi, ho_ten:hoten, vai_tro:vaitro });
+      await DB.taoTaiKhoan(email, mk, { don_vi_id:donViId, ho_ten:hoten, vai_tro:vaitro });
       err.style.color = 'var(--xc)';
       err.innerHTML = `✅ Đã tạo tài khoản <strong>${email}</strong> — mật khẩu ban đầu: <strong class="mono">${mk}</strong><br>
-        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Bấm "Huỷ" để đóng khi đã chép xong.</span>`;
-      await loadHoSo();
+        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Người này BUỘC đổi mật khẩu ngay lần đăng nhập đầu tiên. Bấm "Huỷ" để đóng khi đã chép xong.</span>`;
+      await loadTaiKhoan();
       await hienTaiKhoan();
     } catch(e) {
       err.style.color = 'var(--red)';
-      err.textContent = 'Lỗi: ' + (/already registered|duplicate/.test(e.message) ? 'Email này đã có tài khoản.' : e.message);
+      err.textContent = 'Lỗi: ' + (/already registered|duplicate|đã có tài khoản/.test(e.message) ? 'Email này đã có tài khoản.' : e.message);
     }
   },
 
-  // ── PHÂN QUYỀN ──
-  async luuPQ() {
-    const checked = dsBang.filter(b=>document.getElementById('pq-'+b.bang)?.checked).map(b=>b.bang);
+  // ── ĐẶT LẠI MẬT KHẨU (chỉ admin toàn quyền — RPC dat_lai_mat_khau) ──
+  moModalDatLaiMK(id, email) {
+    editHoSoId = id;
+    document.getElementById('dlmk-email').textContent = email;
+    document.getElementById('dlmk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
+    document.getElementById('err-dlmk').textContent = '';
+    document.getElementById('err-dlmk').style.color = 'var(--red)';
+    UTILS.moModal('modal-dlmk');
+  },
+
+  sinhMKDatLai() {
+    document.getElementById('dlmk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
+  },
+
+  async luuDatLaiMK() {
+    const err = document.getElementById('err-dlmk');
+    const mk = document.getElementById('dlmk-mk').value;
+    err.textContent = ''; err.style.color = 'var(--red)';
+    if (!mk || mk.length < 8) { err.textContent = 'Mật khẩu phải có ít nhất 8 ký tự!'; return; }
     try {
-      await DB.luuPhanQuyen(pqUserId, checked);
+      await DB.datLaiMatKhau(editHoSoId, mk);
+      err.style.color = 'var(--xc)';
+      err.innerHTML = `✅ Đã đặt lại — mật khẩu mới: <strong class="mono">${mk}</strong><br>
+        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi ngay — sẽ không hiện lại được. Phiên đăng nhập cũ của người này đã bị huỷ; lần vào tiếp theo BUỘC đổi mật khẩu.</span>`;
+      await loadTaiKhoan();
+    } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
+  },
+
+  // ── ĐƠN VỊ: bảng xem thêm (quyen_doc_bang) ──
+  async luuPQ() {
+    // Bỏ qua bảng "mình nhập" (checkbox disabled) — không cần ghi dòng ở
+    // quyen_doc_bang vì duoc_doc_bang() đã luôn cho đọc bảng mình nhập.
+    const checked = dsBang
+      .filter(b => b.don_vi_nhap_id !== xemDonViId)
+      .filter(b => document.getElementById('pq-'+b.bang)?.checked)
+      .map(b => b.bang);
+    try {
+      await DB.luuQuyenDocBang(xemDonViId, checked);
       UTILS.dongModal('modal-pq');
-      toast('✅ Đã lưu phân quyền!');
-      await hienPhanQuyen();
+      toast('✅ Đã lưu quyền xem!');
+      await loadQuyenDoc();
+      renderDonVi();
     } catch(e) { toast('Lỗi: '+e.message,'er'); }
   },
 };
@@ -936,50 +1003,60 @@ function xuLyMoKhoa(id, dongY) {
 }
 
 // ════════════════════════════════════════════════════════════
-// TÀI KHOẢN (ho_so, 1-1 với Supabase Auth)
+// TÀI KHOẢN (ho_so + auth.users qua RPC ds_tai_khoan — Bước 6c/6d)
 // ════════════════════════════════════════════════════════════
 async function hienTaiKhoan() {
   setAct('ni-tk');
   document.getElementById('topbar-t').textContent = 'Quản lý tài khoản';
-  await loadHoSo();
+  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
+  try {
+    await Promise.all([loadTaiKhoan(), loadDonVi()]);
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
+    return;
+  }
+  const toanQuyen = UTILS.laAdminToanQuyen(user);
+  const nhanVT = vt => ({admin:'⚙️ Admin', admin_han_che:'🛠️ Admin hạn chế', editor:'✏️ Editor'}[vt] || vt);
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-head">
-        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsHoSo.length})</span></h3>
-        <button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>
+        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsTaiKhoan.length})</span></h3>
+        ${toanQuyen ? '<button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>' : ''}
       </div>
-      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
-        💡 Email đăng nhập không hiển thị được qua API phân quyền client (Supabase Auth không lộ ra ngoài
-        cho vai trò authenticated thường). Tra email trong Dashboard → Authentication → Users, hoặc theo
-        quy ước <code>đơn_vị@snnmt.gov.vn</code>. Đổi mật khẩu cho người khác cũng chỉ làm được ở Dashboard.
-      </div>
+      ${!toanQuyen ? `<div style="padding:8px 16px;font-size:11px;color:var(--amb,#92400e);background:#fef3c7;border-bottom:1px solid var(--g2)">
+        🛠️ Quản trị hạn chế chỉ XEM được danh sách — tạo tài khoản/đổi vai trò/khoá/đặt lại mật khẩu do quản trị viên toàn quyền thực hiện.
+      </div>` : ''}
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>
-            <th>Đơn vị</th><th>Người phụ trách</th>
+            <th>Email</th><th>Đơn vị</th><th>Người phụ trách</th>
             <th style="text-align:center">Vai trò</th>
-            <th style="text-align:center">Trạng thái</th><th></th>
+            <th style="text-align:center">Trạng thái</th>
+            <th>Đăng nhập gần nhất</th><th></th>
           </tr></thead>
-          <tbody>${dsHoSo.map(r=>`<tr>
-            <td><strong>${r.don_vi||'--'}</strong></td>
+          <tbody>${dsTaiKhoan.map(r=>`<tr>
+            <td class="mono" style="font-size:12px">${r.email}${r.phai_doi_mat_khau?' <span class="badge yellow" title="Chưa đổi mật khẩu admin cấp">⏳ chờ đổi MK</span>':''}</td>
+            <td><strong>${r.ten_don_vi||'--'}</strong></td>
             <td>${r.ho_ten||'--'}</td>
             <td style="text-align:center">
-              <select class="ct-sel" style="width:auto" ${r.id===user.id?'disabled':''} onchange="doiVaiTro('${r.id}', this.value)">
+              ${toanQuyen && r.id!==user.id ? `<select class="ct-sel" style="width:auto" onchange="doiVaiTro('${r.id}', this.value)">
                 <option value="editor" ${r.vai_tro==='editor'?'selected':''}>✏️ Editor</option>
-                <option value="admin" ${r.vai_tro==='admin'?'selected':''}>⚙️ Admin</option>
-              </select>
+                <option value="admin_han_che" ${r.vai_tro==='admin_han_che'?'selected':''}>🛠️ Admin hạn chế</option>
+                <option value="admin" ${r.vai_tro==='admin'?'selected':''}>⚙️ Admin toàn quyền</option>
+              </select>` : `<span class="badge ${r.vai_tro==='admin'?'blue':r.vai_tro==='admin_han_che'?'yellow':'gray'}">${nhanVT(r.vai_tro)}</span>`}
             </td>
             <td style="text-align:center">
-              <label class="sw-wrap" style="justify-content:center">
+              ${toanQuyen && r.id!==user.id ? `<label class="sw-wrap" style="justify-content:center">
                 <label class="sw"><input type="checkbox" ${r.trang_thai?'checked':''}
-                  ${r.id===user.id?'disabled':''}
                   onchange="toggleHoSo('${r.id}',this.checked)">
                   <span class="sw-slider"></span></label>
                 <span class="sw-lbl">${r.trang_thai?'Hoạt động':'Khoá'}</span>
-              </label>
+              </label>` : `<span class="badge ${r.trang_thai?'green':'red'}">${r.trang_thai?'Hoạt động':'Khoá'}</span>`}
             </td>
+            <td style="font-size:11px;color:var(--g4)">${r.lan_dang_nhap_cuoi ? new Date(r.lan_dang_nhap_cuoi).toLocaleString('vi-VN') : '--'}</td>
             <td style="white-space:nowrap">
-              <button class="btn ghost" onclick="ADMIN.moModalTK('${r.id}')">✏️ Sửa</button>
+              ${toanQuyen ? `<button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalTK('${r.id}')">✏️ Sửa</button>
+              <button class="btn yellow" style="padding:4px 8px" onclick="ADMIN.moModalDatLaiMK('${r.id}','${r.email}')">🔑 Đặt lại MK</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
         </table>
@@ -989,7 +1066,8 @@ async function hienTaiKhoan() {
 
 async function doiVaiTro(id, vt) {
   if (id === user.id) { toast('Không thể tự đổi vai trò của chính mình.', 'er'); await hienTaiKhoan(); return; }
-  UTILS.xacNhan('Đổi vai trò', `Đổi vai trò thành <strong>${vt==='admin'?'Quản trị viên':'Editor'}</strong>?`,
+  const nhan = {admin:'Admin toàn quyền', admin_han_che:'Admin hạn chế', editor:'Editor'}[vt] || vt;
+  UTILS.xacNhan('Đổi vai trò', `Đổi vai trò thành <strong>${nhan}</strong>?`,
     async () => {
       try { await DB.suaHoSo(id, {vai_tro:vt}); toast('✅ Đã đổi vai trò!'); await hienTaiKhoan(); }
       catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
@@ -1002,47 +1080,126 @@ async function toggleHoSo(id, val) {
 }
 
 // ════════════════════════════════════════════════════════════
-// PHÂN QUYỀN (phan_quyen_bang — khóa theo uuid)
+// ĐƠN VỊ (don_vi — MỚI Bước 6c/6d, thay "Phân quyền" phan_quyen_bang cũ)
 // ════════════════════════════════════════════════════════════
-async function hienPhanQuyen() {
-  setAct('ni-pq');
-  document.getElementById('topbar-t').textContent = 'Phân quyền nhập liệu';
-  await Promise.all([loadHoSo(), loadBang()]);
-  const pqAll = await DB.layTatCaPhanQuyen();
-  const editors = dsHoSo.filter(r=>r.vai_tro==='editor');
+async function hienDonVi() {
+  setAct('ni-donvi');
+  document.getElementById('topbar-t').textContent = 'Quản lý đơn vị';
+  await Promise.all([loadDonVi(), loadBang(), loadQuyenDoc()]);
+  renderDonVi();
+}
+
+async function loadQuyenDoc() { dsQuyenDoc = await DB.layTatCaQuyenDocBang(); }
+
+function renderDonVi() {
+  const rows = dsDonVi.map(d => {
+    const bangNhap = dsBang.filter(b=>b.don_vi_nhap_id===d.id);
+    const bangXemThem = dsQuyenDoc.filter(q=>q.don_vi_id===d.id).map(q=>q.bang);
+    const tenXemThem = bangXemThem.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
+    return `<tr>
+      <td style="text-align:center;padding:4px 8px">
+        <input class="num-inp" type="number" min="1" value="${d.thu_tu||''}" placeholder="--"
+          onchange="luuDonViField(${d.id},'thu_tu',this.value===''?null:parseInt(this.value))">
+      </td>
+      <td>
+        <input type="text" value="${(d.ten||'').replace(/"/g,'&quot;')}"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+          onchange="luuDonViField(${d.id},'ten',this.value)">
+      </td>
+      <td>${bangNhap.length?bangNhap.map(b=>`<span class="badge blue" style="margin:2px">${b.ten_bang}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa giao bảng nào</span>'}</td>
+      <td>${tenXemThem.length?tenXemThem.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Không có</span>'}</td>
+      <td style="text-align:center">
+        <label class="sw-wrap" style="justify-content:center">
+          <label class="sw"><input type="checkbox" ${d.trang_thai?'checked':''}
+            onchange="luuDonViField(${d.id},'trang_thai',this.checked)">
+            <span class="sw-slider"></span></label>
+          <span class="sw-lbl">${d.trang_thai?'Hoạt động':'Ngưng'}</span>
+        </label>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="moModalXemThem(${d.id})">🔑 Xem thêm</button>
+        ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaDonViAdmin(${d.id},'${(d.ten||'').replace(/'/g,"\\'")}')">🗑</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
   document.getElementById('content').innerHTML = `
     <div class="card">
-      <div class="card-head"><h3>🔑 Phân quyền bảng nhập liệu</h3></div>
+      <div class="card-head">
+        <h3>🏢 Đơn vị <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsDonVi.length})</span></h3>
+        <button class="btn primary" onclick="moModalThemDonVi()">+ Thêm đơn vị</button>
+      </div>
+      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
+        💡 <strong>Bảng được nhập</strong> gán ở mục "🗂️ Quản lý bảng" (mỗi bảng đúng một đơn vị).
+        <strong>Bảng xem thêm</strong> là quyền ĐỌC bổ sung ngoài bảng mình nhập — bấm "🔑 Xem thêm" để gán.
+      </div>
       <div style="overflow-x:auto">
         <table class="dt">
-          <thead><tr><th>Đơn vị</th><th>Người phụ trách</th><th>Bảng được nhập</th><th></th></tr></thead>
-          <tbody>${editors.map(r=>{
-            const pq = (pqAll||[]).filter(p=>p.user_id===r.id).map(p=>p.bang);
-            const tenBangs = pq.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
-            return `<tr>
-              <td><strong>${r.don_vi||'--'}</strong></td><td>${r.ho_ten||'--'}</td>
-              <td>${tenBangs.length?tenBangs.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa phân công</span>'}</td>
-              <td><button class="btn ghost" onclick="moModalPQ('${r.id}','${(r.don_vi||'').replace(/'/g,"\\'")}')">✏️ Sửa</button></td>
-            </tr>`;
-          }).join('')}</tbody>
+          <thead><tr><th style="width:60px;text-align:center">Thứ tự</th><th>Tên đơn vị</th><th>Bảng được nhập</th><th>Bảng xem thêm</th><th style="text-align:center">Trạng thái</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--g4)">Chưa có đơn vị nào.</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;
 }
 
-async function moModalPQ(id, donVi) {
-  pqUserId = id;
-  document.getElementById('pq-title').textContent = 'Phân quyền: ' + donVi;
-  document.getElementById('pq-sub').textContent = 'Chọn bảng được phép nhập liệu:';
-  const pq = await DB.layPhanQuyen(id);
-  document.getElementById('pq-list').innerHTML = dsBang.map(b=>`
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;border-bottom:1px solid var(--g2)">
-      <input type="checkbox" id="pq-${b.bang}" ${pq.includes(b.bang)?'checked':''}
+function moModalThemDonVi() {
+  UTILS.xacNhan('+ Thêm đơn vị', `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN ĐƠN VỊ *</label>
+        <input id="nd-ten" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THỨ TỰ</label>
+        <input id="nd-thutu" type="number" min="1" value="${dsDonVi.length+1}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+    </div>`,
+    async () => {
+      const ten = document.getElementById('nd-ten')?.value.trim();
+      const thutu = parseInt(document.getElementById('nd-thutu')?.value) || null;
+      if (!ten) { toast('Vui lòng điền tên đơn vị!','er'); return; }
+      try {
+        await DB.themDonVi({ ten, thu_tu: thutu, trang_thai: true });
+        toast('✅ Đã thêm đơn vị ' + ten + '!');
+        await loadDonVi();
+        renderDonVi();
+      } catch(e) { toast('Lỗi: '+(/duplicate|unique/.test(e.message)?'Tên đơn vị đã tồn tại.':e.message),'er'); }
+    });
+}
+
+async function luuDonViField(id, col, val) {
+  const u={}; u[col]=val;
+  try {
+    await DB.suaDonVi(id, u);
+    const d = dsDonVi.find(x=>x.id===id); if (d) d[col]=val;
+    toast('✅ Đã lưu!');
+  } catch(e) { toast('Lỗi: '+e.message,'er'); renderDonVi(); }
+}
+
+function xoaDonViAdmin(id, ten) {
+  UTILS.xacNhan('🗑 Xoá đơn vị',
+    `<p>Xoá đơn vị <strong>${ten}</strong>?</p>
+     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
+       ⚠️ Tài khoản/bảng đang gắn đơn vị này sẽ mất liên kết (không bị xoá), phải gán lại sau.
+     </div>`,
+    async () => {
+      try { await DB.xoaDonVi(id); toast('✅ Đã xoá đơn vị!'); await loadDonVi(); renderDonVi(); }
+      catch(e) { toast('Lỗi: '+e.message,'er'); }
+    });
+}
+
+async function moModalXemThem(donViId) {
+  xemDonViId = donViId;
+  const d = dsDonVi.find(x=>x.id===donViId);
+  document.getElementById('pq-title').textContent = 'Bảng xem thêm: ' + (d?.ten||'');
+  document.getElementById('pq-sub').textContent = 'Đơn vị này LUÔN xem được bảng mình nhập (đánh dấu sẵn, không bỏ được ở đây). Chọn thêm bảng khác muốn cho phép xem:';
+  const dangXem = dsQuyenDoc.filter(q=>q.don_vi_id===donViId).map(q=>q.bang);
+  document.getElementById('pq-list').innerHTML = dsBang.map(b=>{
+    const laBangMinh = b.don_vi_nhap_id === donViId;
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:${laBangMinh?'default':'pointer'};padding:7px 0;border-bottom:1px solid var(--g2);${laBangMinh?'opacity:.6':''}">
+      <input type="checkbox" id="pq-${b.bang}" ${laBangMinh || dangXem.includes(b.bang)?'checked':''} ${laBangMinh?'disabled':''}
         style="width:15px;height:15px;accent-color:var(--xc)">
-      <span><strong>${b.ten_bang}</strong> <span style="font-size:11px;color:var(--g4)">${b.don_vi_bao_cao||''}</span></span>
-    </label>`).join('');
+      <span><strong>${b.ten_bang}</strong> ${laBangMinh?'<span class="badge blue" style="margin-left:4px">bảng mình nhập</span>':''}</span>
+    </label>`;
+  }).join('');
   UTILS.moModal('modal-pq');
 }
+// (ADMIN.luuPQ ở dưới ghi kết quả vào quyen_doc_bang qua DB.luuQuyenDocBang)
 
 // ════════════════════════════════════════════════════════════
 // CHỈ TIÊU
@@ -1135,9 +1292,9 @@ async function taiChiTieu(maBang) {
       <td>${mkSel(c.id,'tan_suat',optsTanSuat,c.tan_suat||'hang_thang')}</td>
       <td>${mkSel(c.id,'la_tieu_de',optsLaTD,isTD?'__true':'__false')}</td>
       <td style="text-align:center;padding:3px 6px">
-        <button onclick="xoaChiTieuAdmin('${c.id}','${tenRut}','${maBang}')"
+        ${UTILS.laAdminToanQuyen(user) ? `<button onclick="xoaChiTieuAdmin('${c.id}','${tenRut}','${maBang}')"
           style="padding:3px 8px;background:#fee2e2;color:var(--red);border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--font)"
-          title="Xóa chỉ tiêu này">🗑️</button>
+          title="Xóa chỉ tiêu này">🗑️</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1262,6 +1419,7 @@ async function hienQuanLyBang() {
   setAct('ni-bang');
   document.getElementById('topbar-t').textContent = 'Quản lý bảng báo cáo';
   await loadBang();
+  if (!dsDonVi.length) await loadDonVi();
   try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = []; }
   renderQuanLyBang();
   document.getElementById('content').insertAdjacentHTML('beforeend', renderGSheetCard());
@@ -1275,6 +1433,10 @@ function renderQuanLyBang() {
         <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
         <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
       </div>
+      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
+        💡 <strong>Đơn vị nhập</strong>: đơn vị chịu trách nhiệm nhập số liệu bảng này (mỗi bảng đúng MỘT
+        đơn vị). Muốn đơn vị khác XEM THÊM bảng này (không nhập) → vào mục "🏢 Đơn vị".
+      </div>
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>
@@ -1282,6 +1444,7 @@ function renderQuanLyBang() {
             <th style="width:90px">Mã bảng</th>
             <th>Tên bảng</th>
             <th>Đơn vị báo cáo</th>
+            <th style="width:170px">Đơn vị nhập</th>
             <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
             <th style="text-align:center;width:70px">Rộng ĐVT</th>
             <th style="text-align:center;width:80px">Rộng ghi chú</th>
@@ -1305,6 +1468,12 @@ function renderQuanLyBang() {
                 onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
                 onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
             </td>
+            <td>
+              <select class="ct-sel" onchange="luuDonViNhap('${b.bang}',this.value?parseInt(this.value):null)">
+                <option value="">— Chưa giao —</option>
+                ${dsDonVi.map(d=>`<option value="${d.id}" ${b.don_vi_nhap_id===d.id?'selected':''}>${d.ten}</option>`).join('')}
+              </select>
+            </td>
             <td style="text-align:center;padding:4px 6px">
               <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
                 onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
@@ -1318,7 +1487,7 @@ function renderQuanLyBang() {
                 onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
             </td>
             <td style="white-space:nowrap">
-              <button class="btn danger" style="padding:4px 8px" onclick="xoaBangAdmin('${b.bang}','${(b.ten_bang||'').replace(/'/g,"\\'")}')">🗑 Xoá</button>
+              ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaBangAdmin('${b.bang}','${(b.ten_bang||'').replace(/'/g,"\\'")}')">🗑 Xoá</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
         </table>
@@ -1328,6 +1497,14 @@ function renderQuanLyBang() {
       ✅ <strong>V2:</strong> thêm bảng báo cáo mới không cần tạo bảng CSDL riêng — mọi số liệu đều nằm
       trong bảng <code>so_lieu</code> chung. Chỉ cần thêm dòng ở đây rồi sang mục "Chỉ tiêu" để thêm chỉ tiêu.
     </div>`;
+}
+
+async function luuDonViNhap(maBang, donViId) {
+  try {
+    await DB.capNhatBang(maBang, { don_vi_nhap_id: donViId });
+    const b = dsBang.find(x=>x.bang===maBang); if (b) b.don_vi_nhap_id = donViId;
+    toast('✅ Đã gán đơn vị nhập!');
+  } catch(e) { toast('Lỗi: '+e.message,'er'); renderQuanLyBang(); }
 }
 
 function moModalThemBang() {
@@ -1605,6 +1782,73 @@ async function luuTieuDe(maBang) {
   const td2 = document.getElementById('td2-'+maBang)?.value.trim()||'';
   try { await DB.capNhatBang(maBang,{tieu_de_chinh:td1,tieu_de_phu:td2}); toast('✅ Đã lưu tiêu đề!'); }
   catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// NHẬT KÝ SỬA SỐ LIỆU (lich_su_so_lieu — MỚI Bước 6c/6d)
+// ════════════════════════════════════════════════════════════
+async function hienLichSu() {
+  setAct('ni-ls');
+  document.getElementById('topbar-t').textContent = 'Nhật ký sửa số liệu';
+  if (!dsBang.length) await loadBang();
+  if (!dsTaiKhoan.length) { try { await loadTaiKhoan(); } catch(e) { dsTaiKhoan = []; } }
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>📜 Nhật ký sửa số liệu</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;color:var(--g5)">Bảng:</label>
+          <select id="sel-bang-ls" onchange="taiLichSu(this.value)"
+            style="padding:6px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px">
+            ${dsBang.map(b=>`<option value="${b.bang}">${b.ten_bang}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
+        💡 Hiện tối đa 100 lần sửa gần nhất của bảng đang chọn. Không ai (kể cả admin) sửa/xoá được nhật ký này.
+      </div>
+    </div>
+    <div id="ls-content"><div class="loading"><span class="spin"></span></div></div>`;
+  if (dsBang.length) taiLichSu(dsBang[0].bang);
+}
+
+async function taiLichSu(maBang) {
+  const el = document.getElementById('ls-content');
+  el.innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
+  let ds;
+  try { ds = await DB.layLichSuSoLieu({ bang: maBang, gioiHan: 100 }); }
+  catch(e) { el.innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải nhật ký: ${e.message}</div>`; return; }
+
+  const tenNguoi = uid => {
+    const t = dsTaiKhoan.find(x=>x.id===uid);
+    return t ? (t.ho_ten || t.email) : (uid ? uid.slice(0,8)+'…' : '--');
+  };
+  const nhanHanhDong = h => ({them:'🆕 Thêm', sua:'✏️ Sửa', xoa:'🗑 Xoá'}[h] || h);
+  const hienGiaTri = (n, t) => t !== null && t !== undefined && t !== '' ? t : (n !== null && n !== undefined ? n : '--');
+
+  const rows = ds.map(r => `<tr>
+    <td style="font-size:11px;color:var(--g4);white-space:nowrap">${new Date(r.thoi_diem).toLocaleString('vi-VN')}</td>
+    <td class="mono" style="font-size:11px">${r.id_chi_tieu}</td>
+    <td class="mono" style="font-size:11px;text-align:center">${r.cot_id}</td>
+    <td style="text-align:center"><span class="badge ${r.hanh_dong==='them'?'blue':r.hanh_dong==='xoa'?'red':'yellow'}">${nhanHanhDong(r.hanh_dong)}</span></td>
+    <td style="font-size:12px;color:var(--g4)">${hienGiaTri(r.gia_tri_cu, r.gia_tri_text_cu)}</td>
+    <td style="font-size:12px;font-weight:600">${hienGiaTri(r.gia_tri_moi, r.gia_tri_text_moi)}</td>
+    <td style="font-size:12px">${tenNguoi(r.nguoi_sua)} <span style="color:var(--g4);font-size:10px">(${r.vai_tro_luc_sua||''})</span></td>
+    <td style="font-size:12px;color:var(--g5)">${(r.ly_do||'').replace(/</g,'&lt;')||'--'}</td>
+  </tr>`).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th>Thời điểm</th><th>Chỉ tiêu</th><th>Cột</th><th style="text-align:center">Hành động</th>
+            <th>Giá trị cũ</th><th>Giá trị mới</th><th>Người sửa</th><th>Lý do</th>
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--g4)">Chưa có lần sửa nào ghi nhận cho bảng này.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 </script>
 </body>

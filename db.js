@@ -1,3 +1,5 @@
+// Phiên bản ứng dụng: V2 — nâng cấp bảo mật
+// Phiên bản file: Bước 6d — db.js, cập nhật 2026/07/25 14:04 (GMT+7)
 // ============================================================
 // DB.JS — V2: TẦNG TRUY VẤN SUPABASE (Auth + RLS + mô hình 3 chiều)
 // Yêu cầu load trước: supabase-js v2 (CDN) → config.js → db.js
@@ -49,7 +51,9 @@ const DB = {
       email:   data.user.email,
       ho_ten:  hoSo.ho_ten,
       don_vi:  hoSo.don_vi,
+      don_vi_id: hoSo.don_vi_id ?? null,             // MỚI Bước 6c/6d: nguồn sự thật phân quyền
       vai_tro: hoSo.vai_tro,
+      phai_doi_mat_khau: !!hoSo.phai_doi_mat_khau,   // MỚI Bước 6c/6d: buộc đổi MK lần đăng nhập kế
       he_dinh_dang: hoSo.he_dinh_dang || null,   // gợi ý hệ định dạng số (seed máy mới)
     };
   },
@@ -73,7 +77,9 @@ const DB = {
       email:   session.user.email,
       ho_ten:  hoSo.ho_ten,
       don_vi:  hoSo.don_vi,
+      don_vi_id: hoSo.don_vi_id ?? null,
       vai_tro: hoSo.vai_tro,
+      phai_doi_mat_khau: !!hoSo.phai_doi_mat_khau,
       he_dinh_dang: hoSo.he_dinh_dang || null,
     };
   },
@@ -92,11 +98,14 @@ const DB = {
     if (error) throw error;
   },
 
-  // Tự đổi mật khẩu của CHÍNH MÌNH (Auth). Đặt lại mật khẩu cho người khác
-  // là việc của admin: Dashboard → Authentication → Users, hoặc PHẦN 1B
-  // trong 03_auth_rls.sql (publishable key không có quyền admin API).
+  // Tự đổi mật khẩu của CHÍNH MÌNH — BẢN MỚI Bước 6c/6d: gọi RPC
+  // doi_mat_khau_cua_toi() thay vì sb.auth.updateUser() trực tiếp, vì RPC
+  // đổi mật khẩu VÀ tắt cờ ho_so.phai_doi_mat_khau CÙNG một giao dịch (tránh
+  // trường hợp đổi được mật khẩu mà cờ bắt đổi vẫn còn bật ở lần đăng nhập
+  // sau). Đặt lại mật khẩu cho NGƯỜI KHÁC dùng DB.datLaiMatKhau (chỉ admin
+  // toàn quyền) — xem 06_don_vi_va_quan_tri_tai_khoan.sql PHẦN 7.
   async doiMatKhauCuaToi(matKhauMoi) {
-    const { error } = await sb.auth.updateUser({ password: matKhauMoi });
+    const { error } = await sb.rpc('doi_mat_khau_cua_toi', { p_mat_khau: matKhauMoi });
     if (error) throw error;
   },
 
@@ -106,21 +115,40 @@ const DB = {
     return sb.auth.onAuthStateChange((event, session) => callback(event, session));
   },
 
-  // Tạo tài khoản Auth mới (admin dùng ở trang quản trị, Bước 6b).
-  // Dùng client PHỤ không lưu phiên — signUp trên client chính sẽ ĐÁ phiên
-  // admin đang đăng nhập. Trigger trg_tao_ho_so tự tạo dòng ho_so từ metadata.
-  // Yêu cầu Dashboard: Authentication → Sign In/Up → Email bật, Confirm email TẮT.
-  async taoTaiKhoan(email, matKhau, { don_vi = '', ho_ten = '', vai_tro = 'editor' } = {}) {
-    const sbTao = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data, error } = await sbTao.auth.signUp({
-      email: String(email || '').trim().toLowerCase(),
-      password: matKhau,
-      options: { data: { don_vi, ho_ten, vai_tro: vai_tro === 'admin' ? 'admin' : 'editor' } },
+  // Tạo tài khoản mới — BẢN MỚI Bước 6c/6d: gọi RPC tao_tai_khoan() thay vì
+  // sb.auth.signUp() trên client phụ (cách cũ Bước 6b). Lý do đổi:
+  //   1) RPC gán được don_vi_id VÀ vai_tro (kể cả 'admin_han_che') ngay khi
+  //      tạo — signUp chỉ ghi metadata, phải sửa lại ho_so sau.
+  //   2) Không cần bật "Confirm email TẮT" trên Dashboard.
+  //   3) RPC tự kiểm la_admin_toan_quyen() bên trong (07_hai_loai_admin...sql)
+  //      — admin_han_che gọi sẽ bị chặn ngay ở CSDL, không chỉ ở UI.
+  // Trả về uuid tài khoản vừa tạo (không phải object user đầy đủ như signUp).
+  async taoTaiKhoan(email, matKhau, { don_vi_id = null, ho_ten = '', vai_tro = 'editor' } = {}) {
+    const { data, error } = await sb.rpc('tao_tai_khoan', {
+      p_email: String(email || '').trim().toLowerCase(),
+      p_mat_khau: matKhau,
+      p_ho_ten: ho_ten || null,
+      p_don_vi_id: don_vi_id,
+      p_vai_tro: vai_tro,
     });
     if (error) throw error;
-    return data.user;      // { id, email, ... }
+    return data;      // uuid
+  },
+
+  // Đặt lại mật khẩu cho NGƯỜI KHÁC — chỉ admin toàn quyền (RPC tự kiểm).
+  // Bật cờ phai_doi_mat_khau + huỷ phiên cũ của người đó (xem file 06 PHẦN 7.3).
+  async datLaiMatKhau(userId, matKhauMoi) {
+    const { error } = await sb.rpc('dat_lai_mat_khau', { p_user_id: userId, p_mat_khau: matKhauMoi });
+    if (error) throw error;
+  },
+
+  // Danh sách tài khoản KÈM EMAIL — thay layTatCaHoSo() ở trang Tài khoản
+  // (Bước 6b không hiện được email; Bước 6c thêm RPC ds_tai_khoan() SECURITY
+  // DEFINER để đọc auth.users hợp lệ, chỉ admin gọi được — xem file 06 PHẦN 7.1).
+  async dsTaiKhoanDayDu() {
+    const { data, error } = await sb.rpc('ds_tai_khoan');
+    if (error) throw error;
+    return data || [];
   },
 
   // ── HỒ SƠ NGƯỜI DÙNG (ho_so, 1-1 với auth.users) ───────
@@ -152,6 +180,104 @@ const DB = {
       .from(CONFIG.BANG.HO_SO)
       .update(row).eq('id', userId);
     if (error) throw error;
+  },
+
+  // ── ĐƠN VỊ (don_vi — MỚI Bước 6c/6d) ────────────────────
+  // Đọc: mọi người đã đăng nhập (RLS don_vi_doc). Ghi: chỉ admin.
+  async layTatCaDonVi() {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.DON_VI)
+      .select('*').order('thu_tu', { ascending: true, nullsFirst: false }).order('ten');
+    if (error) throw error;
+    return data || [];
+  },
+
+  async themDonVi(row) {
+    const { data, error } = await sb.from(CONFIG.BANG.DON_VI).insert(row).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async suaDonVi(id, row) {
+    const { error } = await sb.from(CONFIG.BANG.DON_VI).update(row).eq('id', id);
+    if (error) throw error;
+  },
+
+  // Xoá đơn vị: chặn ở CSDL nếu là admin_han_che (policy RESTRICTIVE Bước 6c
+  // phần 07); ho_so.don_vi_id / danh_sach_bang.don_vi_nhap_id là ON DELETE
+  // SET NULL nên xoá đơn vị không mất tài khoản/bảng, chỉ gỡ liên kết.
+  async xoaDonVi(id) {
+    const { error } = await sb.from(CONFIG.BANG.DON_VI).delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  // Bảng do MỘT đơn vị chịu trách nhiệm NHẬP (danh_sach_bang.don_vi_nhap_id).
+  // Dùng ở index.html cho editor: chỉ thấy đúng bảng đơn vị mình nhập.
+  async layBangDuocNhap(donViId) {
+    if (!donViId) return [];
+    const { data, error } = await sb
+      .from(CONFIG.BANG.DANH_SACH_BANG)
+      .select('*').eq('don_vi_nhap_id', donViId).order('thu_tu');
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Quyền ĐỌC bổ sung (đơn vị × bảng) — TOÀN BỘ bảng ghép (admin quản trị).
+  async layTatCaQuyenDocBang() {
+    const { data, error } = await sb.from(CONFIG.BANG.QUYEN_DOC_BANG).select('*');
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Danh sách MÃ BẢNG một đơn vị được cấp quyền đọc THÊM (không tính bảng
+  // mình nhập — bảng đó luôn đọc được, không cần dòng nào ở quyen_doc_bang).
+  async layQuyenDocBangCuaDonVi(donViId) {
+    if (!donViId) return [];
+    const { data, error } = await sb
+      .from(CONFIG.BANG.QUYEN_DOC_BANG)
+      .select('bang').eq('don_vi_id', donViId);
+    if (error) throw error;
+    return (data || []).map(r => r.bang);
+  },
+
+  // Bảng đơn vị được XEM (nhập + được cấp thêm) — dùng ở xembaocao.html.
+  // Gộp 2 nguồn rồi khử trùng bằng UTILS.gopBangDuocXem (hàm thuần, có test).
+  async layBangDuocXem(donViId) {
+    if (!donViId) return [];
+    const [dsBangAll, dsQuyen] = await Promise.all([
+      this.layTatCaBang(),
+      this.layQuyenDocBangCuaDonVi(donViId),
+    ]);
+    return UTILS.gopBangDuocXem(dsBangAll, donViId, dsQuyen);
+  },
+
+  // Ghi đè toàn bộ quyền đọc BỔ SUNG của một đơn vị (xoá cũ → chèn mới) —
+  // chỉ admin. Không đụng bảng đơn vị đó đang nhập (không cần dòng riêng).
+  async luuQuyenDocBang(donViId, dsMaBang) {
+    const { error: eXoa } = await sb
+      .from(CONFIG.BANG.QUYEN_DOC_BANG)
+      .delete().eq('don_vi_id', donViId);
+    if (eXoa) throw eXoa;
+    if (dsMaBang && dsMaBang.length) {
+      const { error } = await sb
+        .from(CONFIG.BANG.QUYEN_DOC_BANG)
+        .insert(dsMaBang.map(mb => ({ don_vi_id: donViId, bang: mb })));
+      if (error) throw error;
+    }
+  },
+
+  // ── NHẬT KÝ SỬA SỐ LIỆU (lich_su_so_lieu — MỚI Bước 6c/6d) ─
+  // Đọc theo đúng quyền đọc số liệu (RLS lich_su_doc); không ai ghi trực
+  // tiếp được (chỉ trigger). loc = { bang?, idChiTieu?, cotId?, gioiHan? }
+  async layLichSuSoLieu(loc = {}) {
+    let q = sb.from(CONFIG.BANG.LICH_SU_SO_LIEU).select('*');
+    if (loc.bang)       q = q.eq('bang', loc.bang);
+    if (loc.idChiTieu)  q = q.eq('id_chi_tieu', loc.idChiTieu);
+    if (loc.cotId)      q = q.eq('cot_id', loc.cotId);
+    q = q.order('thoi_diem', { ascending: false }).limit(loc.gioiHan || 100);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
   },
 
   // ── DANH SÁCH BẢNG ─────────────────────────────────────
@@ -389,9 +515,12 @@ const DB = {
   },
 
   // Upsert số liệu (một ô = { id_chi_tieu, cot_id, gia_tri | gia_tri_text,
-  // ghi_chu?, nguon_so_lieu? }). Tự gắn nguoi_nhap = uuid đang đăng nhập và
-  // thoi_gian_nhap = bây giờ (khác V1 — nguoi_nhap là uuid thật, không phải tên).
-  // RLS duoc_ghi_o() chặn ghi sai bảng phân quyền / cột đã khóa.
+  // ghi_chu?, nguon_so_lieu?, ly_do_sua? }). Tự gắn nguoi_nhap = uuid đang
+  // đăng nhập và thoi_gian_nhap = bây giờ (khác V1 — nguoi_nhap là uuid thật,
+  // không phải tên). RLS duoc_ghi_o() chặn ghi sai bảng phân quyền / cột đã khóa.
+  // ly_do_sua (MỚI Bước 6c/6d): cột "đi nhờ" — trigger chép sang
+  // lich_su_so_lieu rồi tự xoá khỏi so_lieu; giao diện chỉ gửi khi admin sửa
+  // số liệu của đơn vị khác (xem UTILS.canHoiLyDoSua).
   async luuDuLieu(rows) {
     if (!rows || !rows.length) return;
     const { data: { user } } = await sb.auth.getUser();

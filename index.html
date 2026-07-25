@@ -1,3 +1,5 @@
+<!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
+<!-- Phiên bản file: Bước 6d — index.html v2, cập nhật 2026/07/25 14:04 (GMT+7) -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -279,17 +281,19 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Đổi mật khẩu — V2: chỉ cần mật khẩu mới (Supabase Auth đã xác thực phiên) -->
+<!-- Đổi mật khẩu — V2: chỉ cần mật khẩu mới (Supabase Auth đã xác thực phiên).
+     Bước 6d: cũng dùng làm màn hình BUỘC đổi khi ho_so.phai_doi_mat_khau=true
+     (admin vừa tạo TK/đặt lại mật khẩu) — khi đó ẩn nút Đóng, không cho thoát. -->
 <div class="modal-bg" id="modal-pass">
   <div class="mbox">
-    <h3>🔐 Đổi mật khẩu</h3><p>Mật khẩu mới tối thiểu 6 ký tự (yêu cầu của Supabase Auth).</p>
+    <h3 id="modal-pass-title">🔐 Đổi mật khẩu</h3><p id="modal-pass-sub">Mật khẩu mới tối thiểu 8 ký tự.</p>
     <div class="mrow">
       <div><label class="lbl">Mật khẩu mới</label><input class="inp" type="password" id="p-moi" placeholder="••••••••"></div>
       <div><label class="lbl">Nhập lại</label><input class="inp" type="password" id="p-moi2" placeholder="••••••••"></div>
     </div>
     <div class="mbtns">
       <button class="btn-p" onclick="APP.luuPass()">Lưu mật khẩu</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-pass')">Đóng</button>
+      <button class="btn-g" id="btn-dong-pass" onclick="UTILS.dongModal('modal-pass')">Đóng</button>
     </div>
     <div class="err-txt" id="err-pass" style="margin-top:8px"></div>
   </div>
@@ -318,6 +322,23 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
     <div class="mbtns">
       <button class="btn-p" onclick="APP.guiDeNghiMoKhoa()">Gửi đề nghị</button>
       <button class="btn-g" onclick="UTILS.dongModal('modal-de-nghi')">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ghi lý do sửa (MỚI Bước 6d) — hiện khi admin/admin_han_che sửa số liệu
+     của bảng KHÔNG do đơn vị mình nhập. Lý do tuỳ chọn, chép vào lich_su_so_lieu. -->
+<div class="modal-bg" id="modal-ly-do-sua">
+  <div class="mbox">
+    <h3>📝 Ghi lý do sửa? (tuỳ chọn)</h3>
+    <p>Bạn đang sửa số liệu của một đơn vị khác. Có thể ghi lại lý do để đơn vị đó và người xem nhật ký sau này hiểu vì sao có thay đổi.</p>
+    <div class="mrow">
+      <div><label class="lbl">Lý do (bỏ trống nếu không cần)</label>
+        <input class="inp" type="text" id="lds-ly-do" placeholder="Vd: chỉnh theo số liệu Sở đã đối chiếu..."></div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" onclick="APP.xacNhanLuuLyDo()">💾 Lưu</button>
+      <button class="btn-g" onclick="APP.huyLuuLyDo()">Huỷ</button>
     </div>
   </div>
 </div>
@@ -470,11 +491,14 @@ const APP = {
   async khoiDong() {
     UTILS.el('login').style.display = 'none'; UTILS.el('app').classList.add('on');
     UTILS.el('sb-name').textContent = this.user.don_vi || this.user.email;
-    const roleLabel = this.user.vai_tro === 'admin' ? '⚙️ Quản trị viên' : '✏️ Người nhập liệu';
+    const roleLabel = UTILS.nhanVaiTro(this.user.vai_tro);
     UTILS.el('sb-role').textContent = (this.user.ho_ten ? this.user.ho_ten + ' · ' : '') + roleLabel;
     this.renderLocaleChip();
     await Promise.all([this.loadBang(), this.loadCot(), this.loadGSheet()]);
     this.buildMenu();
+    // MỚI Bước 6d: admin vừa tạo TK / đặt lại mật khẩu → buộc đổi ngay, không
+    // cho dùng tiếp tới khi đổi xong (modal không có nút Đóng ở chế độ này).
+    if (this.user.phai_doi_mat_khau) this.moModalPass(true);
   },
 
   renderLocaleChip() {
@@ -484,7 +508,7 @@ const APP = {
     UTILS.el('locale-chip').innerHTML = `🌐 Định dạng số: ${tenHe}${heTay ? ' 📌' : ''}`;
   },
 
-  async loadBang() { this.dsBang = this.user.vai_tro === 'admin' ? await DB.layTatCaBang() : await DB.layBangDuocPhep(this.user.id) },
+  async loadBang() { this.dsBang = UTILS.laAdmin(this.user) ? await DB.layTatCaBang() : await DB.layBangDuocNhap(this.user.don_vi_id) },
 
   async loadCot() {
     this.dsCot = await DB.layCotHienThi();
@@ -928,14 +952,48 @@ const APP = {
       if (loai === 'gc') rows[rk].ghi_chu = v;
       if (loai === 'ng') rows[rk].nguon_so_lieu = v;
     }
-    try {
-      await DB.luuDuLieu(Object.values(rows));
-      UTILS.toast(`✅ Đã lưu ${Object.values(rows).length} dòng!`, 'ok');
+    const danhSach = Object.values(rows);
+    await this.xinLyDoNeuCan(danhSach, () => {
+      UTILS.toast(`✅ Đã lưu ${danhSach.length} dòng!`, 'ok');
       this.changes = {}; UTILS.tat('sbar');
       const _bl3 = UTILS.el('btn-luu-top'); if (_bl3) { _bl3.style.background = '#c5d0c9'; _bl3.style.color = '#3d5247'; _bl3.style.cursor = 'default'; }
       document.querySelectorAll('.os').forEach(i => i.classList.toggle('has', i.value !== ''));
-    } catch (e) { UTILS.toast('❌ Lỗi: ' + e.message, 'er'); console.error('luuDuLieu:', e) }
+    });
     nut.textContent = '💾 Lưu'; nut.disabled = false;
+  },
+
+  // ── GHI LÝ DO SỬA (MỚI Bước 6d) — khi admin/admin_han_che sửa số liệu của
+  // bảng KHÔNG do đơn vị mình nhập, hỏi (tuỳ chọn) lý do trước khi lưu thật.
+  // Dùng chung cho cả nhập tay (luuDuLieu) lẫn nhập từ Excel (uploadExcel).
+  _lyDoPending: null,
+  async xinLyDoNeuCan(rows, onSuccess) {
+    if (!rows.length) return;
+    const b = this.dsBang.find(x => x.bang === this.bangHT);
+    if (UTILS.canHoiLyDoSua(this.user, b)) {
+      this._lyDoPending = { rows, onSuccess };
+      UTILS.el('lds-ly-do').value = '';
+      UTILS.moModal('modal-ly-do-sua');
+      return;
+    }
+    await this._luuRoiChay(rows, onSuccess);
+  },
+
+  async xacNhanLuuLyDo() {
+    const lyDo = UTILS.el('lds-ly-do').value.trim();
+    const p = this._lyDoPending; this._lyDoPending = null;
+    UTILS.dongModal('modal-ly-do-sua');
+    if (!p) return;
+    if (lyDo) p.rows.forEach(r => r.ly_do_sua = lyDo);
+    await this._luuRoiChay(p.rows, p.onSuccess);
+  },
+
+  huyLuuLyDo() { this._lyDoPending = null; UTILS.dongModal('modal-ly-do-sua'); },
+
+  async _luuRoiChay(rows, onSuccess) {
+    try {
+      await DB.luuDuLieu(rows);
+      if (onSuccess) await onSuccess();
+    } catch (e) { UTILS.toast('❌ Lỗi: ' + e.message, 'er'); console.error('luuDuLieu:', e); }
   },
 
   async xuatExcel(coData = false) {
@@ -1060,29 +1118,40 @@ const APP = {
 
       if (!rows.length) { UTILS.toast('Không có dữ liệu hợp lệ để import', 'warn'); return }
 
-      await DB.luuDuLieu(rows);
-      UTILS.toast(`✅ Đã import ${rows.length} ô dữ liệu từ Excel!`, 'ok');
-      input.value = '';
-      await this.moNhap(this.bangHT);
+      await this.xinLyDoNeuCan(rows, async () => {
+        UTILS.toast(`✅ Đã import ${rows.length} ô dữ liệu từ Excel!`, 'ok');
+        input.value = '';
+        await this.moNhap(this.bangHT);
+      });
     } catch (err) {
       UTILS.toast('❌ Lỗi đọc file: ' + err.message, 'er');
       console.error(err);
     }
   },
 
-  moModalPass() {
+  moModalPass(forced = false) {
     UTILS.el('err-pass').textContent = '';
     ['p-moi', 'p-moi2'].forEach(id => UTILS.el(id).value = '');
+    this._buocDoiMK = !!forced;
+    const btnDong = UTILS.el('btn-dong-pass');
+    if (btnDong) btnDong.style.display = forced ? 'none' : '';
+    UTILS.el('modal-pass-title').textContent = forced ? '🔐 Bắt buộc đổi mật khẩu' : '🔐 Đổi mật khẩu';
+    UTILS.el('modal-pass-sub').textContent = forced
+      ? 'Quản trị viên vừa tạo hoặc đặt lại mật khẩu cho tài khoản này. Vui lòng đặt mật khẩu mới (≥8 ký tự) trước khi tiếp tục sử dụng.'
+      : 'Mật khẩu mới tối thiểu 8 ký tự.';
     UTILS.moModal('modal-pass');
   },
 
   async luuPass() {
     const moi = UTILS.el('p-moi').value, moi2 = UTILS.el('p-moi2').value;
     const err = UTILS.el('err-pass'); err.textContent = '';
-    if (moi.length < 6) { err.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự.'; return }
+    if (moi.length < 8) { err.textContent = 'Mật khẩu mới phải có ít nhất 8 ký tự.'; return }
     if (moi !== moi2) { err.textContent = 'Mật khẩu nhập lại không khớp.'; return }
     try {
       await DB.doiMatKhauCuaToi(moi);
+      this.user.phai_doi_mat_khau = false;
+      UTILS.luuSession(this.user);
+      this._buocDoiMK = false;
       UTILS.dongModal('modal-pass'); UTILS.toast('✅ Đổi mật khẩu thành công!', 'ok');
     } catch (e) { err.textContent = 'Lỗi: ' + e.message }
   },

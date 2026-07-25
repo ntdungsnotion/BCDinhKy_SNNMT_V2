@@ -1,3 +1,5 @@
+// Phiên bản ứng dụng: V2 — nâng cấp bảo mật
+// Phiên bản file: Bước 6d — utils.js, cập nhật 2026/07/25 14:04 (GMT+7)
 // ============================================================
 // UTILS.JS — V2: HÀM TIỆN ÍCH DÙNG CHUNG
 // Thứ tự load: supabase-js → config.js → db.js → utils.js
@@ -62,6 +64,43 @@ const UTILS = {
     UTILS.el('xn-msg').innerHTML = msg;
     UTILS.el('xn-ok').onclick = () => { UTILS.dongModal('modal-xn'); callback(); };
     UTILS.moModal('modal-xn');
+  },
+
+  // ── MÔ HÌNH ĐƠN VỊ / 2 LOẠI ADMIN (MỚI Bước 6c/6d) ──────
+  // Hàm THUẦN (không đụng DOM/mạng) để test độc lập — DB.layBangDuocXem và
+  // 3 trang HTML chỉ gọi lại, không viết lại logic.
+
+  // Gộp "bảng mình nhập" (don_vi_nhap_id = donViId) + "bảng được cấp quyền
+  // đọc thêm" (dsMaBangDuocCap, danh sách mã bảng) → mảng bảng duy nhất,
+  // khử trùng, giữ thứ tự theo thu_tu như dsBangAll.
+  gopBangDuocXem(dsBangAll, donViId, dsMaBangDuocCap) {
+    if (!donViId) return [];
+    const capThem = new Set(dsMaBangDuocCap || []);
+    return (dsBangAll || []).filter(b => b.don_vi_nhap_id === donViId || capThem.has(b.bang));
+  },
+
+  // true/false: người này có phải hỏi "ghi lý do sửa?" khi lưu số liệu của
+  // bảng đang mở không — CHỈ khi là quản trị viên (2 loại) VÀ bảng có đơn vị
+  // nhập rõ ràng KHÁC đơn vị của chính mình. Editor sửa bảng mình luôn không hỏi.
+  canHoiLyDoSua(user, bang) {
+    if (!user || !bang) return false;
+    if (user.vai_tro !== 'admin' && user.vai_tro !== 'admin_han_che') return false;
+    if (!bang.don_vi_nhap_id) return false;
+    return bang.don_vi_nhap_id !== user.don_vi_id;
+  },
+
+  // Có phải một trong hai loại quản trị viên không (dùng cho việc hiển thị
+  // menu/khối quản trị — la_admin() phía CSDL cũng gộp cả hai loại).
+  laAdmin(user) { return !!user && (user.vai_tro === 'admin' || user.vai_tro === 'admin_han_che'); },
+
+  // Chỉ admin TOÀN QUYỀN (không tính admin_han_che) — dùng để ẩn nút Xoá
+  // danh mục / quản trị tài khoản ở giao diện (CSDL đã chặn ở tầng RLS,
+  // đây chỉ là lớp UX chặn sớm, khớp la_admin_toan_quyen() phía CSDL).
+  laAdminToanQuyen(user) { return !!user && user.vai_tro === 'admin'; },
+
+  // Nhãn hiển thị vai trò — dùng chung cho sidebar 3 trang.
+  nhanVaiTro(vaiTro) {
+    return { admin: '⚙️ Quản trị viên', admin_han_che: '🛠️ Quản trị hạn chế', editor: '✏️ Người nhập liệu' }[vaiTro] || vaiTro || '';
   },
 
   // ── CỘT BÁO CÁO (kỳ × loại) — sinh mã & tiêu đề ─────────
