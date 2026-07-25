@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6d — admin.html v3, cập nhật 2026/07/25 14:04 (GMT+7) -->
+<!-- Phiên bản file: Bước 6d — admin.html v4, cập nhật 2026/07/25 14:40 (GMT+7): nút "Tạo mật khẩu ngẫu nhiên", đảm bảo luôn có nút Đóng sau khi tạo TK -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -216,7 +216,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
         <label>Mật khẩu ban đầu (≥8 ký tự)</label>
         <div style="display:flex;gap:6px">
           <input class="inp mono" id="tk-mk" type="text" placeholder="••••••••" style="flex:1">
-          <button type="button" class="btn ghost" onclick="ADMIN.sinhMKNgauNhien()">🎲 Sinh</button>
+          <button type="button" class="btn ghost" style="white-space:nowrap" onclick="ADMIN.sinhMKNgauNhien()">🎲 Tạo mật khẩu ngẫu nhiên</button>
         </div>
       </div>
       <div class="fg"><label>Đơn vị / phòng ban</label>
@@ -248,7 +248,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
         <label>Mật khẩu mới (≥8 ký tự)</label>
         <div style="display:flex;gap:6px">
           <input class="inp mono" id="dlmk-mk" type="text" placeholder="••••••••" style="flex:1">
-          <button type="button" class="btn ghost" onclick="ADMIN.sinhMKDatLai()">🎲 Sinh</button>
+          <button type="button" class="btn ghost" style="white-space:nowrap" onclick="ADMIN.sinhMKDatLai()">🎲 Tạo mật khẩu ngẫu nhiên</button>
         </div>
       </div>
     </div>
@@ -842,6 +842,11 @@ const ADMIN = {
     document.getElementById('tk-vaitro').value = r?.vai_tro || 'editor';
     document.getElementById('err-tk').textContent = '';
     document.getElementById('err-tk').style.color = 'var(--red)';
+    // Khôi phục cụm nút gốc (lần tạo trước thành công đã thay bằng nút "Đóng").
+    const btns = document.querySelector('#modal-tk .mbtns');
+    if (btns) btns.innerHTML =
+      `<button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>` +
+      `<button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Huỷ</button>`;
     UTILS.moModal('modal-tk');
   },
 
@@ -876,7 +881,12 @@ const ADMIN = {
       await DB.taoTaiKhoan(email, mk, { don_vi_id:donViId, ho_ten:hoten, vai_tro:vaitro });
       err.style.color = 'var(--xc)';
       err.innerHTML = `✅ Đã tạo tài khoản <strong>${email}</strong> — mật khẩu ban đầu: <strong class="mono">${mk}</strong><br>
-        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Người này BUỘC đổi mật khẩu ngay lần đăng nhập đầu tiên. Bấm "Huỷ" để đóng khi đã chép xong.</span>`;
+        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Người này BUỘC đổi mật khẩu ngay lần đăng nhập đầu tiên.</span>`;
+      // Đã tạo xong: đổi cụm nút thành DUY NHẤT nút "Xong — Đóng" nổi bật, để
+      // người dùng luôn thấy chỗ đóng (trước đây thông báo dài đẩy nút "Huỷ"
+      // khuất xuống dưới màn hình). Ngăn bấm "Lưu" lần nữa gây tạo trùng.
+      const btns = document.querySelector('#modal-tk .mbtns');
+      if (btns) btns.innerHTML = `<button class="btn-p" onclick="UTILS.dongModal('modal-tk')">✓ Đã chép xong — Đóng</button>`;
       await loadTaiKhoan();
       await hienTaiKhoan();
     } catch(e) {
