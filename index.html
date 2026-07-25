@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6d — index.html v2, cập nhật 2026/07/25 14:04 (GMT+7) -->
+<!-- Phiên bản file: Bước 7a — index.html v3, cập nhật 2026/07/25 22:57 (GMT+7): (1) "chọn nhanh đơn vị" đọc ĐỘNG từ DB (RPC ds_don_vi_chon_nhanh) — chỉ đơn vị đang hoạt động, tự cập nhật khi Sở gộp/tách/khoá đơn vị; (2) picker gộp theo đơn vị, hỗ trợ đơn vị có ≥2 tài khoản (bấm để hiện email, hoặc tự gõ) -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -396,19 +396,33 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
 </div>
 
 <script>
-const DANH_SACH_DON_VI = [{"email": "admin@sonmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kế hoạch - Tài chính", "vai_tro": "admin"}, {"email": "ttbvtv@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Trồng trọt và BVTV", "vai_tro": "editor"}, {"email": "channuoi@snnmt.gov.vn", "ho_ten": "Võ Lâm Chiêu Dương", "don_vi": "Chi cục Chăn nuôi và Thú y", "vai_tro": "editor"}, {"email": "kiemlam@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Kiểm lâm", "vai_tro": "editor"}, {"email": "cctskn@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Thủy sản và Kiểm ngư", "vai_tro": "editor"}, {"email": "trongtrot@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Bảo vệ môi trường", "vai_tro": "editor"}, {"email": "cctl@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Thủy lợi", "vai_tro": "editor"}, {"email": "ccptnt@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục phát triển nông thôn", "vai_tro": "editor"}, {"email": "vanphongso@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Văn phòng Sở", "vai_tro": "editor"}, {"email": "kiemtra@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kiểm tra và GQKNTC", "vai_tro": "editor"}, {"email": "phapche@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Pháp chế", "vai_tro": "editor"}, {"email": "dautu@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý đầu tư", "vai_tro": "editor"}, {"email": "khcn@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Khoa học và Công nghệ", "vai_tro": "editor"}, {"email": "qlydat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý đất", "vai_tro": "editor"}, {"email": "kinhtedat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kinh tế đất", "vai_tro": "editor"}, {"email": "boithuong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Bồi thường, hỗ trợ, tái định cư", "vai_tro": "editor"}, {"email": "dodac@snnmt.gov.vn", "ho_ten": "Phạm Thị Ngọc Nhung", "don_vi": "Phòng Đo đạc, Bản đồ và Viễn thám", "vai_tro": "editor"}, {"email": "chatthairanx@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý chất thải rắn", "vai_tro": "editor"}, {"email": "tainuyennuoc@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Tài nguyên nước, KSBĐ", "vai_tro": "editor"}, {"email": "khituong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Khí tượng Thủy văn và BĐKH", "vai_tro": "editor"}, {"email": "ntmgmbv@snnmt.gov.vn", "ho_ten": "Trương Công Thắng", "don_vi": "Văn phòng NTM&GMBV", "vai_tro": "editor"}, {"email": "dangkydat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Văn phòng Đăng ký đất đai", "vai_tro": "editor"}, {"email": "ttdodac@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Trung tâm Đo đạc bản đồ", "vai_tro": "editor"}, {"email": "khuyennong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Trung tâm Khuyến nông", "vai_tro": "editor"}, {"email": "qbvmt@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Quỹ Bảo vệ môi trường", "vai_tro": "editor"}];
+// Bước 7a: danh sách "chọn nhanh đơn vị" nạp ĐỘNG từ DB (RPC ds_don_vi_chon_nhanh)
+// — chỉ đơn vị đang hoạt động; tự cập nhật khi Sở gộp/tách/khoá đơn vị. Không còn
+// nhúng tĩnh (vốn trôi dần). Rỗng cho tới khi nạp xong ở init(); nếu nạp lỗi vẫn
+// gõ tay email đăng nhập được.
+let DANH_SACH_DON_VI = [];
 
 const APP = {
   user: null, dsBang: [], dsCot: [], dsSoSanh: [], dsGSheet: [],
   bangHT: null, changes: {}, ctMap: {}, yeuCauHienTai: null,
+  dvMoRong: new Set(),   // Bước 7a: đơn vị (nhiều tài khoản) đang mở danh sách email
 
   async init() {
     document.title = CONFIG.TEN_HE_THONG + ' – ' + CONFIG.TEN_CO_QUAN;
     UTILS.el('login-h1').innerHTML = CONFIG.TEN_HE_THONG + '<br>' + CONFIG.TEN_CO_QUAN;
-    this.renderDV(DANH_SACH_DON_VI);
+    await this.napDanhSachDV();
     DB.onAuthChange((event) => { if (event === 'SIGNED_OUT') this.veManHinhDangNhap(); });
     const nguoiDung = await UTILS.kiemTraDangNhap();
     if (nguoiDung) { this.user = nguoiDung; await this.khoiDong(); }
+  },
+
+  // Bước 7a: nạp danh sách "chọn nhanh đơn vị" ĐỘNG từ DB (chỉ đơn vị đang hoạt
+  // động). Gọi được cả khi chưa đăng nhập (anon). Lỗi mạng → để rỗng, vẫn gõ tay
+  // email đăng nhập được.
+  async napDanhSachDV() {
+    try { DANH_SACH_DON_VI = await DB.dsDonViChonNhanh(); }
+    catch (e) { DANH_SACH_DON_VI = []; }
+    this.renderDV(DANH_SACH_DON_VI);
   },
 
   veManHinhDangNhap() {
@@ -416,34 +430,77 @@ const APP = {
     this.user = null; this.bangHT = null; this.changes = {};
     UTILS.el('inp-email').value = ''; UTILS.el('inp-pass').value = ''; UTILS.el('inp-s').value = '';
     UTILS.el('err-login').textContent = '';
-    this.renderDV(DANH_SACH_DON_VI);
+    this.dvMoRong.clear();
+    this.napDanhSachDV();
+  },
+
+  // Gộp danh sách phẳng theo ĐƠN VỊ — mỗi đơn vị một ô, chứa 1..n tài khoản.
+  // (Bước 7a: nền cho đơn vị có ≥2 người nhập.)
+  nhomDV(ds) {
+    const m = new Map();
+    for (const r of ds) {
+      if (!m.has(r.don_vi)) m.set(r.don_vi, { don_vi: r.don_vi, laAdmin: r.vai_tro === 'admin', tk: [] });
+      m.get(r.don_vi).tk.push({ email: r.email, ho_ten: r.ho_ten });
+    }
+    return [...m.values()];
   },
 
   renderDV(ds) {
     const el = UTILS.el('dv-list');
     if (!ds.length) { el.innerHTML = '<div style="padding:12px;color:var(--g4);font-size:12px;grid-column:1/-1">Không tìm thấy</div>'; return }
-    const adm = ds.filter(r => r.vai_tro === 'admin'), edt = ds.filter(r => r.vai_tro === 'editor');
+    const nhom = this.nhomDV(ds);
+    // vai trò 'admin' → Quản trị; MỌI vai trò khác (editor, admin_han_che…) → Đơn vị báo cáo
+    const adm = nhom.filter(g => g.laAdmin), don = nhom.filter(g => !g.laAdmin);
     let h = '<div class="dv-grid">';
     if (adm.length) {
       h += `<div class="grp-lbl">Quản trị</div>`;
-      adm.forEach(r => h += this.dvRow(r));
-      if (adm.length % 2 !== 0) h += '<div></div>';
+      adm.forEach(g => h += this.dvRow(g));
+      // căn lưới 2 cột: nếu ô cuối nhóm quản trị lẻ và ô đó đơn-tài-khoản (không mở rộng), chèn ô trống
+      if (adm.length % 2 !== 0 && adm.every(g => g.tk.length === 1)) h += '<div></div>';
     }
-    if (edt.length) {
+    if (don.length) {
       h += `<div class="grp-lbl">Đơn vị báo cáo</div>`;
-      edt.forEach(r => h += this.dvRow(r));
+      don.forEach(g => h += this.dvRow(g));
     }
     h += '</div>';
     el.innerHTML = h;
   },
 
-  dvRow(r) {
+  dvRow(g) {
     const cur = (UTILS.el('inp-email')?.value || '').trim().toLowerCase();
-    const s = cur === r.email.toLowerCase() ? 'sel' : '';
-    return `<div class="dv-item ${s}" onclick="APP.chonDV('${r.email}')">
-      <div class="dn">${r.don_vi}</div>
-      <div class="ds">${r.ho_ten || ''}</div>
+    // Đơn vị 1 tài khoản: bấm là điền thẳng email (hành vi như cũ).
+    if (g.tk.length === 1) {
+      const r = g.tk[0];
+      const s = cur === r.email.toLowerCase() ? 'sel' : '';
+      return `<div class="dv-item ${s}" onclick="APP.chonDV('${r.email}')">
+        <div class="dn">${g.don_vi}</div>
+        <div class="ds">${r.ho_ten || ''}</div>
+      </div>`;
+    }
+    // Đơn vị ≥2 tài khoản: bấm để MỞ/ĐÓNG danh sách email (hoặc tự gõ ở ô đăng nhập).
+    const dv = g.don_vi.replace(/'/g, "\\'");
+    const mo = this.dvMoRong.has(g.don_vi);
+    const coSel = g.tk.some(r => cur === r.email.toLowerCase());
+    let h = `<div class="dv-item ${coSel ? 'sel' : ''}" style="grid-column:1/-1" onclick="APP.toggleNhomDV('${dv}')">
+      <div class="dn">${g.don_vi} <span style="font-weight:400;color:var(--g4)">(${g.tk.length} tài khoản ${mo ? '▾' : '▸'})</span></div>
+      <div class="ds">Bấm để chọn email, hoặc tự gõ ở ô đăng nhập</div>
     </div>`;
+    if (mo) {
+      h += g.tk.map(r => {
+        const s = cur === r.email.toLowerCase() ? 'sel' : '';
+        return `<div class="dv-item ${s}" style="grid-column:1/-1;padding-left:24px" onclick="APP.chonDV('${r.email}')">
+          <div class="dn" style="font-weight:500">✉️ ${r.email}</div>
+          <div class="ds">${r.ho_ten || ''}</div>
+        </div>`;
+      }).join('');
+    }
+    return h;
+  },
+
+  toggleNhomDV(donVi) {
+    if (this.dvMoRong.has(donVi)) this.dvMoRong.delete(donVi);
+    else this.dvMoRong.add(donVi);
+    this.filterDV(UTILS.el('inp-s')?.value || '');
   },
 
   filterDV(q) {

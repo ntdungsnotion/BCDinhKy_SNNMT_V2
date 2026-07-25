@@ -1,5 +1,5 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6d — admin.html v4, cập nhật 2026/07/25 14:40 (GMT+7): nút "Tạo mật khẩu ngẫu nhiên", đảm bảo luôn có nút Đóng sau khi tạo TK -->
+<!-- Phiên bản file: Bước 7a — admin.html v5, cập nhật 2026/07/25 22:57 (GMT+7): (1) nút gạt Khoá/Hoạt động gọi RPC dat_trang_thai_tai_khoan (đồng bộ banned_until, hết lỗi "User is banned"); (2) modal Thêm tài khoản & Đặt lại MK: nút "Đóng" LUÔN có (đang thao tác dở = huỷ bỏ), sau khi xong có nút "Chép mật khẩu" RIÊNG tách khỏi "Đóng" -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -232,7 +232,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
     </div>
     <div class="mbtns">
       <button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Huỷ</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Đóng</button>
     </div>
     <div class="err-txt" id="err-tk" style="margin-top:8px"></div>
   </div>
@@ -257,7 +257,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
     </div>
     <div class="mbtns">
       <button class="btn-p" onclick="ADMIN.luuDatLaiMK()">💾 Đặt lại</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Huỷ</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>
     </div>
     <div class="err-txt" id="err-dlmk" style="margin-top:8px"></div>
   </div>
@@ -825,6 +825,15 @@ const ADMIN = {
   },
 
   // ── TÀI KHOẢN ──
+  // Bước 7a: chép mật khẩu vừa tạo/đặt lại vào clipboard. Là nút RIÊNG, tách khỏi
+  // nút "Đóng" — admin có thể chép hoặc tự nhớ. Lưu mật khẩu ở _mkChep để nút đọc
+  // (tránh nhét chuỗi vào onclick gây lỗi ký tự đặc biệt).
+  _mkChep: '',
+  async chepMK(ev) {
+    try { if (navigator.clipboard) await navigator.clipboard.writeText(this._mkChep || ''); } catch (e) { /* trình duyệt chặn — admin tự bôi đen chép */ }
+    const b = ev && ev.target; if (b) { b.textContent = '✓ Đã chép'; b.disabled = true; }
+  },
+
   moModalTK(id=null) {
     editHoSoId = id;
     const r = id ? dsTaiKhoan.find(x=>x.id===id) : null;
@@ -842,11 +851,12 @@ const ADMIN = {
     document.getElementById('tk-vaitro').value = r?.vai_tro || 'editor';
     document.getElementById('err-tk').textContent = '';
     document.getElementById('err-tk').style.color = 'var(--red)';
-    // Khôi phục cụm nút gốc (lần tạo trước thành công đã thay bằng nút "Đóng").
+    // Khôi phục cụm nút gốc (lần tạo trước thành công đã thay bằng nút chép/đóng).
+    // Bước 7a: nút đóng LUÔN có; khi đang thêm dở dang, "Đóng" = huỷ bỏ.
     const btns = document.querySelector('#modal-tk .mbtns');
     if (btns) btns.innerHTML =
       `<button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>` +
-      `<button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Huỷ</button>`;
+      `<button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Đóng</button>`;
     UTILS.moModal('modal-tk');
   },
 
@@ -882,11 +892,14 @@ const ADMIN = {
       err.style.color = 'var(--xc)';
       err.innerHTML = `✅ Đã tạo tài khoản <strong>${email}</strong> — mật khẩu ban đầu: <strong class="mono">${mk}</strong><br>
         <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Người này BUỘC đổi mật khẩu ngay lần đăng nhập đầu tiên.</span>`;
-      // Đã tạo xong: đổi cụm nút thành DUY NHẤT nút "Xong — Đóng" nổi bật, để
-      // người dùng luôn thấy chỗ đóng (trước đây thông báo dài đẩy nút "Huỷ"
-      // khuất xuống dưới màn hình). Ngăn bấm "Lưu" lần nữa gây tạo trùng.
+      // Bước 7a: tạo xong → 2 nút RIÊNG: "Chép mật khẩu" (tuỳ dùng) và "Đóng"
+      // (luôn có). Không gộp chung như trước, vì admin có thể tự nhớ, không cần chép.
+      // Ngăn bấm "Lưu" lần nữa gây tạo trùng.
+      this._mkChep = mk;
       const btns = document.querySelector('#modal-tk .mbtns');
-      if (btns) btns.innerHTML = `<button class="btn-p" onclick="UTILS.dongModal('modal-tk')">✓ Đã chép xong — Đóng</button>`;
+      if (btns) btns.innerHTML =
+        `<button class="btn-g" onclick="ADMIN.chepMK(event)">📋 Chép mật khẩu</button>` +
+        `<button class="btn-p" onclick="UTILS.dongModal('modal-tk')">Đóng</button>`;
       await loadTaiKhoan();
       await hienTaiKhoan();
     } catch(e) {
@@ -902,6 +915,12 @@ const ADMIN = {
     document.getElementById('dlmk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
     document.getElementById('err-dlmk').textContent = '';
     document.getElementById('err-dlmk').style.color = 'var(--red)';
+    // Khôi phục cụm nút gốc (lần đặt lại trước thành công đã thay bằng nút chép/đóng).
+    // Bước 7a: nút đóng LUÔN có; đang thao tác dở mà bấm "Đóng" = huỷ bỏ.
+    const btns = document.querySelector('#modal-dlmk .mbtns');
+    if (btns) btns.innerHTML =
+      `<button class="btn-p" onclick="ADMIN.luuDatLaiMK()">💾 Đặt lại</button>` +
+      `<button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>`;
     UTILS.moModal('modal-dlmk');
   },
 
@@ -919,6 +938,13 @@ const ADMIN = {
       err.style.color = 'var(--xc)';
       err.innerHTML = `✅ Đã đặt lại — mật khẩu mới: <strong class="mono">${mk}</strong><br>
         <span style="font-size:11px;color:var(--g4)">Chép lại và gửi ngay — sẽ không hiện lại được. Phiên đăng nhập cũ của người này đã bị huỷ; lần vào tiếp theo BUỘC đổi mật khẩu.</span>`;
+      // Bước 7a: đặt lại xong → 2 nút RIÊNG: "Chép mật khẩu" (tuỳ dùng) + "Đóng"
+      // (luôn có). Ngăn bấm "Đặt lại" lần nữa gây đổi mật khẩu thừa.
+      this._mkChep = mk;
+      const btns = document.querySelector('#modal-dlmk .mbtns');
+      if (btns) btns.innerHTML =
+        `<button class="btn-g" onclick="ADMIN.chepMK(event)">📋 Chép mật khẩu</button>` +
+        `<button class="btn-p" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>`;
       await loadTaiKhoan();
     } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
   },
@@ -1085,7 +1111,13 @@ async function doiVaiTro(id, vt) {
 }
 
 async function toggleHoSo(id, val) {
-  try { await DB.suaHoSo(id, {trang_thai:val}); toast(val?'✅ Đã mở lại!':'🔒 Đã khoá!'); }
+  if (id === user.id && !val) {   // tự khoá chính mình — chặn sớm, RPC cũng chặn
+    toast('Không thể tự khoá tài khoản của chính mình.', 'er'); await hienTaiKhoan(); return;
+  }
+  // BƯỚC 7A: gọi RPC đồng bộ 2 lớp (auth banned_until + ho_so.trang_thai) thay
+  // vì chỉ lật ho_so.trang_thai — nếu không, mở lại tài khoản đang bị ban ở lớp
+  // Auth vẫn báo "User is banned".
+  try { await DB.datTrangThaiTaiKhoan(id, val); toast(val?'✅ Đã mở lại!':'🔒 Đã khoá!'); }
   catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
 }
 

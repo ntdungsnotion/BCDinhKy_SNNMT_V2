@@ -1,5 +1,8 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 6d — db.js, cập nhật 2026/07/25 14:04 (GMT+7)
+// Phiên bản file: Bước 7a — db.js, cập nhật 2026/07/25 22:57 (GMT+7)
+//   Bước 7a: thêm datTrangThaiTaiKhoan() — khoá/mở khoá đồng bộ 2 lớp
+//            (auth banned_until + ho_so.trang_thai) qua RPC dat_trang_thai_tai_khoan;
+//            thêm dsDonViChonNhanh() — picker "chọn nhanh đơn vị" đọc động (anon).
 // ============================================================
 // DB.JS — V2: TẦNG TRUY VẤN SUPABASE (Auth + RLS + mô hình 3 chiều)
 // Yêu cầu load trước: supabase-js v2 (CDN) → config.js → db.js
@@ -142,11 +145,35 @@ const DB = {
     if (error) throw error;
   },
 
+  // Khoá / mở khoá tài khoản — BẢN MỚI Bước 7a. Trước đây trang Tài khoản chỉ
+  // lật ho_so.trang_thai (suaHoSo), KHÔNG đụng auth.users.banned_until, nên
+  // "mở lại" một tài khoản đang bị ban ở lớp Auth vẫn báo "User is banned".
+  // RPC dat_trang_thai_tai_khoan() đồng bộ CẢ HAI lớp trong một giao dịch và
+  // tự kiểm la_admin_toan_quyen() bên trong (08_khoa_mo_tai_khoan.sql).
+  //   hoatDong = true  → gỡ ban + trang_thai = true
+  //   hoatDong = false → ban + trang_thai = false + huỷ phiên đang mở
+  async datTrangThaiTaiKhoan(userId, hoatDong) {
+    const { error } = await sb.rpc('dat_trang_thai_tai_khoan', {
+      p_user_id: userId, p_hoat_dong: !!hoatDong,
+    });
+    if (error) throw error;
+  },
+
   // Danh sách tài khoản KÈM EMAIL — thay layTatCaHoSo() ở trang Tài khoản
   // (Bước 6b không hiện được email; Bước 6c thêm RPC ds_tai_khoan() SECURITY
   // DEFINER để đọc auth.users hợp lệ, chỉ admin gọi được — xem file 06 PHẦN 7.1).
   async dsTaiKhoanDayDu() {
     const { data, error } = await sb.rpc('ds_tai_khoan');
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Danh sách "chọn nhanh đơn vị" ở trang đăng nhập — BẢN MỚI Bước 7a: đọc ĐỘNG
+  // từ DB qua RPC ds_don_vi_chon_nhanh() (anon gọi được, chỉ trả tài khoản đang
+  // hoạt động + đơn vị chưa ngưng). Thay danh sách TĨNH cũ trong index.html vốn
+  // bị trôi khi Sở gộp/tách đơn vị. Không đăng nhập được vẫn gọi được (anon).
+  async dsDonViChonNhanh() {
+    const { data, error } = await sb.rpc('ds_don_vi_chon_nhanh');
     if (error) throw error;
     return data || [];
   },
