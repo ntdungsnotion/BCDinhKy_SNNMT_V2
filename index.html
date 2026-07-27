@@ -1,5 +1,9 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 8b — index.html v3, cập nhật 2026/07/27 10:14 (GMT+7):
+<!-- Phiên bản file: Bước 8b-vá — index.html v4, cập nhật 2026/07/27 13:53 (GMT+7):
+     khung Tiến độ vẽ lại theo mockup Mèo Đen — MỘT bảng phẳng (gộp ô Đơn vị
+     bằng rowspan, không còn card riêng từng đơn vị), cột Ghi chú dựng tường
+     thuật nhiều dòng từ lich_su_nop (DB.layLichSuNopTheoKy mới). -->
+<!-- Phiên bản trước: Bước 8b — index.html v3, cập nhật 2026/07/27 10:14 (GMT+7):
      (1) ô chọn kỳ báo cáo ở sidebar (1 kỳ → nhãn cố định, ≥2 kỳ → <select>,
      mặc định ky_dang_thu_thap()); (2) cột hiện = ky_bao_cao_cot(kỳ đã chọn) ∩
      dua_vao_bieu (đặc tả v4 mục 3.3, thay layCotHienThi() toàn cục cũ); (3) ẩn
@@ -92,7 +96,16 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
 .sb-ky-sel{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:white;font-family:var(--font);font-size:12px;outline:none}
 .sb-ky-sel option{color:var(--dk)}
 .canh-bao-tra-lai{background:#fef2f2;border:1px solid #fecaca;color:var(--red);border-radius:var(--r);padding:9px 14px;margin-bottom:8px;font-size:12px;font-weight:600}
-.tien-do-wrap{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+/* Bước 8b-vá: khung Tiến độ dạng BẢNG PHẲNG kiểu bảng tính, theo mockup Mèo Đen
+   — không còn card riêng từng đơn vị, gộp ô Đơn vị bằng rowspan. */
+.tien-do-wrap{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;padding:16px 18px}
+.tien-do-table{width:100%;border-collapse:collapse;font-size:13px}
+.tien-do-table .td-title{color:var(--red,#c0392b);font-weight:800;font-size:15px;padding:2px 4px 10px}
+.tien-do-table .td-spacer{height:8px}
+.tien-do-table .td-nhan{font-weight:700;font-size:12px;color:var(--g5);white-space:nowrap;padding:2px 10px 2px 4px;vertical-align:middle}
+.tien-do-table .tr-head th{text-align:left;padding:7px 10px;font-size:12px;font-weight:700;color:var(--xd);border-bottom:2px solid var(--g3);background:var(--g1)}
+.tien-do-table td{padding:6px 10px;border-bottom:1px solid var(--g2);vertical-align:top}
+.tien-do-table .td-donvi{font-weight:700;color:var(--xd);vertical-align:middle;border-right:1px solid var(--g2)}
 .sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
 .sb-nav::-webkit-scrollbar{width:3px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
 .nlbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 3px}
@@ -791,9 +804,13 @@ const APP = {
       return;
     }
     UTILS.el('content').innerHTML = `<div class="loading"><span class="spin"></span> Đang tải...</div>`;
-    let ds = [];
-    try { ds = await DB.tienDoDot(this.kyChonId); }
-    catch (e) { UTILS.el('content').innerHTML = `<div class="empty"><span class="i">⚠️</span><span>Lỗi: ${e.message}</span></div>`; return; }
+    let ds = [], dsLichSu = [];
+    try {
+      [ds, dsLichSu] = await Promise.all([
+        DB.tienDoDot(this.kyChonId),
+        DB.layLichSuNopTheoKy(this.kyChonId),
+      ]);
+    } catch (e) { UTILS.el('content').innerHTML = `<div class="empty"><span class="i">⚠️</span><span>Lỗi: ${e.message}</span></div>`; return; }
 
     const kySelHtml = (this.dsKyDeChon && this.dsKyDeChon.length > 1)
       ? `<select class="inp" style="width:auto;min-width:220px" onchange="APP.doiKyTienDo(this.value)">${
@@ -801,36 +818,47 @@ const APP = {
         }</select>`
       : `<strong>${this.dsKyDeChon?.[0]?.ten || ''}</strong>`;
 
-    const gom = {};
-    ds.forEach(r => { const key = r.don_vi_ten || '(chưa gán đơn vị)'; (gom[key] = gom[key] || []).push(r); });
-    const khoi = Object.keys(gom).sort((a, b) => a.localeCompare(b, 'vi')).map(donVi => {
-      const bieuList = gom[donVi];
-      const daNop = bieuList.filter(x => x.trang_thai_don_vi === 'da_nop').length;
-      const rows = bieuList.map(r => {
-        const mauDV = r.mau_don_vi || '#9ca3af';
-        const mauTH = r.mau_thoi_han || '#9ca3af';
-        return `<tr>
-          <td>${r.ten_bang}</td>
-          <td><span class="badge" style="background:${mauDV}22;color:${mauDV};padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600">${r.ten_trang_thai_don_vi || r.trang_thai_don_vi}</span></td>
-          <td>${r.trang_thai_thoi_han ? `<span class="badge" style="background:${mauTH}22;color:${mauTH};padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600">${r.ten_trang_thai_thoi_han}</span>` : '<span style="color:var(--g4);font-size:11px">chưa đặt hạn</span>'}</td>
-          <td style="font-size:11px">${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:#1e40af">(riêng)</span>' : ''}</td>
-          <td style="font-size:11px;color:var(--g4)">${r.thoi_diem_nop ? new Date(r.thoi_diem_nop).toLocaleString('vi-VN') : ''}${r.nguoi_nop_ten ? (' · ' + r.nguoi_nop_ten) : ''}</td>
+    // Nhóm lịch sử theo biểu để dựng tường thuật cột "Ghi chú"
+    const lsTheoBang = {};
+    dsLichSu.forEach(h => { (lsTheoBang[h.bang] = lsTheoBang[h.bang] || []).push(h); });
+
+    // Bước 8b-vá (theo mockup Mèo Đen): MỘT bảng phẳng, gộp ô Đơn vị bằng
+    // rowspan thay vì tách card riêng từng đơn vị. tien_do_dot() đã ORDER BY
+    // don_vi_ten, thu_tu nên các dòng cùng đơn vị luôn liền nhau — chỉ cần
+    // duyệt tuần tự và gộp, không cần tự sắp lại.
+    let rows = '';
+    let i = 0;
+    while (i < ds.length) {
+      const donVi = ds[i].don_vi_ten || '(chưa gán đơn vị)';
+      let j = i;
+      while (j < ds.length && (ds[j].don_vi_ten || '(chưa gán đơn vị)') === donVi) j++;
+      const soDong = j - i;
+      for (let k = i; k < j; k++) {
+        const r = ds[k];
+        const mauDV = r.mau_don_vi || '#374151';
+        const gc = UTILS.tuongThuatLichSuNop(lsTheoBang[r.bang] || []).join('<br>');
+        rows += '<tr>';
+        if (k === i) rows += `<td class="td-donvi" rowspan="${soDong}">${donVi}</td>`;
+        rows += `<td>${r.ten_bang}</td>
+          <td>${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:#1e40af;font-size:11px">(riêng)</span>' : ''}</td>
+          <td style="color:${mauDV};font-weight:700">${r.ten_trang_thai_don_vi || r.trang_thai_don_vi}</td>
+          <td style="font-size:12px;color:var(--g5)">${gc}</td>
         </tr>`;
-      }).join('');
-      return `<div class="tien-do-wrap" style="margin-bottom:10px">
-        <div style="padding:9px 14px;border-bottom:1px solid var(--g2);font-size:13px;font-weight:700;color:var(--xd)">🏢 ${donVi} <span style="font-size:11px;font-weight:400;color:var(--g4)">(${daNop}/${bieuList.length} biểu đã nộp)</span></div>
-        <div style="overflow-x:auto"><table class="dt" style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:var(--g1)"><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--g5)">Biểu</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--g5)">Trạng thái</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--g5)">Thời hạn</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--g5)">Hạn</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--g5)">Nộp lúc</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div>
-      </div>`;
-    }).join('');
+      }
+      i = j;
+    }
 
     UTILS.el('content').innerHTML = `
-      <div class="tien-do-wrap" style="margin-bottom:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:12px;color:var(--g5);font-weight:700">🗓️ Kỳ báo cáo:</span> ${kySelHtml}
-      </div>
-      ${khoi || '<div class="empty"><span class="i">📭</span><span>Chưa có biểu nào phải báo ở kỳ này.</span></div>'}`;
+      <div class="tien-do-wrap">
+        <table class="tien-do-table">
+          <tr><td colspan="5" class="td-title">Tiến độ nộp báo cáo</td></tr>
+          <tr><td colspan="5" class="td-spacer"></td></tr>
+          <tr><td class="td-nhan">Kỳ báo cáo:</td><td colspan="4">${kySelHtml}</td></tr>
+          <tr><td colspan="5" class="td-spacer"></td></tr>
+          <tr class="tr-head"><th>Đơn vị</th><th>Biểu</th><th>Hạn nộp</th><th>Trạng thái</th><th>Ghi chú</th></tr>
+          ${rows || '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--g4)">Chưa có biểu nào phải báo ở kỳ này.</td></tr>'}
+        </table>
+      </div>`;
   },
 
   async doiKyTienDo(kyId) {

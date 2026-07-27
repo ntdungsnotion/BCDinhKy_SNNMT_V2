@@ -1,6 +1,10 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 8b — db.js, cập nhật 2026/07/27 10:14 (GMT+7)
-//   Bước 8b: thêm trọn khối "KỲ BÁO CÁO" (Bước 8/8a-vá) — bọc 7 RPC gốc +
+// Phiên bản file: Bước 8b-vá — db.js, cập nhật 2026/07/27 13:53 (GMT+7)
+//   Bước 8b-vá: thêm layLichSuNopTheoKy() — lấy TOÀN BỘ lịch sử nộp của một
+//               kỳ MỘT LẦN (kèm embed ho_so.ho_ten), dùng dựng tường thuật ở
+//               khung Tiến độ/Theo dõi theo mockup Mèo Đen (tránh N+1 lời gọi).
+// Phiên bản trước:
+// Bước 8b: thêm trọn khối "KỲ BÁO CÁO" (Bước 8/8a-vá) — bọc 7 RPC gốc +
 //            10 RPC/bảng mới của 8a-vá + RPC dat_phai_bao_cao (bổ sung ngoài
 //            phạm vi 8a-vá gốc, xem 12_dat_phai_bao_cao.sql); layChiTieuTheoBang
 //            lấy thêm thang_tuy_chinh/nam_dac_biet cho UTILS.apDungTanSuat.
@@ -878,6 +882,20 @@ const DB = {
   // xem quyết định 8a-vá).
   async tienDoDot(kyId) {
     const { data, error } = await sb.rpc('tien_do_dot', { p_ky_id: kyId });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Toàn bộ lịch sử nộp của CẢ MỘT KỲ, một lần gọi (kèm tên người thực hiện
+  // qua embed ho_so.ho_ten) — dùng để dựng tường thuật nhiều dòng ở khung
+  // Tiến độ (index.html)/Theo dõi (admin.html), tránh gọi layLichSuNop() lặp
+  // lại cho từng biểu (N+1). Sắp CŨ→MỚI để dựng tường thuật theo trình tự.
+  async layLichSuNopTheoKy(kyId) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.LICH_SU_NOP)
+      .select('*, ho_so(ho_ten)')
+      .eq('ky_id', kyId)
+      .order('luc', { ascending: true });
     if (error) throw error;
     return data || [];
   },

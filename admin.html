@@ -1,11 +1,16 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 8b — admin.html v6, cập nhật 2026/07/27 10:14 (GMT+7):
+<!-- Phiên bản file: Bước 8b-vá — admin.html v7, cập nhật 2026/07/27 13:53 (GMT+7):
+     mục "Theo dõi" vẽ lại theo mockup Mèo Đen — MỘT bảng phẳng (gộp ô Đơn vị
+     bằng rowspan), bỏ card "hàng đợi" riêng, thêm cột Thao tác (theo trạng
+     thái) + Ghi chú quản trị (lý do trả lại/từ chối gần nhất), cột Ghi chú
+     dựng tường thuật nhiều dòng từ lich_su_nop (DB.layLichSuNopTheoKy mới). -->
+<!-- Phiên bản trước: Bước 8b — admin.html v6, cập nhật 2026/07/27 10:14 (GMT+7):
      (1) mục "Cột báo cáo" đổi nhãn "Kỳ dữ liệu" + ngăn trên "Chọn kỳ báo cáo"
      (Luồng A2) + lọc tháng + phân trang 100 dòng; (2) mục MỚI "Kỳ báo cáo"
      (Luồng A1 — wizard 3 bước + trang chi tiết: cột, hạn, phát hành/đóng);
      (3) mục MỚI "Theo dõi" (Luồng C — hàng đợi đề nghị chỉnh sửa, danh sách
      GOM THEO ĐƠN VỊ, quản lý "phải báo cáo", quản lý danh mục trạng thái nộp). -->
-<!-- Phiên bản trước: Bước 7a — admin.html v5, cập nhật 2026/07/25 22:57 (GMT+7): (1) nút gạt Khoá/Hoạt động gọi RPC dat_trang_thai_tai_khoan (đồng bộ banned_until, hết lỗi "User is banned"); (2) modal Thêm tài khoản & Đặt lại MK: nút "Đóng" LUÔN có (đang thao tác dở = huỷ bỏ), sau khi xong có nút "Chép mật khẩu" RIÊNG tách khỏi "Đóng" -->
+<!-- Phiên bản trước nữa: Bước 7a — admin.html v5, cập nhật 2026/07/25 22:57 (GMT+7): (1) nút gạt Khoá/Hoạt động gọi RPC dat_trang_thai_tai_khoan (đồng bộ banned_until, hết lỗi "User is banned"); (2) modal Thêm tài khoản & Đặt lại MK: nút "Đóng" LUÔN có (đang thao tác dở = huỷ bỏ), sau khi xong có nút "Chép mật khẩu" RIÊNG tách khỏi "Đóng" -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -59,6 +64,7 @@ table.dt thead th:not(.sort-asc):not(.sort-desc) .sort-icon::after{content:'↕'
 table.dt td{padding:8px 12px;border-bottom:1px solid var(--g2)}
 table.dt tr:last-child td{border-bottom:none}
 table.dt tr:hover td{background:#f7faf8}
+table.dt .td-donvi{font-weight:700;color:var(--xd);vertical-align:middle;border-right:1px solid var(--g2)}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
 .badge.green{background:#d1fae5;color:#065f46}.badge.red{background:#fee2e2;color:#991b1b}
 .badge.blue{background:#dbeafe;color:var(--blue)}.badge.gray{background:var(--g2);color:var(--g5)}
@@ -377,6 +383,7 @@ let hanNopBangChiTiet = [];
 let dsKyMoTheoDoi = [];
 let theodoiKyId = null;
 let theodoiTienDo = [];
+let theodoiLichSu = [];            // Bước 8b-vá: toàn bộ lịch sử nộp của kỳ (dựng tường thuật cột Ghi chú/Ghi chú quản trị)
 let theodoiTrangThaiNop = [];      // TOÀN BỘ dòng trang_thai_nop của kỳ (kể cả phai_bao_cao=false)
 let dsDmTrangThaiNop = [];
 
@@ -2371,12 +2378,12 @@ async function hienTheoDoi() {
 }
 
 async function taiTienDoTheoDoi() {
-  if (!theodoiKyId) { theodoiTienDo = []; theodoiTrangThaiNop = []; renderTheoDoi(); return; }
+  if (!theodoiKyId) { theodoiTienDo = []; theodoiLichSu = []; theodoiTrangThaiNop = []; renderTheoDoi(); return; }
   try {
-    [theodoiTienDo, theodoiTrangThaiNop] = await Promise.all([
-      DB.tienDoDot(theodoiKyId), DB.layTrangThaiNopTheoKy(theodoiKyId),
+    [theodoiTienDo, theodoiLichSu, theodoiTrangThaiNop] = await Promise.all([
+      DB.tienDoDot(theodoiKyId), DB.layLichSuNopTheoKy(theodoiKyId), DB.layTrangThaiNopTheoKy(theodoiKyId),
     ]);
-  } catch (e) { toast('Lỗi tải tiến độ: ' + e.message, 'er'); theodoiTienDo = []; theodoiTrangThaiNop = []; }
+  } catch (e) { toast('Lỗi tải tiến độ: ' + e.message, 'er'); theodoiTienDo = []; theodoiLichSu = []; theodoiTrangThaiNop = []; }
   renderTheoDoi();
 }
 
@@ -2384,41 +2391,46 @@ function renderTheoDoi() {
   const kySel = dsKyMoTheoDoi.map(k => `<option value="${k.id}" ${String(theodoiKyId) === String(k.id) ? 'selected' : ''}>${(k.ten||'').replace(/</g,'&lt;')}${k.dang_thu_thap ? ' ⭐' : ''}</option>`).join('');
   const kyHienTai = dsKyMoTheoDoi.find(k => String(k.id) === String(theodoiKyId));
 
-  const hangDoi = theodoiTienDo.filter(r => r.trang_thai_don_vi === 'de_nghi_sua');
-  const rowsHangDoi = hangDoi.map(r => `<tr>
-    <td><strong>${r.ten_bang}</strong></td><td>${r.don_vi_ten || ''}</td>
-    <td style="font-size:12px">${(r.ghi_chu || '--').replace(/</g,'&lt;')}</td>
-    <td style="white-space:nowrap">
-      <button class="btn primary" style="padding:4px 10px;margin-right:4px" onclick="theodoiDuyet('${r.bang}',true)">✅ Duyệt (mở lại)</button>
-      <button class="btn danger" style="padding:4px 10px" onclick="theodoiDuyet('${r.bang}',false)">❌ Từ chối</button>
-    </td>
-  </tr>`).join('');
+  // Bước 8b-vá (theo mockup Mèo Đen): MỘT bảng phẳng — bỏ card "hàng đợi đề
+  // nghị chỉnh sửa" riêng + card gom-theo-đơn-vị cũ, gộp lại thành một bảng
+  // duy nhất với cột Thao tác (tuỳ trạng thái) + Ghi chú quản trị. Gộp ô
+  // Đơn vị bằng rowspan — tien_do_dot() đã ORDER BY don_vi_ten, thu_tu nên
+  // các dòng cùng đơn vị luôn liền nhau, chỉ cần duyệt tuần tự.
+  const lsTheoBang = {};
+  theodoiLichSu.forEach(h => { (lsTheoBang[h.bang] = lsTheoBang[h.bang] || []).push(h); });
 
-  // Danh sách GOM THEO ĐƠN VỊ (đặc tả v4 mục 11 Luồng C — KHÔNG dùng ma trận
-  // đơn vị × biểu vì mỗi biểu chỉ thuộc một đơn vị, ma trận sẽ trống ~96% ô).
-  const gom = {};
-  theodoiTienDo.forEach(r => { const key = r.don_vi_ten || '(chưa gán đơn vị)'; (gom[key] = gom[key] || []).push(r); });
-  const donViBlocks = Object.keys(gom).sort((a, b) => a.localeCompare(b, 'vi')).map(donVi => {
-    const bieuList = gom[donVi];
-    const daNop = bieuList.filter(b => b.trang_thai_don_vi === 'da_nop').length;
-    const rows = bieuList.map(r => {
-      const mauDV = r.mau_don_vi || '#9ca3af';
-      const mauTH = r.mau_thoi_han || '#9ca3af';
-      return `<tr>
-        <td>${r.ten_bang}</td>
-        <td><span class="badge" style="background:${mauDV}22;color:${mauDV}">${r.ten_trang_thai_don_vi || r.trang_thai_don_vi}</span></td>
-        <td>${r.trang_thai_thoi_han ? `<span class="badge" style="background:${mauTH}22;color:${mauTH}">${r.ten_trang_thai_thoi_han}</span>` : '<span style="color:var(--g4);font-size:11px">chưa đặt hạn</span>'}</td>
-        <td style="font-size:11px">${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:var(--blue)">(riêng)</span>' : ''}</td>
-        <td style="font-size:11px;color:var(--g4)">${r.thoi_diem_nop ? new Date(r.thoi_diem_nop).toLocaleString('vi-VN') : ''}${r.nguoi_nop_ten ? (' · ' + r.nguoi_nop_ten) : ''}</td>
-        <td style="white-space:nowrap">${r.trang_thai_don_vi === 'da_nop' ? `<button class="btn ghost" style="padding:3px 8px" onclick="theodoiTraLai('${r.bang}')">↩ Trả lại</button>` : ''}</td>
+  let rows = '';
+  let i = 0;
+  while (i < theodoiTienDo.length) {
+    const donVi = theodoiTienDo[i].don_vi_ten || '(chưa gán đơn vị)';
+    let j = i;
+    while (j < theodoiTienDo.length && (theodoiTienDo[j].don_vi_ten || '(chưa gán đơn vị)') === donVi) j++;
+    const soDong = j - i;
+    for (let k = i; k < j; k++) {
+      const r = theodoiTienDo[k];
+      const mauDV = r.mau_don_vi || '#374151';
+      const lsBieu = lsTheoBang[r.bang] || [];
+      const gc = UTILS.tuongThuatLichSuNop(lsBieu).join('<br>');
+      const gcQuanTri = UTILS.ghiChuQuanTriGanNhat(lsBieu);
+      let thaoTac = '';
+      if (r.trang_thai_don_vi === 'de_nghi_sua') {
+        thaoTac = `<button class="btn primary" style="padding:3px 9px;margin-right:4px" onclick="theodoiDuyet('${r.bang}',true)">✅ Duyệt</button>`
+                + `<button class="btn danger" style="padding:3px 9px" onclick="theodoiDuyet('${r.bang}',false)">❌ Từ chối</button>`;
+      } else if (r.trang_thai_don_vi === 'da_nop') {
+        thaoTac = `<button class="btn ghost" style="padding:3px 9px" onclick="theodoiTraLai('${r.bang}')">↩ Trả lại báo cáo</button>`;
+      }
+      rows += '<tr>';
+      if (k === i) rows += `<td class="td-donvi" rowspan="${soDong}">${donVi}</td>`;
+      rows += `<td>${r.ten_bang}</td>
+        <td style="font-size:12px">${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:#1e40af">(riêng)</span>' : ''}</td>
+        <td style="color:${mauDV};font-weight:700">${r.ten_trang_thai_don_vi || r.trang_thai_don_vi}</td>
+        <td style="font-size:12px;color:var(--g5)">${gc}</td>
+        <td style="white-space:nowrap">${thaoTac}</td>
+        <td style="font-size:12px;color:var(--g5)">${(gcQuanTri || '').replace(/</g,'&lt;')}</td>
       </tr>`;
-    }).join('');
-    return `<div class="card" style="margin-top:10px">
-      <div class="card-head"><h3 style="font-size:13px">🏢 ${donVi} <span style="font-size:11px;font-weight:400;color:var(--g4)">(${daNop}/${bieuList.length} biểu đã nộp)</span></h3></div>
-      <div style="overflow-x:auto"><table class="dt"><thead><tr><th>Biểu</th><th>Trạng thái</th><th>Thời hạn</th><th>Hạn</th><th>Nộp lúc</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    </div>`;
-  }).join('');
+    }
+    i = j;
+  }
 
   document.getElementById('content').innerHTML = `
     <div class="card">
@@ -2428,13 +2440,11 @@ function renderTheoDoi() {
         <select class="inp" style="width:auto;min-width:240px" onchange="theodoiKyId=parseInt(this.value);taiTienDoTheoDoi()">${kySel || '<option value="">Chưa có kỳ nào</option>'}</select>
         ${kyHienTai ? (kyHienTai.dang_thu_thap ? '<span class="badge blue">⭐ Đang thu thập</span>' : `<button class="btn ghost" onclick="theodoiDatDangThuThap()">📌 Đặt làm kỳ đang thu thập</button>`) : ''}
       </div>
+      <div style="overflow-x:auto"><table class="dt tien-do-table-admin">
+        <thead><tr><th>Đơn vị</th><th>Biểu</th><th>Hạn nộp</th><th>Trạng thái</th><th>Ghi chú</th><th>Thao tác</th><th>Ghi chú quản trị</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--g4)">Chưa có biểu nào phải báo ở kỳ này (hoặc chưa chọn kỳ báo cáo).</td></tr>'}</tbody>
+      </table></div>
     </div>
-    ${hangDoi.length ? `<div class="card" style="margin-top:12px">
-      <div class="card-head"><h3>⏳ Đề nghị chỉnh sửa đang chờ <span style="font-size:12px;font-weight:400;color:var(--g4)">(${hangDoi.length})</span></h3></div>
-      <div style="overflow-x:auto"><table class="dt"><thead><tr><th>Biểu</th><th>Đơn vị</th><th>Lý do</th><th></th></tr></thead>
-      <tbody>${rowsHangDoi}</tbody></table></div>
-    </div>` : ''}
-    ${donViBlocks || '<div class="empty" style="margin-top:12px"><span class="i">📭</span><span>Chưa có biểu nào phải báo ở kỳ này (hoặc chưa chọn kỳ báo cáo).</span></div>'}
     ${theodoiKyId ? renderPanelPhaiBaoCao() : ''}
     ${renderCardDmTrangThaiNop()}
   `;

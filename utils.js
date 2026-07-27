@@ -1,5 +1,8 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 8b — utils.js, cập nhật 2026/07/27 10:14 (GMT+7):
+// Phiên bản file: Bước 8b-vá — utils.js, cập nhật 2026/07/27 13:53 (GMT+7):
+//   thêm formatNgayGio(), tuongThuatLichSuNop(), ghiChuQuanTriGanNhat() —
+//   dựng tường thuật nhiều dòng cho khung Tiến độ/Theo dõi theo mockup Mèo Đen.
+// Phiên bản trước: Bước 8b — utils.js, cập nhật 2026/07/27 10:14 (GMT+7):
 //   thêm apDungTanSuat() (khớp hệt hàm SQL cùng tên, tính ở giao diện để
 //   ẩn/khoá Ô theo tần suất chỉ tiêu) và formatNgay() (hiển thị hạn nộp).
 // ============================================================
@@ -141,6 +144,50 @@ const UTILS = {
     const dt = new Date(s);
     if (isNaN(dt.getTime())) return '';
     return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+  },
+
+  // Định dạng "HH:MM dd/mm/yyyy" — dùng cho các mốc thời gian có giờ (nộp,
+  // đề nghị, duyệt, trả lại...), khớp đúng kiểu hiển thị Mèo Đen yêu cầu
+  // (vd "14:20 08/08/2026").
+  formatNgayGio(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm} ${this.formatNgay(d)}`;
+  },
+
+  // Dựng tường thuật NHIỀU DÒNG cho một biểu từ mảng lich_su_nop của MỘT
+  // (kỳ × biểu) — đã sắp CŨ→MỚI, có embed ho_so.ho_ten (xem
+  // DB.layLichSuNopTheoKy). Dùng chung cho khung Tiến độ (index.html, chỉ
+  // đọc) và Theo dõi (admin.html). Trả về MẢNG chuỗi (mỗi phần tử một dòng
+  // để nối bằng <br>), rỗng nếu biểu chưa có vết nào.
+  tuongThuatLichSuNop(dsLichSu) {
+    if (!dsLichSu || !dsLichSu.length) return [];
+    return dsLichSu.map(h => {
+      const ten = h.ho_so?.ho_ten || '(không rõ)';
+      const luc = this.formatNgayGio(h.luc);
+      switch (h.hanh_dong) {
+        case 'nop':     return `Nộp lúc ${luc}, người nộp: ${ten}`;
+        case 'xin_sua': return `Đề nghị chỉnh sửa lúc ${luc}, người đề nghị: ${ten}${h.ly_do ? ' — ' + h.ly_do : ''}`;
+        case 'duyet':   return `Đã duyệt mở lại lúc ${luc}, người duyệt: ${ten}`;
+        case 'tu_choi': return `Từ chối đề nghị lúc ${luc}, người xử lý: ${ten}${h.ly_do ? ', lý do: ' + h.ly_do : ''}`;
+        case 'tra_lai': return `Trả lại lúc ${luc}, người xử lý: ${ten}${h.ly_do ? ', lý do: ' + h.ly_do : ''}`;
+        default:        return `${h.hanh_dong} lúc ${luc}, bởi: ${ten}`;
+      }
+    });
+  },
+
+  // Lý do của hành động QUẢN TRỊ gần nhất (trả lại / từ chối) trong lịch sử
+  // của một biểu — cột "Ghi chú quản trị" ở Theo dõi (admin.html), theo
+  // mockup Mèo Đen. GIỮ LẠI dù biểu đã nộp lại sau đó (vết cũ vẫn có ích để
+  // admin nhớ lại đã từng trả lại vì lý do gì). Trả về '' nếu chưa từng có.
+  ghiChuQuanTriGanNhat(dsLichSu) {
+    if (!dsLichSu || !dsLichSu.length) return '';
+    const dsQuanTri = dsLichSu.filter(h => h.hanh_dong === 'tra_lai' || h.hanh_dong === 'tu_choi');
+    if (!dsQuanTri.length) return '';
+    return dsQuanTri[dsQuanTri.length - 1].ly_do || '';
   },
 
   // ── CỘT BÁO CÁO (kỳ × loại) — sinh mã & tiêu đề ─────────
