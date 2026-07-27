@@ -1,5 +1,9 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 7a — db.js, cập nhật 2026/07/25 22:57 (GMT+7)
+// Phiên bản file: Bước 8b — db.js, cập nhật 2026/07/27 10:14 (GMT+7)
+//   Bước 8b: thêm trọn khối "KỲ BÁO CÁO" (Bước 8/8a-vá) — bọc 7 RPC gốc +
+//            10 RPC/bảng mới của 8a-vá + RPC dat_phai_bao_cao (bổ sung ngoài
+//            phạm vi 8a-vá gốc, xem 12_dat_phai_bao_cao.sql); layChiTieuTheoBang
+//            lấy thêm thang_tuy_chinh/nam_dac_biet cho UTILS.apDungTanSuat.
 //   Bước 7a: thêm datTrangThaiTaiKhoan() — khoá/mở khoá đồng bộ 2 lớp
 //            (auth banned_until + ho_so.trang_thai) qua RPC dat_trang_thai_tai_khoan;
 //            thêm dsDonViChonNhanh() — picker "chọn nhanh đơn vị" đọc động (anon).
@@ -488,7 +492,7 @@ const DB = {
   async layChiTieuTheoBang(maBang) {
     const { data, error } = await sb
       .from(CONFIG.BANG.CHI_TIEU)
-      .select('id, chi_tieu, don_vi, bang, thu_tu, la_tieu_de, cho_phep_nhap, kieu_du_lieu, stt_hien_thi, tan_suat, id_bo, do_rong_cot')
+      .select('id, chi_tieu, don_vi, bang, thu_tu, la_tieu_de, cho_phep_nhap, kieu_du_lieu, stt_hien_thi, tan_suat, thang_tuy_chinh, nam_dac_biet, id_bo, do_rong_cot')
       .eq('bang', maBang)
       .order('thu_tu');
     if (error) throw error;
@@ -657,5 +661,285 @@ const DB = {
         .insert(dsBang.map(mb => ({ user_id: userId, bang: mb })));
       if (error) throw error;
     }
+  },
+
+  // ════════════════════════════════════════════════════════════
+  // KỲ BÁO CÁO (Bước 8 / 8a-vá / 8b) — lớp nghiệp vụ đứng TRÊN mô hình 3
+  // chiều (chỉ tiêu × cột × loại). "Kỳ báo cáo" (bảng ky_bao_cao) khác hẳn
+  // "kỳ dữ liệu" (cot_bao_cao — không đổi, xem khối CỘT BÁO CÁO ở trên).
+  // Bảy RPC gốc của 8a GIỮ NGUYÊN chữ ký qua bản vá 8a-vá:
+  //   tao_ky_bao_cao, dat_han_nop, nop_bao_cao, de_nghi_chinh_sua,
+  //   duyet_mo_lai_bao_cao, tien_do_dot, _tim_hoac_tao_cot (nội bộ, không gọi
+  //   trực tiếp từ đây).
+  // ════════════════════════════════════════════════════════════
+
+  // Danh sách kỳ báo cáo (mọi trạng thái — dùng cho trang quản trị).
+  // loc = { nam?, thang? } — lọc đúng (không phải khoảng, vì kỳ báo cáo ít,
+  // không cần khoảng năm như cot_bao_cao). Sắp tao_luc GIẢM DẦN (đặc tả v4
+  // mục 11 Luồng A1 — mới nhất trên).
+  async layTatCaKyBaoCao(loc = {}) {
+    let q = sb.from(CONFIG.BANG.KY_BAO_CAO).select('*');
+    if (loc.nam)   q = q.eq('nam', loc.nam);
+    if (loc.thang) q = q.eq('thang', loc.thang);
+    q = q.order('tao_luc', { ascending: false });
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async layKyBaoCao(id) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.KY_BAO_CAO)
+      .select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Kỳ báo cáo đơn vị được PHÉP CHỌN ở index.html (đặc tả v4 mục 3.3 "Danh
+  // sách kỳ để chọn"). Admin thấy MỌI kỳ đang mở (admin bypass mọi tầng khóa
+  // nên không cần lọc theo phai_bao_cao). Đơn vị chỉ thấy kỳ mo có ít nhất
+  // một biểu của mình đang phai_bao_cao=true.
+  // isAdmin=false mà dsBangCuaDonVi rỗng → trả về mảng rỗng (chưa được phân
+  // công bảng nào thì không có kỳ nào để chọn).
+  async layDsKyDeChon(dsBangCuaDonVi, isAdmin) {
+    if (isAdmin) {
+      const { data, error } = await sb
+        .from(CONFIG.BANG.KY_BAO_CAO)
+        .select('*').eq('trang_thai_ky', 'mo')
+        .order('tao_luc', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+    if (!dsBangCuaDonVi || !dsBangCuaDonVi.length) return [];
+    const { data, error } = await sb
+      .from(CONFIG.BANG.KY_BAO_CAO)
+      .select('*, trang_thai_nop!inner(bang,phai_bao_cao)')
+      .eq('trang_thai_ky', 'mo')
+      .eq('trang_thai_nop.phai_bao_cao', true)
+      .in('trang_thai_nop.bang', dsBangCuaDonVi)
+      .order('tao_luc', { ascending: false });
+    if (error) throw error;
+    // Khử trùng phòng hờ: mỗi kỳ chỉ nên xuất hiện MỘT lần dù có nhiều biểu
+    // khớp điều kiện lọc embed ở trên (PostgREST không nhân bản dòng cha khi
+    // embed, nhưng giữ khử trùng cho chắc — rẻ, không hại).
+    const daThay = new Set();
+    return (data || []).filter(k => {
+      if (daThay.has(k.id)) return false;
+      daThay.add(k.id); return true;
+    });
+  },
+
+  // Tạo kỳ báo cáo mới (Luồng A1 bước "Xác nhận"). Trả về id kỳ vừa tạo.
+  // Kỳ khởi tạo ở trạng thái 'nhap' (nháp) — đơn vị chưa thấy tới khi admin
+  // "Phát hành" (xem suaKyBaoCao — chỉ là UPDATE trang_thai_ky='mo').
+  async taoKyBaoCao(nam, loaiKy = 'thang', thang = null, ten = null, hanNop = null) {
+    const { data, error } = await sb.rpc('tao_ky_bao_cao', {
+      p_nam: nam, p_loai_ky: loaiKy, p_thang: thang, p_ten: ten, p_han_nop: hanNop,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  // Sửa trực tiếp kỳ báo cáo (RLS admin ghi trực tiếp được — KHÔNG cần RPC).
+  // Dùng cho: "Phát hành" ({trang_thai_ky:'mo'}), đóng kỳ ({trang_thai_ky:'dong'}),
+  // sửa tên/hạn chung/thứ tự/ghi chú.
+  async suaKyBaoCao(id, row) {
+    const { error } = await sb.from(CONFIG.BANG.KY_BAO_CAO).update(row).eq('id', id);
+    if (error) throw error;
+  },
+
+  // Xem trước (CHỈ ĐỌC) 5 cột mặc định của một kỳ CHƯA tạo — Luồng A1 bước 2.
+  async duKienCotKy(thang, nam) {
+    const { data, error } = await sb.rpc('du_kien_cot_ky', { p_thang: thang, p_nam: nam });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Kỳ dữ liệu (cột) THẬT SỰ thuộc một kỳ báo cáo đã tạo — dùng ở Luồng A2
+  // (ngăn trên "Chọn kỳ báo cáo") và Luồng A1 bước 3 (xác nhận sau khi tạo).
+  // Sắp theo COALESCE(ky_bao_cao_cot.thu_tu, cot_bao_cao.thu_tu_hien_thi) —
+  // đúng công thức đặc tả v4 mục 4 (trình tự cột trong lưới nhập).
+  async layCotCuaKy(kyId) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.KY_BAO_CAO_COT)
+      .select('thu_tu, cot_id, cot_bao_cao(*)')
+      .eq('ky_id', kyId);
+    if (error) throw error;
+    return (data || [])
+      .filter(r => r.cot_bao_cao)
+      .map(r => ({ ...r.cot_bao_cao, thu_tu_trong_ky: r.thu_tu }))
+      .sort((a, b) => (Number(a.thu_tu_trong_ky ?? a.thu_tu_hien_thi) || 0)
+                     - (Number(b.thu_tu_trong_ky ?? b.thu_tu_hien_thi) || 0));
+  },
+
+  // Admin thêm MỘT kỳ dữ liệu (cột) vào kỳ báo cáo — cột đặc biệt (kế hoạch
+  // năm, ước quý…) ở Luồng A1 bước 3, hoặc tuỳ chỉnh thêm ở Luồng A2. Tự tạo
+  // cột nếu (tháng,năm,loại) chưa có (dùng chung _tim_hoac_tao_cot). Trả về cot_id.
+  async themCotVaoKy(kyId, thang, nam, loai, thuTu = null) {
+    const { data, error } = await sb.rpc('them_cot_vao_ky', {
+      p_ky_id: kyId, p_thang: thang, p_nam: nam, p_loai: loai, p_thu_tu: thuTu,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin bỏ một kỳ dữ liệu (cột) khỏi kỳ báo cáo (KHÔNG xoá cot_bao_cao/so_lieu).
+  async boCotKhoiKy(kyId, cotId) {
+    const { error } = await sb.rpc('bo_cot_khoi_ky', { p_ky_id: kyId, p_cot_id: cotId });
+    if (error) throw error;
+  },
+
+  // Đặt hạn nộp. p_bang=null → hạn CHUNG cả kỳ; p_bang có giá trị → hạn RIÊNG
+  // biểu đó (đè hạn chung). hanNop=null → GỠ hạn riêng / xoá hạn chung.
+  async datHanNop(kyId, bang = null, hanNop = null) {
+    const { error } = await sb.rpc('dat_han_nop', { p_ky_id: kyId, p_bang: bang, p_han_nop: hanNop });
+    if (error) throw error;
+  },
+
+  async layHanNopBang(kyId) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.HAN_NOP_BANG)
+      .select('*').eq('ky_id', kyId);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Tính lại phai_bao_cao của mọi biểu trong kỳ (gọi sau khi thêm/bớt cột) —
+  // CHỈ chạm dòng admin_sua_tay=false (không ghi đè chỗ admin đã sửa tay).
+  // Trả về số dòng vừa cập nhật.
+  async tinhLaiPhaiBaoCao(kyId) {
+    const { data, error } = await sb.rpc('tinh_lai_phai_bao_cao', { p_ky_id: kyId });
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin sửa TAY cờ phai_bao_cao của một (kỳ × biểu) — Luồng C mục 11 việc 3.
+  // RPC MỚI ngoài phạm vi 8a-vá gốc (xem 12_dat_phai_bao_cao.sql) — trang_thai_nop
+  // cố ý không có policy ghi trực tiếp cho authenticated. Luôn đặt admin_sua_tay=true
+  // để tinh_lai_phai_bao_cao() không ghi đè lại lần sau.
+  async datPhaiBaoCao(kyId, bang, phaiBaoCao) {
+    const { error } = await sb.rpc('dat_phai_bao_cao', {
+      p_ky_id: kyId, p_bang: bang, p_phai_bao_cao: !!phaiBaoCao,
+    });
+    if (error) throw error;
+  },
+
+  // Kỳ "đang thu thập" — cờ lưu thẳng (đặc tả v4 mục 3.3b), CHỈ dùng làm mặc
+  // định ở ô chọn kỳ của đơn vị. Trả về id kỳ, hoặc null nếu chưa có kỳ nào mở.
+  async kyDangThuThap() {
+    const { data, error } = await sb.rpc('ky_dang_thu_thap');
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin đặt kỳ đang thu thập (Luồng A2 tự gọi khi "Đồng ý" ngăn trên; trang
+  // quản trị kỳ báo cáo cũng gọi được tay nếu thấy phần mềm đặt lệch).
+  async datKyDangThuThap(kyId) {
+    const { error } = await sb.rpc('dat_ky_dang_thu_thap', { p_ky_id: kyId });
+    if (error) throw error;
+  },
+
+  // Đơn vị (hoặc admin thay mặt) NỘP báo cáo cho (kỳ × biểu) — thay hẳn
+  // guiBaoCao() cũ (Bước 5, đã dọn khoá chéo tầng ở 8a-vá, xem đặc tả v4 mục 7).
+  async nopBaoCao(kyId, bang) {
+    const { error } = await sb.rpc('nop_bao_cao', { p_ky_id: kyId, p_bang: bang });
+    if (error) throw error;
+  },
+
+  // Đơn vị đề nghị chỉnh sửa lại biểu ĐÃ NỘP — thay hẳn deNghiMoKhoa() cũ.
+  async deNghiChinhSuaKy(kyId, bang, ghiChu = null) {
+    const { error } = await sb.rpc('de_nghi_chinh_sua', {
+      p_ky_id: kyId, p_bang: bang, p_ghi_chu: (ghiChu || '').trim() || null,
+    });
+    if (error) throw error;
+  },
+
+  // Admin duyệt (đồng ý → 'da_mo_lai') hoặc từ chối (→ trả lại 'da_nop') đề
+  // nghị chỉnh sửa đang chờ.
+  async duyetMoLaiBaoCao(kyId, bang, dongY) {
+    const { error } = await sb.rpc('duyet_mo_lai_bao_cao', {
+      p_ky_id: kyId, p_bang: bang, p_dong_y: !!dongY,
+    });
+    if (error) throw error;
+  },
+
+  // Admin CHỦ ĐỘNG trả lại biểu đã nộp (không cần đơn vị xin trước) — RPC MỚI
+  // của 8a-vá, việc 10.
+  async traLaiBaoCao(kyId, bang, lyDo = null) {
+    const { error } = await sb.rpc('tra_lai_bao_cao', {
+      p_ky_id: kyId, p_bang: bang, p_ly_do: (lyDo || '').trim() || null,
+    });
+    if (error) throw error;
+  },
+
+  // Tiến độ nộp của MỘT kỳ báo cáo — RLS tự lọc: đơn vị chỉ thấy biểu mình,
+  // admin thấy hết. Đã lọc phai_bao_cao=true và sửa đúng "đang nhập" (8a-vá
+  // lỗi 3). Giao diện Luồng C tự GOM theo don_vi_ten (KHÔNG đổi chữ ký RPC —
+  // xem quyết định 8a-vá).
+  async tienDoDot(kyId) {
+    const { data, error } = await sb.rpc('tien_do_dot', { p_ky_id: kyId });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Vết nộp/xin sửa/duyệt/từ chối/trả lại của một (kỳ × biểu) — đơn vị đọc
+  // được vết biểu MÌNH (RLS lich_su_nop_doc), admin đọc hết. Dùng để hiển thị
+  // "lý do bị trả lại" ở index.html và lịch sử ở admin.html.
+  async layLichSuNop(kyId, bang) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.LICH_SU_NOP)
+      .select('*').eq('ky_id', kyId).eq('bang', bang)
+      .order('luc', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Trạng thái nộp của MỘT (kỳ × biểu) cụ thể — dùng ở index.html (trang nhập)
+  // để quyết định khoá lưới + nút Nộp/Đề nghị chỉnh sửa. RLS: đơn vị chỉ đọc
+  // được biểu mình phụ trách (đã đủ, không cần thêm điều kiện ở đây).
+  async layTrangThaiNopMotBieu(kyId, bang) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.TRANG_THAI_NOP)
+      .select('*').eq('ky_id', kyId).eq('bang', bang).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Toàn bộ dòng trang_thai_nop của MỘT kỳ báo cáo — KỂ CẢ phai_bao_cao=false
+  // (khác tienDoDot() chỉ trả biểu đang phai_bao_cao=true, xem 11_va_ky_bao_cao.sql
+  // Phần 13). Dùng cho panel "Quản lý phải báo cáo" (Luồng C việc 3) — admin cần
+  // thấy CẢ những biểu đang bị loại để bật lại nếu thấy sai.
+  async layTrangThaiNopTheoKy(kyId) {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.TRANG_THAI_NOP)
+      .select('*, danh_sach_bang(ten_bang)')
+      .eq('ky_id', kyId);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // ── DANH MỤC TRẠNG THÁI NỘP (dm_trang_thai_nop) — admin quản lý tên/màu/
+  // ngưỡng ngày, KHÔNG khoá cứng trong CHECK constraint (Bước 8 mục 1). ──
+  async layDmTrangThaiNop() {
+    const { data, error } = await sb
+      .from(CONFIG.BANG.DM_TRANG_THAI_NOP)
+      .select('*').order('nhom').order('thu_tu', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async themDmTrangThaiNop(row) {
+    const { error } = await sb.from(CONFIG.BANG.DM_TRANG_THAI_NOP).insert(row);
+    if (error) throw error;
+  },
+
+  async suaDmTrangThaiNop(ma, row) {
+    const { error } = await sb.from(CONFIG.BANG.DM_TRANG_THAI_NOP).update(row).eq('ma', ma);
+    if (error) throw error;
+  },
+
+  async xoaDmTrangThaiNop(ma) {
+    const { error } = await sb.from(CONFIG.BANG.DM_TRANG_THAI_NOP).delete().eq('ma', ma);
+    if (error) throw error;
   },
 };

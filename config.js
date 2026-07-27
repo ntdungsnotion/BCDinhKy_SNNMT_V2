@@ -1,5 +1,6 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 6d — config.js, cập nhật 2026/07/25 14:04 (GMT+7)
+// Phiên bản file: Bước 8b — config.js, cập nhật 2026/07/27 10:14 (GMT+7):
+//   thêm tên 5 bảng MỚI của Bước 8/8a-vá (kỳ báo cáo nghĩa rộng + theo dõi nộp).
 // ============================================================
 // CONFIG.JS — V2 (project Supabase MỚI, độc lập hoàn toàn với V1)
 // Publishable key AN TOÀN để đặt trong frontend — RLS mới là
@@ -32,5 +33,14 @@ const CONFIG = {
     DON_VI:          'don_vi',             // MỚI Bước 6c: đơn vị/phòng ban
     QUYEN_DOC_BANG:  'quyen_doc_bang',      // MỚI Bước 6c: quyền đọc bổ sung (đơn vị × bảng)
     LICH_SU_SO_LIEU: 'lich_su_so_lieu',     // MỚI Bước 6c: nhật ký sửa số liệu
+
+    // MỚI Bước 8/8a-vá: kỳ báo cáo (nghĩa rộng) + theo dõi tiến độ nộp.
+    // Kỳ DỮ LIỆU (mốc thời gian từng cột) vẫn là COT_BAO_CAO ở trên — KHÔNG đổi.
+    KY_BAO_CAO:       'ky_bao_cao',         // một LẦN TỔ CHỨC báo cáo (vd "tháng 6/2026")
+    KY_BAO_CAO_COT:   'ky_bao_cao_cot',     // kỳ báo cáo gồm những kỳ dữ liệu (cột) nào
+    HAN_NOP_BANG:     'han_nop_bang',       // hạn nộp riêng của (kỳ × biểu), đè hạn chung
+    TRANG_THAI_NOP:   'trang_thai_nop',     // mốc đã chốt của đơn vị theo (kỳ × biểu)
+    DM_TRANG_THAI_NOP:'dm_trang_thai_nop',  // danh mục trạng thái (đơn vị/thời hạn), admin sửa tên/màu
+    LICH_SU_NOP:      'lich_su_nop',        // vết nộp/xin sửa/duyệt/từ chối/trả lại — đơn vị đọc được vết biểu mình
   },
 };

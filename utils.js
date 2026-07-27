@@ -1,5 +1,7 @@
 // Phiên bản ứng dụng: V2 — nâng cấp bảo mật
-// Phiên bản file: Bước 6d — utils.js, cập nhật 2026/07/25 14:04 (GMT+7)
+// Phiên bản file: Bước 8b — utils.js, cập nhật 2026/07/27 10:14 (GMT+7):
+//   thêm apDungTanSuat() (khớp hệt hàm SQL cùng tên, tính ở giao diện để
+//   ẩn/khoá Ô theo tần suất chỉ tiêu) và formatNgay() (hiển thị hạn nộp).
 // ============================================================
 // UTILS.JS — V2: HÀM TIỆN ÍCH DÙNG CHUNG
 // Thứ tự load: supabase-js → config.js → db.js → utils.js
@@ -101,6 +103,44 @@ const UTILS = {
   // Nhãn hiển thị vai trò — dùng chung cho sidebar 3 trang.
   nhanVaiTro(vaiTro) {
     return { admin: '⚙️ Quản trị viên', admin_han_che: '🛠️ Quản trị hạn chế', editor: '✏️ Người nhập liệu' }[vaiTro] || vaiTro || '';
+  },
+
+  // ── TẦN SUẤT CHỈ TIÊU (Bước 8b) — thuần JS, khớp HỆT hàm SQL
+  // public.ap_dung_tan_suat(text,integer,integer) trong 11_va_ky_bao_cao.sql
+  // Phần 4. Tính ở giao diện (không gọi RPC mỗi ô) vì lưới có thể có hàng
+  // nghìn ô — đặc tả v4 mục 6 cố ý để việc ẩn/khoá này ở tầng giao diện,
+  // KHÔNG chặn ở CSDL (tần suất là quy ước nghiệp vụ có thể đổi).
+  // chiTieu cần có 3 trường: tan_suat, thang_tuy_chinh (mảng|null),
+  // nam_dac_biet (mảng|null) — layChiTieuTheoBang() đã lấy đủ.
+  // Thứ tự ưu tiên (ĐÚNG NHƯ SQL, không đổi):
+  //   1) nam_dac_biet có giá trị → năm của cột phải thuộc danh sách
+  //   2) thang_tuy_chinh có giá trị → tháng của cột phải thuộc danh sách
+  //   3) không có cả hai → theo tan_suat: hang_thang mọi tháng,
+  //      hang_quy chỉ tháng 3/6/9/12; giá trị khác (tương lai) coi như
+  //      hang_thang (an toàn hơn là ẩn nhầm dữ liệu hợp lệ).
+  apDungTanSuat(chiTieu, thang, nam) {
+    if (!chiTieu) return true;
+    if (chiTieu.nam_dac_biet && chiTieu.nam_dac_biet.length) {
+      return chiTieu.nam_dac_biet.includes(nam);
+    }
+    if (chiTieu.thang_tuy_chinh && chiTieu.thang_tuy_chinh.length) {
+      return chiTieu.thang_tuy_chinh.includes(thang);
+    }
+    if (chiTieu.tan_suat === 'hang_quy') return [3, 6, 9, 12].includes(thang);
+    return true;
+  },
+
+  // Định dạng ngày kiểu Việt Nam dd/mm/yyyy — dùng cho han_nop (kiểu date,
+  // Supabase trả 'YYYY-MM-DD'). Trả '' nếu rỗng/không hợp lệ (KHÔNG ném lỗi —
+  // dữ liệu hạn nộp được PHÉP NULL, xem đặc tả v4 mục 10).
+  formatNgay(d) {
+    if (!d) return '';
+    const s = String(d);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    const dt = new Date(s);
+    if (isNaN(dt.getTime())) return '';
+    return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
   },
 
   // ── CỘT BÁO CÁO (kỳ × loại) — sinh mã & tiêu đề ─────────

@@ -1,5 +1,12 @@
 <!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 6d — xembaocao.html v3, cập nhật 2026/07/25 14:04 (GMT+7): lọc bảng theo bảng-được-xem của đơn vị -->
+<!-- Phiên bản file: Bước 8b — xembaocao.html v4, cập nhật 2026/07/27 10:14 (GMT+7):
+     đặc tả v4 mục 12 — (1) thanh "Chọn nhanh kỳ báo cáo" nay đọc kỳ báo cáo
+     THẬT (ky_bao_cao) qua 1 ô chọn duy nhất, thay 2 ô Tháng/Năm cũ; (2) BỎ HẲN
+     dòng gợi ý hard-code "Tự chọn: CT tháng trước..."; (3)-(6) 4 nhãn còn lại
+     đổi "kỳ báo cáo" → "kỳ dữ liệu" cho đúng nghĩa (mục ①, hướng dẫn trống,
+     welcome). Chức năng chọn kỳ dữ liệu tự do (mục 12 "chức năng thứ hai")
+     GIỮ NGUYÊN — chỉ lưu trong phiên, không ghi CSDL. -->
+<!-- Phiên bản trước: Bước 6d — xembaocao.html v3, cập nhật 2026/07/25 14:04 (GMT+7): lọc bảng theo bảng-được-xem của đơn vị -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -229,7 +236,7 @@ table.t tr:not(.tr-h):hover td{background:#f0fdf4}table.t tr:not(.tr-h):hover td
         <div class="welcome-card">
           <div class="welcome-ico">📊</div>
           <h2>Chọn một bảng báo cáo để bắt đầu</h2>
-          <p>Danh sách các bảng bạn được phép xem nằm ở thanh bên trái.<br>Bấm vào một bảng để chọn kỳ và so sánh số liệu.</p>
+          <p>Danh sách các bảng bạn được phép xem nằm ở thanh bên trái.<br>Bấm vào một bảng để chọn kỳ dữ liệu và so sánh số liệu.</p>
           <div class="welcome-hint only-d">👈 Chọn bảng ở thanh bên trái</div>
           <button class="welcome-hint only-m" style="border:none;cursor:pointer;font-family:var(--font)" onclick="XEM.toggleSidebar()">📋 Bấm để mở danh sách bảng</button>
         </div>
@@ -247,6 +254,7 @@ const XEM = {
   selectedCot:[], comparisons:[],  // đã thêm vào biểu; comparisons = [{tu, mau}] (id cột)
   wOverride:{},                    // độ rộng cột kéo tay — CHỈ lưu trong phiên, không ghi SQL
   _resizing:null,
+  dsKyBaoCao:[],                   // Bước 8b: kỳ báo cáo THẬT (ky_bao_cao) — dùng cho thanh chọn nhanh
 
   async init(){
     // ── Bảo vệ: phải đăng nhập (Supabase Auth thật, không tin cache) ──
@@ -268,6 +276,10 @@ const XEM = {
       UTILS.el('sb-nav').innerHTML = `<div style="padding:12px;color:#ffb4a2;font-size:12px">Lỗi tải dữ liệu: ${e.message}</div>`;
       return;
     }
+    // Bước 8b: danh sách kỳ báo cáo THẬT cho thanh "Chọn nhanh kỳ báo cáo" — lỗi
+    // không chặn trang (thanh chọn nhanh chỉ ẩn/rỗng, chức năng chọn kỳ dữ liệu
+    // tự do ở mục ① vẫn chạy bình thường).
+    try{ this.dsKyBaoCao = await DB.layTatCaKyBaoCao(); }catch(e){ this.dsKyBaoCao = []; }
     // Sắp xếp cột từ LỚN đến NHỎ theo thứ tự hiển thị, fallback năm*100+tháng
     this.allCot.sort((a,b)=> this._khoaThuTu(b) - this._khoaThuTu(a));
 
@@ -348,7 +360,7 @@ const XEM = {
       this.daXem = true;           // đã có bộ cột (từ trước) → hiển thị ngay
       await this.taiDuLieu();
     }else{
-      UTILS.el('tw-area').innerHTML = `<div class="empty"><span class="i">👆</span><span>Chọn kỳ báo cáo, rồi bấm <b>Xem biểu</b> để hiển thị số liệu.</span></div>`;
+      UTILS.el('tw-area').innerHTML = `<div class="empty"><span class="i">👆</span><span>Chọn kỳ dữ liệu, rồi bấm <b>Xem biểu</b> để hiển thị số liệu.</span></div>`;
     }
   },
 
@@ -358,10 +370,8 @@ const XEM = {
       <div class="sec">
         <div class="qs-bar">
           <span class="qs-lbl">⚡ Chọn nhanh kỳ báo cáo:</span>
-          <span>Tháng</span> <select class="sel" id="qs-thang"></select>
-          <span>Năm</span> <select class="sel" id="qs-nam"></select>
+          <select class="sel" id="qs-ky" style="min-width:220px"></select>
           <button class="btn-add" onclick="XEM.apDungChonNhanh()">Áp dụng</button>
-          <span class="qs-hint">Tự chọn: CT tháng trước · Ước tháng · Ước lũy kế · CT &amp; Lũy kế cùng kỳ năm trước + 2 so sánh (kỳ thiếu sẽ bỏ qua)</span>
         </div>
         <div class="ctrl-row" style="align-items:center;gap:14px;margin-bottom:12px">
           <div class="ctrl-block">
@@ -370,7 +380,7 @@ const XEM = {
           </div>
           <div class="ctrl-note" style="flex:1;min-width:200px">📄 Đang xem: <b>${b?.ten_bang||''}</b> — đổi bảng ở thanh bên trái bất cứ lúc nào.</div>
         </div>
-        <div class="sec-title"><span class="num">1</span> Chọn kỳ báo cáo <b id="cnt-ky" style="color:var(--xc);font-weight:700"></b></div>
+        <div class="sec-title"><span class="num">1</span> Chọn kỳ dữ liệu <b id="cnt-ky" style="color:var(--xc);font-weight:700"></b></div>
         <div class="ky-box">
           <div class="ky-box-h"><div class="c-chk">Chọn</div><div class="c-name">Tên kỳ (sắp xếp mới → cũ)</div></div>
           <div class="ky-list" id="ky-list"></div>
@@ -410,7 +420,7 @@ const XEM = {
 
     UTILS.el('topbar-actions').innerHTML = `<button class="btn-sm gr" onclick="XEM.xuatExcel()">📥 Xuất Excel</button>`;
     this.buildNamOptions();
-    this.buildChonNhanh();
+    this.buildChonNhanhKy();
     this.buildKyList();
     this.buildCmpSelects();
     this.renderChips();
@@ -425,65 +435,39 @@ const XEM = {
 
   doiNam(v){ this.namLoc = v; this.buildKyList(); },
 
-  // ── CHỌN NHANH — GIỮ NGUYÊN NGUYÊN TẮC V1: người dùng chỉ chọn Tháng x +
-  // Năm yyyy, hệ thống TỰ chọn trọn BỘ KỲ CHUẨN của báo cáo tháng + 2 so sánh:
-  //   CT (x-1)/yyyy (x=1 → CT 12/(yyyy-1)) · Ước x/yyyy · Ước lũy kế x/yyyy
-  //   · CT x/(yyyy-1) · Lũy kế CT x/(yyyy-1)
-  //   So sánh: Ước ÷ CT cùng kỳ năm trước; Ước LK ÷ LKCT năm trước.
-  //   Kỳ nào thiếu thì bỏ qua. THAY THẾ lựa chọn hiện tại và hiển thị ngay.
-  // KHÁC V1 về kỹ thuật (kết quả giữ nguyên): V1 phải dò MÃ CHUỖI kỳ
-  // ({prefix}_{MM}/{yyyy}) vì loại chỉ là text tự do; V2 cot_bao_cao có trường
-  // thật (loai, thang, nam) nên khớp thẳng, không cần đoán mã.
-
-  // Điền dropdown chọn nhanh: tháng 1-12, năm theo dữ liệu; mặc định = cột
-  // mới nhất (bỏ cột Kế hoạch khi tính mặc định — KH mang năm tương lai,
-  // lấy làm mặc định sẽ trỏ tới tháng chưa có số liệu).
-  buildChonNhanh(){
-    const selT = UTILS.el('qs-thang'), selN = UTILS.el('qs-nam');
-    if(!selT) return;
-    const nams = [...new Set(this.allCot.map(k=>Number(k.nam)))].sort((a,b)=>b-a);
-    selN.innerHTML = nams.map(n=>`<option value="${n}">${n}</option>`).join('');
-    selT.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
-    const thuong = this.allCot.filter(k=>k.loai!=='kh');
-    const namsT = [...new Set(thuong.map(k=>Number(k.nam)))].sort((a,b)=>b-a);
-    if(namsT.length){
-      const yMax = namsT[0];
-      const tMax = Math.max(...thuong.filter(k=>Number(k.nam)===yMax).map(k=>Number(k.thang)||1));
-      selN.value = String(yMax); selT.value = String(tMax);
+  // ── Bước 8b: CHỌN NHANH nay đọc THẲNG kỳ báo cáo THẬT (bảng ky_bao_cao +
+  // ky_bao_cao_cot) — thay khối suy đoán tháng/năm cũ (V1: dò mã chuỗi kỳ;
+  // bản trước Bước 8: TỰ đoán bộ 5 cột từ Tháng+Năm gõ tay, mong manh và có
+  // thể lệch ý đồ thật của kỳ báo cáo). Áp dụng = LẤY ĐÚNG bộ cột đã gắn cho
+  // kỳ báo cáo đó (ky_bao_cao_cot), KHÔNG đoán, KHÔNG tự sinh so sánh — người
+  // dùng tự thêm so sánh ở mục ② nếu cần (đặc tả v4 mục 12: "bỏ hẳn" dòng gợi
+  // ý hard-code, không thay bằng suy đoán khác).
+  buildChonNhanhKy(){
+    const sel = UTILS.el('qs-ky');
+    if(!sel) return;
+    if(!this.dsKyBaoCao.length){
+      sel.innerHTML = `<option value="">Chưa có kỳ báo cáo nào</option>`;
+      return;
     }
-  },
-
-  // Tìm MỘT cột theo (loại, tháng, năm); trùng nhiều (hiếm) → lấy thứ tự lớn nhất.
-  _timCotTheo(loai, thang, nam){
-    const ds = this.allCot.filter(c=>c.loai===loai
-      && Number(c.thang)===thang && Number(c.nam)===nam);
-    if(!ds.length) return null;
-    return ds.reduce((a,b)=> this._khoaThuTu(a)>=this._khoaThuTu(b)?a:b).id;
-  },
-
-  timBoCotMacDinh(x, yyyy){
-    const ct1   = (x>1) ? this._timCotTheo('ct', x-1, yyyy) : this._timCotTheo('ct', 12, yyyy-1);
-    const uoc   = this._timCotTheo('uoc',   x, yyyy);
-    const uoclk = this._timCotTheo('uoclk', x, yyyy);
-    const ct0   = this._timCotTheo('ct',    x, yyyy-1);
-    const lk0   = this._timCotTheo('lkct',  x, yyyy-1);
-    const cot = this._thuTuTang([ct1, uoc, uoclk, ct0, lk0].filter(v=>v!==null));
-    const ss = [];
-    if(uoc!==null   && ct0!==null) ss.push({tu:uoc,   mau:ct0});
-    if(uoclk!==null && lk0!==null) ss.push({tu:uoclk, mau:lk0});
-    ss.sort((a,b)=> this._khoaThuTu(this._cotObj(a.tu)) - this._khoaThuTu(this._cotObj(b.tu)));
-    return {cot, ss};
+    sel.innerHTML = this.dsKyBaoCao.map(k=>`<option value="${k.id}">${k.ten}</option>`).join('');
   },
 
   async apDungChonNhanh(){
-    const x = Number(UTILS.el('qs-thang').value), yyyy = Number(UTILS.el('qs-nam').value);
-    const {cot, ss} = this.timBoCotMacDinh(x, yyyy);
-    if(!cot.length){ UTILS.toast(`Không tìm thấy kỳ nào phù hợp cho tháng ${x}/${yyyy}.`,'er'); return; }
-    this.selectedCot = cot;          // thay thế lựa chọn hiện tại
-    this.comparisons = ss;
+    const kyId = Number(UTILS.el('qs-ky')?.value);
+    if(!kyId){ UTILS.toast('Chưa có kỳ báo cáo nào để áp dụng.','er'); return; }
+    let cotCuaKy;
+    try{ cotCuaKy = await DB.layCotCuaKy(kyId); }
+    catch(e){ UTILS.toast('Lỗi tải kỳ dữ liệu của kỳ báo cáo: '+e.message,'er'); return; }
+    if(!cotCuaKy.length){ UTILS.toast('Kỳ báo cáo này chưa có kỳ dữ liệu (cột) nào.','er'); return; }
+    // Chỉ lấy những cột THẬT SỰ có trong allCot (phòng lệch dữ liệu hiếm gặp)
+    const idsHopLe = new Set(this.allCot.map(c=>c.id));
+    const cot = this._thuTuTang(cotCuaKy.map(c=>c.id).filter(id=>idsHopLe.has(id)));
+    if(!cot.length){ UTILS.toast('Không tìm thấy cột hợp lệ cho kỳ báo cáo này.','er'); return; }
+    this.selectedCot = cot;           // thay thế lựa chọn hiện tại
     this.checkedCot.clear();
     this.buildKyList(); this.buildCmpSelects(); this.renderChips();
-    UTILS.toast(`⚡ Đã chọn ${cot.length} kỳ + ${ss.length} so sánh cho tháng ${x}/${yyyy}${cot.length<5?' (kỳ thiếu đã bỏ qua)':''}.`,'ok');
+    const ten = this.dsKyBaoCao.find(k=>k.id===kyId)?.ten || '';
+    UTILS.toast(`⚡ Đã chọn ${cot.length} kỳ dữ liệu của "${ten}".`,'ok');
     this.daXem = true;
     await this.taiDuLieu();
   },
@@ -634,7 +618,7 @@ const XEM = {
       ...this.comparisons.flatMap(c=>[c.tu,c.mau])
     ])];
     if(!canDung.length){
-      tw.innerHTML = `<div class="empty"><span class="i">👆</span><span>Chọn ít nhất một kỳ báo cáo phía trên để xem số liệu.</span></div>`;
+      tw.innerHTML = `<div class="empty"><span class="i">👆</span><span>Chọn ít nhất một kỳ dữ liệu phía trên để xem số liệu.</span></div>`;
       return;
     }
     tw.innerHTML = `<div class="tw"><div class="loading"><span class="spin"></span> Đang tải số liệu...</div></div>`;
