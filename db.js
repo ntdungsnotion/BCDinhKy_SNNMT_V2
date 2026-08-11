@@ -244,10 +244,22 @@ const DB = {
   },
 
   async luuDuLieu(maBang, rows) {
-    const { error } = await sb
-      .from(this._tenBangCSDL(maBang))
-      .upsert(rows, { onConflict: 'id_chi_tieu,ky_bao_cao' });
-    if (error) throw error;
+    if (!rows || !rows.length) return;
+    // PostgREST lấy danh sách cột từ các object trong payload; nếu các object
+    // có bộ khóa KHÁC nhau (dòng chỉ sửa ghi chú vs dòng chỉ sửa giá trị) thì
+    // hoặc báo lỗi, hoặc ghi đè cột thiếu thành null — mất số liệu đã có.
+    // → Gom theo "chữ ký" khóa rồi upsert từng nhóm.
+    const nhom = {};
+    rows.forEach(r => {
+      const k = Object.keys(r).sort().join(',');
+      (nhom[k] = nhom[k] || []).push(r);
+    });
+    for (const k of Object.keys(nhom)) {
+      const { error } = await sb
+        .from(this._tenBangCSDL(maBang))
+        .upsert(nhom[k], { onConflict: 'id_chi_tieu,ky_bao_cao' });
+      if (error) throw error;
+    }
   },
 
   // ── GOOGLE SHEET (danh_sach_gsheet) ────────────────────

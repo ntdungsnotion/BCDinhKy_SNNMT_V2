@@ -33,6 +33,9 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
   .main{flex:1;width:100%;overflow:visible}
   .topbar{position:sticky;top:0;z-index:90;padding:0 10px}
   .topbar-t{font-size:13px}
+  /* Thanh nút có thể tràn ngang trên điện thoại → cho cuộn thay vì bị cắt */
+  #topbar-actions{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:62vw;padding-bottom:2px}
+  #topbar-actions .btn-sm{flex-shrink:0}
   .content{overflow:visible;padding:8px}
   .tw{overflow-x:auto;max-height:none!important;-webkit-overflow-scrolling:touch}
   table.t th.th-n,table.t td.td-n{position:static!important}
@@ -167,6 +170,7 @@ table.t td.td-u{text-align:center;font-size:11px;color:var(--g4)}
   z-index:2;
 }
 .ot:disabled{background:var(--g1);cursor:default}
+.ot.has{color:var(--xd);font-weight:600}
 
 /* ── Cột so sánh (chỉ đọc, tự tính) — giống xembaocao.html ── */
 table.t th.th-cmp{background:#1e40af}
@@ -202,6 +206,22 @@ table.t tr.tr-focused td.td-ctf{background:#e8f5e9 !important}
 .gs-iframe{width:100%;border:none;display:block;min-height:420px}
 .btn-sm.send{background:#1b4332;color:white}.btn-sm.send:hover{opacity:.85}
 .btn-sm.send.done{background:var(--g3);color:var(--g5);cursor:default}
+/* ── Hệ định dạng số (Bước 7) ── */
+.btn-sm.he{background:#eef4ff;color:#1e40af;border:1px solid #c7d7f5}
+.btn-sm.he:hover{background:#dfe9fd}
+.os.cho-he{background:#fff8e1;border-color:#ffca28!important;color:#8a6d00;font-weight:600}
+.he-opt{display:block;width:100%;text-align:left;padding:10px 13px;margin-bottom:7px;border:1.5px solid var(--g2);border-radius:8px;background:white;font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s}
+.he-opt:hover{border-color:var(--xn);background:var(--xp)}
+.he-opt.pri{border-color:var(--xc);background:#f2fbf5}
+.he-opt b{display:block;color:var(--xd);font-size:13.5px}
+.he-opt span{display:block;color:var(--g4);font-size:11.5px;margin-top:2px;line-height:1.45}
+.he-now{background:var(--g1);border:1px solid var(--g2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--g5);margin-bottom:12px}
+.he-now b{color:var(--xd)}
+.gd-list{max-height:190px;overflow:auto;border:1px solid var(--g2);border-radius:8px;font-size:12px;margin-bottom:12px}
+.gd-list table{width:100%;border-collapse:collapse}
+.gd-list td{padding:5px 8px;border-bottom:1px solid var(--g2)}
+.gd-list td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+.gd-list td.cu{color:var(--red)}.gd-list td.moi{color:var(--xc);font-weight:600}
 
 .resize-handle:hover{background:rgba(255,255,255,.3)}
 table.t th{position:relative;overflow:hidden}
@@ -349,6 +369,28 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
       <button class="btn-g" onclick="UTILS.dongModal('modal-pass')">Đóng</button>
     </div>
     <div class="err-txt" id="err-pass" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- Hộp hỏi hệ định dạng số (Bước 7) -->
+<div class="modal-bg" id="modal-he">
+  <div class="mbox" style="max-width:480px">
+    <h3 id="he-title">🔢 Máy này dùng định dạng số nào?</h3>
+    <div id="he-sub" style="font-size:12px;color:var(--g4);margin-bottom:14px;line-height:1.55"></div>
+    <div id="he-opts"></div>
+  </div>
+</div>
+
+<!-- Hộp xác nhận ghi đè số liệu đã có (Bước 7) -->
+<div class="modal-bg" id="modal-gd">
+  <div class="mbox" style="max-width:540px">
+    <h3>⚠️ Ghi đè số liệu đã có</h3>
+    <p id="gd-sub"></p>
+    <div class="gd-list" id="gd-list"></div>
+    <div class="mbtns">
+      <button class="btn-p" id="gd-ok">Ghi đè</button>
+      <button class="btn-g" id="gd-huy">Huỷ</button>
+    </div>
   </div>
 </div>
 
@@ -613,7 +655,9 @@ const APP={
       }
       const _btnGui='<button id="btn-gui" class="btn-sm send'+(tatCaKhoa?' done':'')+'" onclick="APP.guiBaoCao()" '+(tatCaKhoa?'disabled':'')+'>'+( tatCaKhoa?'✅ Đã gửi':'📨 Gửi báo cáo')+'</button>';
       const _btnLuu='<button id="btn-luu-top" class="btn-sm" style="background:#c5d0c9;color:#3d5247;cursor:default" onclick="APP.luuDuLieu()">💾 Lưu</button>';
-      _ta.innerHTML=_btnExcel+_btnLuu+_btnGui;
+      const _btnHe='<button id="btn-he" class="btn-sm he" onclick="APP.moCaiDatHe()" title="Hệ định dạng số đang dùng để đọc dữ liệu dán/tải lên">🔢</button>';
+      _ta.innerHTML=_btnExcel+_btnHe+_btnLuu+_btnGui;
+      this._veNutHe();
     }
 
     UTILS.el('content').innerHTML=`
@@ -674,6 +718,8 @@ const APP={
 
   renderBang(ct,idx,b){
     const wTen=b?.do_rong_ten||280,wDvt=b?.do_rong_dvt||70,wGc=b?.do_rong_ghichu||140;
+    // Kỳ gắn cho ghi chú & nguồn số liệu (xem _kyGhiChu)
+    const kmGC=this._kyGhiChu();
     let th=`<tr>
       <th class="th-stt" style="width:46px">STT</th>
       <th class="th-id">Mã</th>
@@ -698,12 +744,10 @@ const APP={
           <span style="opacity:.75;font-weight:400">÷ ${this._tenKyNgan(cp.ky_mau)} × 100%</span>
         </div></th>`;
     });
-    th+=`<th class="th-gc" style="width:${wGc}px">Ghi chú</th>
+    const tenKyGC=kmGC?(kmGC.ky_bao_cao_tieu_de||('T'+kmGC.thang_bao_cao+'/'+kmGC.nam_bao_cao)):'';
+    th+=`<th class="th-gc" style="width:${wGc}px" title="${kmGC?'Ghi chú được lưu theo kỳ: '+tenKyGC+' ('+kmGC.ky_bao_cao+')':'Chưa có kỳ Ước thực hiện trong các cột đang hiển thị nên không nhập được ghi chú.'}">
+        Ghi chú${kmGC?`<div style="font-weight:400;font-size:9.5px;opacity:.8;text-transform:none;letter-spacing:0">${tenKyGC}</div>`:''}</th>
          <th class="th-ng" style="width:100px">Nguồn số liệu</th></tr>`;
-    // Kỳ dùng để LƯU ghi chú & nguồn số liệu:
-    // = kỳ "Ước thực hiện" có thu_tu_hien_thi LỚN NHẤT trong các cột đang hiển thị
-    // (fallback: kỳ đang mở nhập đầu tiên nếu không có kỳ Ước thực hiện nào).
-    const kmGC=this._kyGhiChu();
     let tb='';
     ct.forEach(c=>{
       const ind=UTILS.demKhoang(c.chi_tieu)*4;
@@ -714,6 +758,12 @@ const APP={
         const kgc=kmGC?`${c.id}|${kmGC.ky_bao_cao}`:null;
         const gc=kgc?(idx[kgc]?.ghi_chu||''):'';
         const ng=kgc?(idx[kgc]?.nguon_so_lieu||''):'';
+        // Ghi chú mở nhập, chỉ khóa khi: không có kỳ Ước thực hiện, kỳ đó bị khóa,
+        // hoặc chỉ tiêu đã khóa (đã bấm Gửi báo cáo).
+        const gcKhoa=!kmGC||!!kmGC.khoa_nhap_lieu||c.cho_phep_nhap===false;
+        const gcLyDo=!kmGC?'Không có kỳ Ước thực hiện trong các cột đang hiển thị.'
+                    :(kmGC.khoa_nhap_lieu?'Kỳ '+(kmGC.ky_bao_cao_tieu_de||kmGC.ky_bao_cao)+' đã khóa nhập liệu.'
+                    :'Bảng đã gửi báo cáo nên không sửa được.');
 
         const isTextRow=c.kieu_du_lieu==='text';
         let tdk='';
@@ -732,11 +782,13 @@ const APP={
           tdk+=`<td style="padding:2px 4px"><input
             type="text" ${isText?'':'inputmode="decimal"'}
             class="os${hasV?' has':''}${isLocked?' locked':''}"
-            data-key="${key}" data-id="${c.id}" data-ky="${k.ky_bao_cao}"
+            data-key="${key}" data-id="${c.id}" data-ky="${k.ky_bao_cao}"${isText?' data-text="1"':''}
+            ${(!isText&&hasV)?`data-num="${v}"`:''}
             value="${hasV?(c.kieu_du_lieu==='text'?v:UTILS.formatSo(v)):''}"
             ${isLocked?'disabled':''}
             style="text-align:${isText?'left':'right'}"
             onchange="APP.ghiNhan(this)"
+            oninput="APP.suaTay(this)"
             onpaste="${isText?'':"APP.handlePaste(event,this)"}"
             onfocus="APP.setFocusRow(this)"
             onblur="APP.clearFocusRow(this)"
@@ -749,7 +801,7 @@ const APP={
         });
         const bdgCT=(this.ctPrep&&this.ctPrep.map[c.id])
           ?`<span class="ct-badge" title="${this._moTaCT(c.id).replace(/"/g,'&quot;')}">&Sigma;</span>`:'';
-        tb+=`<tr><td class="td-stt">${sttHT}</td><td class="td-id">${c.id}</td><td class="td-n" style="padding-left:${ind+10}px">${bdgCT}${c.chi_tieu.trim()}</td><td class="td-u">${c.don_vi||''}</td>${tdk}${tdc}<td style="padding:2px 4px"><input type="text" class="ot" data-gc="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${gc}" ${!kmGC?'disabled':''} onchange="APP.ghiNhan(this,'gc')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td><td class="td-ng" style="padding:2px 4px"><input type="text" class="ot" data-ng="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${ng}" ${!kmGC?'disabled':''} onchange="APP.ghiNhan(this,'ng')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td></tr>`;
+        tb+=`<tr><td class="td-stt">${sttHT}</td><td class="td-id">${c.id}</td><td class="td-n" style="padding-left:${ind+10}px">${bdgCT}${c.chi_tieu.trim()}</td><td class="td-u">${c.don_vi||''}</td>${tdk}${tdc}<td style="padding:2px 4px"><input type="text" class="ot${gc?' has':''}" data-gc="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${gc}" ${gcKhoa?'disabled':''} title="${gcKhoa?gcLyDo:'Ghi chú lưu theo kỳ '+(kmGC.ky_bao_cao_tieu_de||kmGC.ky_bao_cao)}" onchange="APP.ghiNhan(this,'gc')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td><td class="td-ng" style="padding:2px 4px"><input type="text" class="ot${ng?' has':''}" data-ng="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${ng}" ${gcKhoa?'disabled':''} onchange="APP.ghiNhan(this,'ng')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td></tr>`;
       }
     });
     UTILS.el('tw').innerHTML=`<table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table>`;
@@ -771,7 +823,7 @@ const APP={
     if(prep&&prep.order&&prep.order.length){
       // Ảnh chụp giá trị đang gõ trong các ô nhập tay
       const dom={};
-      document.querySelectorAll('#tw .os[data-key]').forEach(i=>{dom[i.dataset.key]=UTILS.parseSo(i.value)});
+      document.querySelectorAll('#tw .os[data-key]').forEach(i=>{dom[i.dataset.key]=this._soO(i)});
       this.dsKy.forEach(k=>{
         const ky=k.ky_bao_cao;
         const kq=CT.tinhChoKy(prep,k,id=>{
@@ -830,7 +882,7 @@ const APP={
   // Lấy giá trị của một kỳ trên 1 dòng: ô nhập tay hoặc ô tổng
   _giaTriO(tr,ky){
     const inp=tr.querySelector(`.os[data-ky="${ky}"]`);
-    if(inp)return UTILS.parseSo(inp.value);
+    if(inp)return this._soO(inp);
     const td=tr.querySelector(`td[data-ctf][data-ky="${ky}"]`);
     if(td)return (td.dataset.raw==='' || td.dataset.raw===undefined)?null:Number(td.dataset.raw);
     return null;
@@ -842,12 +894,27 @@ const APP={
     return k?(k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)):code;
   },
 
-  // Kỳ lưu ghi chú/nguồn: kỳ "Ước thực hiện" có thu_tu_hien_thi LỚN NHẤT
-  // trong các cột đang hiển thị; fallback = kỳ đang mở nhập đầu tiên.
+  // Kỳ dùng để LƯU ghi chú & nguồn số liệu = kỳ "Ước thực hiện" của tháng báo cáo.
+  // Thứ tự ưu tiên:
+  //   1) Kỳ có mã dạng uoc_MM/YYYY (không lấy uoclk_ = ước lũy kế) — mới nhất
+  //   2) Kỳ có loai_so_lieu = "Ước thực hiện" — mới nhất
+  //   3) Kỳ đang mở nhập đầu tiên
+  _moiNhat(arr){
+    return arr.reduce((a,b)=>{
+      const na=Number(a.nam_bao_cao)||0, nb=Number(b.nam_bao_cao)||0;
+      if(na!==nb) return na>nb?a:b;
+      const ta=Number(a.thang_bao_cao)||0, tb=Number(b.thang_bao_cao)||0;
+      if(ta!==tb) return ta>tb?a:b;
+      return (Number(a.thu_tu_hien_thi)||0)>=(Number(b.thu_tu_hien_thi)||0)?a:b;
+    });
+  },
   _kyGhiChu(){
-    const uoc=this.dsKy.filter(k=>(k.loai_so_lieu||'').trim().toLowerCase()==='ước thực hiện');
-    if(uoc.length) return uoc.reduce((a,b)=>((Number(a.thu_tu_hien_thi)||0)>=(Number(b.thu_tu_hien_thi)||0)?a:b));
-    return this.dsKy.find(k=>!k.khoa_nhap_lieu)||null;
+    const ds=this.dsKy||[];
+    const uoc=ds.filter(k=>/^uoc_/i.test(k.ky_bao_cao||''));
+    if(uoc.length) return this._moiNhat(uoc);
+    const theoLoai=ds.filter(k=>(k.loai_so_lieu||'').trim().toLowerCase()==='ước thực hiện');
+    if(theoLoai.length) return this._moiNhat(theoLoai);
+    return ds.find(k=>!k.khoa_nhap_lieu)||null;
   },
 
   // Tính % cho các ô so sánh trong 1 dòng, dựa trên giá trị ĐANG NHẬP trong ô
@@ -875,18 +942,32 @@ const APP={
     document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r=>r.classList.remove('tr-focused'));
     const tr=el.closest('tr');
     if(tr)tr.classList.add('tr-focused');
+    // Ô đang CHỜ xác định hệ định dạng: giữ nguyên chuỗi gốc, không parse.
+    // Nếu bỏ chặn này, chỉ cần click sang ô khác là chuỗi gốc bị nghiền thành
+    // số theo hệ mặc định — hỏng đúng cơ chế Tầng 4/5 vừa dựng.
+    if(el.dataset.cho)return;
     // Khi focus ô số: chuyển về số thô để dễ nhập
     if(el.classList.contains('os')&&el.inputMode==='decimal'){
-      const raw=UTILS.parseSo(el.value);
+      const raw=this._soO(el);
       el.value=raw!==null?String(raw):'';
       setTimeout(()=>el.select(),0);
     }
   },
   clearFocusRow(el){
-    // Format số khi rời ô
+    // Format số khi rời ô — trừ ô đang chờ xác định hệ định dạng (giữ chuỗi gốc)
+    if(el.dataset.cho){
+      setTimeout(()=>{
+        if(!document.activeElement?.closest('tr.tr-focused'))
+          document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r=>r.classList.remove('tr-focused'));
+      },80);
+      return;
+    }
     if(el.classList.contains('os')&&el.inputMode==='decimal'){
-      const raw=UTILS.parseSo(el.value);
+      const raw=this._soO(el);
       el.value=raw!==null?UTILS.formatSo(raw):'';
+      // Chốt lại giá trị số của ô: từ đây vòng echo formatSo/parseSo không còn
+      // cơ hội hiểu sai (số có đúng 3 chữ số thập phân từng bị nhân 1000 lần).
+      el.dataset.num=(raw===null?'':String(raw));
     }
     setTimeout(()=>{
       if(!document.activeElement?.closest('tr.tr-focused'))
@@ -894,9 +975,27 @@ const APP={
     },80);
   },
 
+  // ── Giá trị SỐ chuẩn của một ô nhập ────────────────────────
+  // data-num là giá trị số do CHÍNH APP đặt (nạp từ CSDL, dán, diễn giải lại).
+  // Phải ưu tiên nó thay vì đọc lại el.value, vì el.value đi qua vòng echo
+  // formatSo/parseSo và vòng này làm sai các số có ĐÚNG 3 chữ số thập phân:
+  // parseSo("1234.567") = 1234567 (hiểu dấu chấm là phân cách hàng nghìn).
+  // Người dùng gõ đè thì oninput xoá data-num → quay lại đoán từ el.value.
+  _soO(el){
+    if(!el)return null;
+    if(el.dataset.cho)return null;              // đang chờ xác định hệ định dạng
+    const dn=el.dataset.num;
+    if(dn===''){return null}
+    if(dn!==undefined){const n=Number(dn);return isNaN(n)?null:n}
+    return UTILS.parseSo(el.value);
+  },
+
   ghiNhan(el,loai){
     const key=el.dataset.key||el.dataset.gc||el.dataset.ng;
-    this.changes[`${loai||'so'}|${key}`]=el.value;
+    const dn=el.dataset.num;
+    // Ô số có data-num → ghi thẳng giá trị số, không để luuDuLieu đoán lại chuỗi
+    this.changes[`${loai||'so'}|${key}`]=
+      (!loai&&dn!==undefined&&dn!=='')?Number(dn):el.value;
     // Ô số đổi → tính lại chỉ tiêu tổng + các cột so sánh
     // (khi đang paste hàng loạt thì bỏ qua, tính một lần ở cuối cho nhanh)
     if(!loai&&!this._dangPaste)this.tinhCongThucTatCa();
@@ -905,7 +1004,11 @@ const APP={
     const _bl=UTILS.el('btn-luu-top');if(_bl){_bl.style.background='#2d6a4f';_bl.style.color='#fff';_bl.style.cursor='pointer';}
   },
 
-  handlePaste(e,el){
+  // ══ DÁN TỪ EXCEL — hai pha (Bước 7) ═══════════════════════
+  // Pha 1: xác định các ô đích + GIỮ NGUYÊN chuỗi gốc vào data-goc.
+  // Pha 2: suy hệ định dạng từ CẢ KHỐI; đủ tin cậy thì parse ngay, chưa đủ thì
+  //        dừng lại HỎI (ô giữ chuỗi gốc, chưa parse, chưa tính là thay đổi).
+  async handlePaste(e,el){
     const clip=(e.clipboardData||window.clipboardData).getData('text');
     if(!clip.includes('\t')&&!clip.includes('\n'))return;
     e.preventDefault();
@@ -917,25 +1020,240 @@ const APP={
     const trIdx=allTR.indexOf(el.closest('tr'));
     const startCol=dsMaKy.indexOf(el.dataset.ky);
     if(trIdx<0||startCol<0)return;
-    let pasted=0,boQuaCT=0;
-    this._dangPaste=true;
+
+    // ── Pha 1 ── gom ô đích, chưa hiểu số vội
+    const dich=[];let boQuaCT=0;
     pasteRows.forEach((row,ri)=>{
       const tr=allTR[trIdx+ri];if(!tr)return;
       row.forEach((val,ci)=>{
         const ky=dsMaKy[startCol+ci];if(!ky)return;
         const inp=tr.querySelector(`.os[data-ky="${ky}"]:not(:disabled)`);
         if(!inp){ if(tr.querySelector(`td[data-ctf][data-ky="${ky}"]`))boQuaCT++; return; }
-        const raw=val.trim().replace(/\./g,'').replace(',','.');
-        const num=parseFloat(raw);
-        inp.value=isNaN(num)?(val.trim()||''):num;
-        inp.classList.toggle('has',inp.value!=='');
-        inp.dispatchEvent(new Event('change'));
-        pasted++;
+        dich.push({inp,val});
       });
     });
+    if(!dich.length){
+      UTILS.toast(boQuaCT?`Không dán được: ${boQuaCT} ô là chỉ tiêu tổng tự tính.`:'Không có ô nào nhận được dữ liệu dán.','warn');
+      return;
+    }
+    dich.forEach(d=>{
+      d.inp.dataset.goc=d.val;
+      d.inp.dataset.cho='1';
+      d.inp.value=String(d.val).trim();
+      d.inp.classList.add('cho-he');
+    });
+
+    // ── Pha 2 ── manh mối rút từ CẢ KHỐI, bỏ ô kiểu chữ (chữ không phải bằng
+    // chứng về định dạng số của máy)
+    const mau=dich.filter(d=>d.inp.dataset.text!=='1').map(d=>d.val);
+    const qd=UTILS.HE.quyetDinhHe(mau);
+    let ghiNho=!!qd.ghiNho,he=qd.he;
+    if(qd.hanhDong==='hoi'){
+      const kq=await this._hoiHe(qd);
+      if(!kq){   // người dùng đóng hộp → trả ô về nguyên trạng, không đoán bừa
+        dich.forEach(d=>{d.inp.value='';d.inp.classList.remove('cho-he','has');
+                         delete d.inp.dataset.cho;delete d.inp.dataset.goc;delete d.inp.dataset.num});
+        UTILS.toast('Đã huỷ dán vì chưa xác định được định dạng số.','warn');
+        return;
+      }
+      he=kq.he;ghiNho=kq.ghiNho;
+    }
+    this._apHeChoODan(he,{ghiNho,boQuaCT});
+  },
+
+  // Parse toàn bộ ô đang "chờ" theo hệ đã chốt, rồi soát lại các ô dán trước đó.
+  _apHeChoODan(he,opt={}){
+    if(opt.ghiNho)UTILS.HE.luuHeAuto(he);
+    let n=0,loi=0;
+    this._dangPaste=true;
+    document.querySelectorAll('#tw .os[data-cho]').forEach(inp=>{
+      const goc=inp.dataset.goc===undefined?'':inp.dataset.goc;
+      if(inp.dataset.text==='1'){
+        inp.value=String(goc).trim();
+        delete inp.dataset.goc;delete inp.dataset.num;   // ô chữ: không diễn giải lại
+      }else{
+        const num=UTILS.HE.parseSoTheoHe(goc,he);
+        if(num===null&&String(goc).trim()!=='')loi++;
+        inp.value=(num===null)?String(goc).trim():num;
+        inp.dataset.num=(num===null?'':String(num));
+      }
+      delete inp.dataset.cho;
+      inp.classList.remove('cho-he');
+      inp.classList.toggle('has',inp.value!=='');
+      inp.dispatchEvent(new Event('change'));
+      n++;
+    });
+    // Tầng 5 — manh mối đến muộn: diễn giải LẠI các ô đã dán trước đó từ chuỗi
+    // gốc (không "chữa" con số đã sai). Ô người dùng gõ đè đã mất data-goc.
+    const doi=this._dienGiaiLaiODan(he);
     this._dangPaste=false;
     this.tinhCongThucTatCa();
-    UTILS.toast(`✅ Đã paste ${pasted} ô từ Excel`+(boQuaCT?` (bỏ qua ${boQuaCT} ô tổng tự tính)`:''),'ok');
+    this._veNutHe();
+    const phu=[opt.boQuaCT?`bỏ qua ${opt.boQuaCT} ô tổng tự tính`:'',
+               loi?`${loi} ô không đọc được thành số`:''].filter(Boolean);
+    if(doi>0)
+      UTILS.toast(`⚠️ Đã dán ${n} ô theo hệ ${UTILS.HE.tenHeNgan(he)} và DIỄN GIẢI LẠI ${doi} ô dán trước đó. Kiểm tra rồi Lưu lại!`,'warn');
+    else
+      UTILS.toast(`✅ Đã dán ${n} ô theo hệ ${UTILS.HE.tenHeNgan(he)}`+(phu.length?` (${phu.join(', ')})`:''),loi?'warn':'ok');
+  },
+
+  // Diễn giải lại các ô CÒN chuỗi gốc (đã dán, chưa bị gõ đè) theo hệ mới.
+  // So sánh bằng data-num chứ không bằng value hiển thị, vì value có thể đã
+  // được formatSo làm tròn khi rời ô — so bằng value sẽ đếm nhầm.
+  _dienGiaiLaiODan(he){
+    if(he!=='vn'&&he!=='us')return 0;
+    let doi=0;
+    document.querySelectorAll('#tw .os[data-goc]:not([data-cho])').forEach(inp=>{
+      if(inp.dataset.text==='1')return;
+      const num=UTILS.HE.parseSoTheoHe(inp.dataset.goc,he);
+      const moi=(num===null?'':String(num));
+      const cu=inp.dataset.num===undefined?'':inp.dataset.num;
+      if(cu===moi)return;
+      inp.dataset.num=moi;
+      inp.value=(num===null)?String(inp.dataset.goc).trim():num;
+      inp.classList.toggle('has',inp.value!=='');
+      inp.dispatchEvent(new Event('change'));
+      doi++;
+    });
+    return doi;
+  },
+
+  // Người dùng gõ đè lên ô → xoá chuỗi gốc, ô này KHÔNG BAO GIỜ bị diễn giải lại.
+  suaTay(el){
+    delete el.dataset.goc;delete el.dataset.num;
+    if(el.dataset.cho){delete el.dataset.cho;el.classList.remove('cho-he')}
+  },
+
+  // ══ HỘP HỎI HỆ ĐỊNH DẠNG ══════════════════════════════════
+  // Trả về Promise: {he, ghiNho} khi người dùng chọn, null khi huỷ.
+  _hoiHe(qd){
+    return new Promise(resolve=>{
+      const box=UTILS.el('he-opts');
+      const tenTay=UTILS.HE.tenHeNgan(qd.heTay),tenCo=UTILS.HE.tenHeNgan(qd.he);
+      let sub='',opts=[];
+      const done=(kq)=>{UTILS.dongModal('modal-he');this._veNutHe();resolve(kq)};
+
+      if(qd.lyDo==='xung_dot_tay'){
+        UTILS.el('he-title').textContent='🔢 Số dán vào không khớp cài đặt của máy';
+        sub=`Máy này đang đặt hệ <b>${tenTay}</b>, nhưng khối vừa dán có dấu hiệu rõ của hệ <b>${tenCo}</b> (ví dụ: <code>${UTILS.HE.tenHe(qd.he).split(' ').pop()}</code>). Bạn muốn hiểu con số theo cách nào?`;
+        opts=[
+          {t:`Đọc riêng lần này theo hệ ${tenCo}`,s:'Giữ nguyên cài đặt của máy. Lần sau gặp lại vẫn hỏi.',
+           f:()=>done({he:qd.he,ghiNho:false}),pri:true},
+          {t:`Đọc theo hệ ${tenCo} và ĐỪNG HỎI LẠI trong phiên này`,s:'Dùng khi đang chép một xấp số từ Word/web. Cài đặt máy giữ nguyên, cờ tự tắt khi gặp dữ liệu ngược lại. Ô mơ hồ kiểu 10.000 vẫn đọc theo cài đặt máy.',
+           f:()=>{UTILS.HE._coPhien=qd.he;done({he:qd.he,ghiNho:false})}},
+          {t:`Đổi hẳn cài đặt máy sang hệ ${tenCo}`,s:'Chọn khi máy này thật sự đã đổi định dạng vùng.',
+           f:()=>{UTILS.HE.luuHeTay(qd.he);done({he:qd.he,ghiNho:false})}},
+          {t:`Số này vốn là hệ ${tenTay}`,s:'Đọc thẳng theo cài đặt máy, bỏ qua dấu hiệu vừa phát hiện.',
+           f:()=>done({he:qd.heTay,ghiNho:false})},
+        ];
+      }else{
+        UTILS.el('he-title').textContent='🔢 Máy này dùng định dạng số nào?';
+        if(qd.lyDo==='mau_thuan')
+          sub='Khối vừa dán có <b>lẫn lộn</b> cả hai kiểu định dạng, không thể tự kết luận. Chọn cách đọc để tránh sai số liệu.';
+        else if(qd.lyDo==='co_phien_nguoc')
+          sub=`Đang đọc theo hệ ${tenCo} thì gặp dữ liệu có dấu hiệu <b>ngược lại</b>. Hỏi lại cho chắc thay vì âm thầm đổi cách đọc.`;
+        else
+          sub='Khối vừa dán có số kiểu <code>10.000</code> — <b>mười nghìn</b> hay <b>mười</b> tuỳ định dạng của máy. Chênh nhau nghìn lần nên cần bạn xác nhận một lần.';
+        const dx=qd.heChonSan||'vn';
+        const mk=(h)=>({t:`Định dạng ${UTILS.HE.tenHe(h)}`,
+                        s:h==='vn'?'Dấu chấm ngăn hàng nghìn, dấu phẩy là thập phân.'
+                                  :'Dấu phẩy ngăn hàng nghìn, dấu chấm là thập phân.',
+                        f:()=>done({he:h,ghiNho:true}),pri:h===dx});
+        opts=[mk(dx),mk(dx==='vn'?'us':'vn')];
+      }
+      UTILS.el('he-sub').innerHTML=sub+'<br><span style="color:#b45309">Số vừa dán đang được giữ nguyên dạng chữ (ô vàng) cho tới khi bạn chọn.</span>';
+      box.innerHTML='';
+      opts.forEach(o=>{
+        const b=document.createElement('button');
+        b.className='he-opt'+(o.pri?' pri':'');
+        b.innerHTML=`<b>${o.t}</b><span>${o.s}</span>`;
+        b.onclick=o.f;
+        box.appendChild(b);
+      });
+      const huy=document.createElement('button');
+      huy.className='btn-g';huy.style.marginTop='4px';huy.textContent='Huỷ dán';
+      huy.onclick=()=>done(null);
+      box.appendChild(huy);
+      UTILS.moModal('modal-he');
+    });
+  },
+
+  // ══ NÚT & HỘP CÀI ĐẶT HỆ ĐỊNH DẠNG ════════════════════════
+  _veNutHe(){
+    const b=UTILS.el('btn-he');if(!b)return;
+    const he=UTILS.HE.heDangDung(),ng=UTILS.HE.nguonHe();
+    b.innerHTML=`🔢 Số: ${UTILS.HE.tenHeNgan(he)}`+(UTILS.HE._coPhien?' <span style="opacity:.7">•phiên</span>':'');
+    b.title=`Đang đọc số dán/tải lên theo hệ ${UTILS.HE.tenHe(he)} — ${UTILS.HE.moTaNguon(ng)}.`
+           +(UTILS.HE._coPhien?`\nCờ phiên đang bật: tự đọc dữ liệu có dấu hiệu ${UTILS.HE.tenHeNgan(UTILS.HE._coPhien)} mà không hỏi.`:'')
+           +'\nBấm để đổi.';
+  },
+  moCaiDatHe(){
+    const he=UTILS.HE.heDangDung(),tay=UTILS.HE.layHeTay(),auto=UTILS.HE.layHeAuto(),may=UTILS.HE.heTrinhDuyet();
+    UTILS.el('he-title').textContent='🔢 Định dạng số của máy này';
+    UTILS.el('he-sub').innerHTML=
+      `<div class="he-now">Đang dùng: <b>${UTILS.HE.tenHe(he)}</b> — ${UTILS.HE.moTaNguon()}.<br>`
+      +`Đặt tay: <b>${tay?UTILS.HE.tenHeNgan(tay):'chưa đặt'}</b> · Máy tự học: <b>${auto?UTILS.HE.tenHeNgan(auto):'chưa có'}</b> · Trình duyệt báo: <b>${may?UTILS.HE.tenHeNgan(may):'không rõ'}</b>`
+      +(UTILS.HE._coPhien?`<br>Cờ phiên: đang tự đọc dữ liệu kiểu <b>${UTILS.HE.tenHeNgan(UTILS.HE._coPhien)}</b>.`:'')
+      +'</div>Cài đặt này chỉ áp cho <b>máy này</b> và dùng khi dán hoặc tải Excel. Không ảnh hưởng số liệu đã lưu.';
+    const box=UTILS.el('he-opts');box.innerHTML='';
+    const them=(t,s,f,pri)=>{
+      const b=document.createElement('button');
+      b.className='he-opt'+(pri?' pri':'');
+      b.innerHTML=`<b>${t}</b><span>${s}</span>`;
+      b.onclick=f;box.appendChild(b);
+    };
+    ['vn','us'].forEach(h=>them(
+      `Đặt máy này là ${UTILS.HE.tenHe(h)}`,
+      h==='vn'?'Dấu chấm ngăn hàng nghìn, dấu phẩy là thập phân.':'Dấu phẩy ngăn hàng nghìn, dấu chấm là thập phân.',
+      ()=>this.datHeTay(h),tay===h));
+    if(tay)them('Bỏ đặt tay','Để máy tự nhận diện lại từ dữ liệu dán.',()=>{
+      UTILS.HE.xoaHeTay();UTILS.dongModal('modal-he');this._veNutHe();
+      UTILS.toast('Đã bỏ cài đặt tay — máy sẽ tự nhận diện lại.','ok');
+    });
+    if(UTILS.HE._coPhien)them('Tắt cờ "đừng hỏi lại trong phiên"','Quay lại hỏi khi gặp dữ liệu ngược cài đặt máy.',()=>{
+      UTILS.HE._coPhien=null;UTILS.dongModal('modal-he');this._veNutHe();
+      UTILS.toast('Đã tắt cờ phiên.','ok');
+    });
+    const dong=document.createElement('button');
+    dong.className='btn-g';dong.style.marginTop='4px';dong.textContent='Đóng';
+    dong.onclick=()=>UTILS.dongModal('modal-he');
+    box.appendChild(dong);
+    UTILS.moModal('modal-he');
+  },
+  datHeTay(he){
+    UTILS.HE.luuHeTay(he);
+    UTILS.dongModal('modal-he');
+    this._veNutHe();
+    // Máy bị nhận diện sai → diễn giải lại các ô đã dán trong phiên làm việc này
+    const doi=this._dienGiaiLaiODan(he);
+    if(doi>0){
+      this.tinhCongThucTatCa();
+      UTILS.toast(`⚠️ Đã đặt hệ ${UTILS.HE.tenHeNgan(he)} và diễn giải lại ${doi} ô đã dán. Kiểm tra rồi Lưu lại!`,'warn');
+    }else{
+      UTILS.toast(`✅ Máy này dùng hệ ${UTILS.HE.tenHe(he)}`,'ok');
+    }
+  },
+
+  // ══ XÁC NHẬN GHI ĐÈ SỐ LIỆU ĐÃ CÓ ═════════════════════════
+  // ds: [{ten, ky, cu, moi}] — trả Promise<boolean>
+  _xacNhanGhiDe(ds,tongMoi){
+    return new Promise(resolve=>{
+      UTILS.el('gd-sub').innerHTML=
+        `File Excel sẽ <b>ghi đè ${ds.length} ô đã có số liệu</b> bằng giá trị khác`
+        +(tongMoi?` và thêm mới ${tongMoi} ô.`:'.')
+        +'<br>Kiểm tra danh sách dưới đây trước khi đồng ý — số liệu cũ sẽ không lấy lại được.';
+      const n=Math.min(ds.length,50);
+      let h='<table>';
+      for(let i=0;i<n;i++)h+=`<tr><td>${ds[i].ten}</td><td style="color:#7a9485">${ds[i].ky}</td>`
+        +`<td class="n cu">${UTILS.formatSo(ds[i].cu)}</td><td class="n moi">→ ${UTILS.formatSo(ds[i].moi)}</td></tr>`;
+      h+='</table>';
+      if(ds.length>n)h+=`<div style="padding:6px 8px;color:#7a9485">… và ${ds.length-n} ô khác</div>`;
+      UTILS.el('gd-list').innerHTML=h;
+      const xong=(v)=>{UTILS.dongModal('modal-gd');resolve(v)};
+      UTILS.el('gd-ok').onclick=()=>xong(true);
+      UTILS.el('gd-huy').onclick=()=>xong(false);
+      UTILS.moModal('modal-gd');
+    });
   },
 
   navKey(e,el){
@@ -997,6 +1315,9 @@ const APP={
 
   async luuDuLieu(){
     if(!Object.keys(this.changes).length)return;
+    // Còn ô chưa hiểu được thành số thì không cho ghi xuống CSDL
+    const cho=document.querySelectorAll('#tw .os[data-cho]').length;
+    if(cho){UTILS.toast(`⚠️ Còn ${cho} ô chờ xác định định dạng số. Bấm nút 🔢 để chọn hệ trước khi lưu.`,'warn');return}
     const nut=UTILS.el('btn-luu');nut.textContent='⏳';nut.disabled=true;
     const rows={};
     for(const[k,v] of Object.entries(this.changes)){
@@ -1007,10 +1328,12 @@ const APP={
       if(loai==='so'){
         // v==='' nghĩa là người dùng xóa trắng → lưu null để xóa số cũ
         // v!=='' → parse bình thường, nếu không phải số hợp lệ thì cũng lưu null
-        rows[rk].gia_tri = (v===''||v===null||v===undefined) ? null : UTILS.parseSo(v);
+        rows[rk].gia_tri = (v===''||v===null||v===undefined) ? null
+                         : (typeof v==='number' ? v : UTILS.parseSo(v));
       }
-      if(loai==='gc')rows[rk].ghi_chu=v;
-      if(loai==='ng')rows[rk].nguon_so_lieu=v;
+      const _sach=x=>(x===null||x===undefined||String(x).trim()==='')?null:String(x).trim();
+      if(loai==='gc')rows[rk].ghi_chu=_sach(v);
+      if(loai==='ng')rows[rk].nguon_so_lieu=_sach(v);
     }
     // ── Ghi kèm các ô CHỈ TIÊU TỔNG để CSDL luôn khớp với biểu hiển thị ──
     this._gomOCongThuc().forEach(r=>{
@@ -1039,8 +1362,10 @@ const APP={
       if(this.ctPrep)CT.apDungVaoIdx(idx,this.ctPrep,this.dsKy);
     }
 
-    const headersMaKy=['id_chi_tieu','ten_chi_tieu','don_vi',...this.dsKy.map(k=>k.ky_bao_cao),'ghi_chu','nguon_so_lieu'];
-    const headersHienThi=['STT','Tên chỉ tiêu','ĐVT',...this.dsKy.map(k=>k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)),'Ghi chú',''];
+    // Bố cục cột: A = id chỉ tiêu (ẩn) · B = STT (stt_hien_thi) · C = tên · D = ĐVT
+    //             · các kỳ · Ghi chú · Nguồn số liệu
+    const headersMaKy=['id_chi_tieu','stt','ten_chi_tieu','don_vi',...this.dsKy.map(k=>k.ky_bao_cao),'ghi_chu','nguon_so_lieu'];
+    const headersHienThi=['Mã','STT','Tên chỉ tiêu','ĐVT',...this.dsKy.map(k=>k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)),'Ghi chú',''];
 
     const rowsMaKy=[headersMaKy];
     ct.forEach(c=>{
@@ -1054,16 +1379,17 @@ const APP={
         return isNaN(n)?v:n;     // trả về number -> SheetJS ghi đúng kiểu số, Excel không đọc sai
       });
       const gc=coData?(idx[c.id+'|'+(this._kyGhiChu()?.ky_bao_cao)]?.ghi_chu||''):'';
-      rowsMaKy.push([c.id,c.chi_tieu.trim(),c.don_vi||'',...kyVals,gc,'']);
+      rowsMaKy.push([c.id,sttHT,c.chi_tieu.trim(),c.don_vi||'',...kyVals,gc,'']);
     });
 
     const wb=XLSX.utils.book_new();
     const sheetData=[headersMaKy,headersHienThi,...rowsMaKy.slice(1)];
     const ws=XLSX.utils.aoa_to_sheet(sheetData);
     const range=XLSX.utils.decode_range(ws['!ref']);
-    const fixedCols=3;const kyCols=this.dsKy.length;
+    const fixedCols=4;const kyCols=this.dsKy.length;   // id, STT, tên, ĐVT
 
-    ws['!cols']=[{wch:0.1},{wch:45},{wch:10},...this.dsKy.map(k=>({wch:Math.round((k.do_rong_cot||120)/7)})),{wch:20},{wch:0.1}];
+    // Cột A (id) ẩn hẳn — chỉ dùng để đối chiếu khi upload lại
+    ws['!cols']=[{wch:0.1,hidden:true},{wch:6},{wch:45},{wch:10},...this.dsKy.map(k=>({wch:Math.round((k.do_rong_cot||120)/7)})),{wch:20},{wch:0.1}];
     ws['!rows']=[{hidden:true}];
 
     for(let R=0;R<=range.e.r;R++){
@@ -1079,7 +1405,7 @@ const APP={
         ws[addr].s={
           fill:{fgColor:{rgb:R===1?'1B4332':isLockedRow?'F0F0F0':isFixedCol?'EAEDED':isLockedKy?'E0E0E0':'FFFFFF'}},
           font:{bold:R===1||(ctRow?.la_tieu_de),color:{rgb:R===1?'FFFFFF':'000000'}},
-          alignment:{vertical:'center',wrapText:false},
+          alignment:{vertical:'center',wrapText:false,horizontal:(C===1&&R>1)?'center':undefined},
           protection:{locked}
         };
       }
@@ -1105,21 +1431,54 @@ const APP={
         const idxId=headers.indexOf('id_chi_tieu');
         if(idxId===-1){UTILS.toast('Không tìm thấy cột id_chi_tieu','er');return}
 
-        const fixedCols=new Set(['id_chi_tieu','ten_chi_tieu','don_vi','ghi_chu','nguon_so_lieu','']);
+        const fixedCols=new Set(['id_chi_tieu','stt','ten_chi_tieu','don_vi','ghi_chu','nguon_so_lieu','']);
         const kyHeaders=headers.map((h,i)=>({h,i})).filter(x=>!fixedCols.has(x.h)&&x.i>idxId);
         const gcIdx=headers.indexOf('ghi_chu');
-        const ngIdx=headers.indexOf('nguon_so_lieu');
+        // Cột nguon_so_lieu KHÔNG đọc từ Excel: xuatExcel luôn ghi chuỗi rỗng vào
+        // cột này, nên vòng khứ hồi xuất → tải lên sẽ xoá sạch dữ liệu nguồn.
 
         const maKyHienThi=this.dsKy.map(k=>k.ky_bao_cao);
         const kyHopLe=kyHeaders.filter(x=>maKyHienThi.includes(x.h));
         if(!kyHopLe.length){UTILS.toast('Không tìm thấy kỳ báo cáo hợp lệ trong file','er');return}
 
+        const dsIdHopLe=new Set(Object.keys(this.ctById||{}));
+
+        // ── Hệ định dạng cho các ô kiểu CHỮ trong file ──────────────────
+        // Ô kiểu Số của .xlsx đã mang giá trị gốc (Tầng 1) nên miễn nhiễm; chỉ
+        // ô "số gõ vào ô định dạng Text" mới phải suy đoán. Đường Excel ghi
+        // thẳng xuống CSDL, không qua mắt người soát như đường dán, nên khi
+        // manh mối chưa đủ tin cậy thì HỎI trước, không đoán thầm.
+        const mauChuoi=[];
+        for(let ri=1;ri<raw.length;ri++){
+          const row=raw[ri];const id=String(row[idxId]||'').trim();
+          if(!id||(dsIdHopLe.size&&!dsIdHopLe.has(id)))continue;
+          kyHopLe.forEach(ky=>{const v=row[ky.i];if(typeof v==='string'&&v.trim()!=='')mauChuoi.push(v)});
+        }
+        let heFile=UTILS.HE.heDangDung();
+        if(mauChuoi.length){
+          const qd=UTILS.HE.quyetDinhHe(mauChuoi);
+          if(qd.hanhDong==='hoi'){
+            const kq=await this._hoiHe(qd);
+            if(!kq){UTILS.toast('Đã huỷ tải lên vì chưa xác định được định dạng số.','warn');input.value='';return}
+            heFile=kq.he;if(kq.ghiNho)UTILS.HE.luuHeAuto(heFile);
+          }else{
+            heFile=qd.he;if(qd.ghiNho)UTILS.HE.luuHeAuto(heFile);
+          }
+          this._veNutHe();
+        }
+
+        // Kỳ gắn ghi chú — ghi chú chỉ thuộc về kỳ Ước thực hiện, KHÔNG rải ra
+        // mọi kỳ như bản cũ (bản cũ vừa nhân bản ghi chú vừa ghi rỗng đè lên).
+        const kyGC=this._kyGhiChu();
+
         const rows=[];
-        let boQuaCT=0;
+        let boQuaCT=0,boQuaLoi=0,soGC=0;
         for(let ri=1;ri<raw.length;ri++){
           const row=raw[ri];
           const id=String(row[idxId]||'').trim();
           if(!id||id==='')continue;
+          // Bỏ qua dòng không phải chỉ tiêu của bảng (hàng tiêu đề hiển thị, dòng rác…)
+          if(dsIdHopLe.size&&!dsIdHopLe.has(id))continue;
           const itCT=this.ctPrep&&this.ctPrep.map[id];
 
           kyHopLe.forEach(ky=>{
@@ -1128,29 +1487,70 @@ const APP={
             // Chỉ tiêu tổng do công thức quyết định → không nhận từ Excel
             if(itCT&&CT.apDungChoKy(itCT,ky_info)){boQuaCT++;return}
 
-            const val=String(row[ky.i]||'').trim();
-            if(val==='')return;
-
-            const raw_n=val.replace(/\./g,'').replace(',','.');
-            const num=parseFloat(raw_n);
-            if(isNaN(num))return;
+            const oGoc=row[ky.i];
+            if(oGoc===''||oGoc===null||oGoc===undefined)return;   // lưu ý: KHÔNG dùng ||'' — số 0 là hợp lệ
+            if(typeof oGoc==='boolean')return;
+            // number → dùng THẲNG; chuỗi → parse theo hệ đã chốt ở trên
+            const num=UTILS.HE.oThanhSo(oGoc,heFile);
+            if(num===null||isNaN(num)){boQuaLoi++;return}
 
             rows.push({
               id_chi_tieu:id,
               ky_bao_cao:ky.h,
               gia_tri:num,
-              ghi_chu:gcIdx>=0?String(row[gcIdx]||'').trim():'',
-              nguon_so_lieu:ngIdx>=0?String(row[ngIdx]||'').trim():'',
               nguoi_nhap:this.user._nguoi_nhap||this.user.email||this.user.don_vi,
               thoi_gian_nhap:new Date().toISOString()
             });
           });
+
+          // Ghi chú: chỉ ghi vào ĐÚNG kỳ ghi chú, và chỉ khi ô trong file có nội
+          // dung. Ô rỗng KHÔNG đưa khoá ghi_chu vào payload → không xoá mất ghi
+          // chú đang có. Cột nguon_so_lieu bị bỏ hẳn khỏi đường Excel vì file
+          // xuất ra luôn để trống cột đó, gửi lên sẽ nuke dữ liệu.
+          if(kyGC&&!kyGC.khoa_nhap_lieu&&gcIdx>=0){
+            const gcV=row[gcIdx];
+            const gcS=(gcV===null||gcV===undefined)?'':String(gcV).trim();
+            if(gcS!==''){
+              rows.push({
+                id_chi_tieu:id,
+                ky_bao_cao:kyGC.ky_bao_cao,
+                ghi_chu:gcS,
+                nguoi_nhap:this.user._nguoi_nhap||this.user.email||this.user.don_vi,
+                thoi_gian_nhap:new Date().toISOString()
+              });
+              soGC++;
+            }
+          }
         }
 
         if(!rows.length){UTILS.toast('Không có dữ liệu hợp lệ để import','warn');return}
 
+        // ── Đối chiếu với số liệu đang có: ghi đè thì phải hỏi ──────────
+        const dsKyLQ=[...new Set(rows.map(r=>r.ky_bao_cao))];
+        let dangCo={};
+        try{
+          (await DB.layDuLieu(this.bangHT,dsKyLQ)).forEach(r=>{dangCo[r.id_chi_tieu+'|'+r.ky_bao_cao]=r});
+        }catch(eDC){console.warn('Đối chiếu ghi đè:',eDC.message)}
+        const deGhi=[];let soMoi=0;
+        rows.forEach(r=>{
+          if(r.gia_tri===undefined)return;                 // dòng ghi chú, không xét
+          const cu=dangCo[r.id_chi_tieu+'|'+r.ky_bao_cao]?.gia_tri;
+          if(cu===null||cu===undefined||cu===''){soMoi++;return}
+          if(Number(cu)===Number(r.gia_tri))return;        // giống hệt, không tính là ghi đè
+          const k=this.dsKy.find(x=>x.ky_bao_cao===r.ky_bao_cao);
+          deGhi.push({ten:(this.ctById[r.id_chi_tieu]?.chi_tieu||r.id_chi_tieu).trim(),
+                      ky:(k?.ky_bao_cao_tieu_de||r.ky_bao_cao),cu:Number(cu),moi:Number(r.gia_tri)});
+        });
+        if(deGhi.length){
+          const ok=await this._xacNhanGhiDe(deGhi,soMoi);
+          if(!ok){UTILS.toast('Đã huỷ tải lên, số liệu cũ giữ nguyên.','ok');input.value='';return}
+        }
+
         await DB.luuDuLieu(this.bangHT,rows);
-        UTILS.toast(`✅ Đã import ${rows.length} ô dữ liệu từ Excel!`+(boQuaCT?` (bỏ qua ${boQuaCT} ô chỉ tiêu tổng)`:''),'ok');
+        const _bq=[boQuaCT?`${boQuaCT} ô chỉ tiêu tổng`:'',boQuaLoi?`${boQuaLoi} ô không đọc được thành số`:''].filter(Boolean);
+        UTILS.toast(`✅ Đã import ${rows.length-soGC} ô số liệu`+(soGC?` và ${soGC} ghi chú`:'')+' từ Excel!'
+                    +(_bq.length?` (bỏ qua ${_bq.join(', ')})`:''),
+                    boQuaLoi?'warn':'ok');
         input.value='';
         await this.moNhap(this.bangHT);
         // Ghi lại các ô tổng theo số liệu vừa import
