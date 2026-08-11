@@ -1,18 +1,3 @@
-<!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 8b-vá — index.html v4, cập nhật 2026/07/27 13:53 (GMT+7):
-     khung Tiến độ vẽ lại theo mockup Mèo Đen — MỘT bảng phẳng (gộp ô Đơn vị
-     bằng rowspan, không còn card riêng từng đơn vị), cột Ghi chú dựng tường
-     thuật nhiều dòng từ lich_su_nop (DB.layLichSuNopTheoKy mới). -->
-<!-- Phiên bản trước: Bước 8b — index.html v3, cập nhật 2026/07/27 10:14 (GMT+7):
-     (1) ô chọn kỳ báo cáo ở sidebar (1 kỳ → nhãn cố định, ≥2 kỳ → <select>,
-     mặc định ky_dang_thu_thap()); (2) cột hiện = ky_bao_cao_cot(kỳ đã chọn) ∩
-     dua_vao_bieu (đặc tả v4 mục 3.3, thay layCotHienThi() toàn cục cũ); (3) ẩn
-     cả dòng / khoá từng ô theo tần suất chỉ tiêu (UTILS.apDungTanSuat); (4)
-     khoá TOÀN BỘ lưới khi biểu đã "đã nộp"/"đề nghị chỉnh sửa" Ở KỲ ĐANG CHỌN;
-     (5) BỎ nút "Gửi báo cáo"/"Đề nghị mở khóa" cũ, thay "Nộp báo cáo"/"Đề nghị
-     chỉnh sửa" theo kỳ (nopBaoCao/deNghiChinhSuaKy); (6) khung tiến độ thứ ba
-     (APP.moTienDo) cạnh "nhập biểu"/"xem biểu". -->
-<!-- Phiên bản trước: Bước 6d — index.html v2, cập nhật 2026/07/25 14:04 (GMT+7) -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -25,17 +10,22 @@
 <script src="config.js"></script>
 <script src="db.js"></script>
 <script src="utils.js"></script>
+<script src="congthuc.js"></script>
 <style>
-:root{--xd:#1b4332;--xc:#2d6a4f;--xn:#52b788;--xp:#d8f3dc;--w:#fff;--g1:#f4f6f5;--g2:#e4e9e6;--g3:#c5d0c9;--g4:#7a9485;--g5:#3d5247;--dk:#1a2e22;--red:#c0392b;--amb:#b45309;--sw:230px;--font:'Be Vietnam Pro',sans-serif;--mono:'JetBrains Mono',monospace;--r:7px;}
+:root{--xd:#1b4332;--xc:#2d6a4f;--xn:#52b788;--xp:#d8f3dc;--w:#fff;--g1:#f4f6f5;--g2:#e4e9e6;--g3:#c5d0c9;--g4:#7a9485;--g5:#3d5247;--dk:#1a2e22;--red:#c0392b;--sw:230px;--font:'Be Vietnam Pro',sans-serif;--mono:'JetBrains Mono',monospace;--r:7px;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1);height:100vh;overflow:hidden}
+/* ── Lớp phủ khi mở sidebar trên mobile ── */
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:95}
 .sb-overlay.on{display:block}
 @media(max-width:768px){
+  /* Đăng nhập: xếp dọc, ẩn panel phải */
   .lbox{grid-template-columns:1fr;height:auto;max-height:95vh}
   .lr{display:none}
+  /* Bố cục app */
   body{overflow:auto;height:auto}
   #app{height:auto!important;min-height:100vh}
+  /* Sidebar off-canvas: trượt từ trái, có animation */
   .sb{position:fixed;top:0;left:0;height:100%;width:min(var(--sw),84vw)!important;z-index:100;
       transform:translateX(-105%);transition:transform .28s cubic-bezier(.4,0,.2,1);
       box-shadow:4px 0 20px rgba(0,0,0,.25)}
@@ -49,9 +39,11 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
   .hamburger{display:flex!important}
   .only-m{display:inline-flex!important}
   .only-d{display:none!important}
+  /* Toast / modal / thanh lưu tràn ngang cho dễ chạm */
   .toast{left:8px;right:8px;top:54px}
   .mbox{min-width:unset;width:94vw;padding:18px}
   .sbar{left:8px;right:8px;bottom:8px;border-radius:10px}
+  /* Màn hình chào mừng gọn lại */
   .welcome{min-height:auto;padding:20px 10px;gap:14px}
   .welcome-card{padding:26px 20px}
   .welcome-card h2{font-size:17px}
@@ -64,12 +56,18 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
 .logo{text-align:center}.logo .i{font-size:28px;display:block;margin-bottom:5px}
 .logo h1{font-size:13px;font-weight:700;color:var(--xd);line-height:1.4}
 .logo p{font-size:11px;color:var(--g4);margin-top:3px}
+.dv-chosen{background:var(--xp);border:1.5px solid var(--xn);border-radius:var(--r);padding:8px 12px;font-size:13px;font-weight:600;color:var(--xd);display:none;align-items:center;justify-content:space-between}
+.dv-chosen .sub{font-size:11px;font-weight:400;color:var(--xc);margin-top:1px}
+.dv-chosen button{background:none;border:none;cursor:pointer;color:var(--g4);font-size:16px}
 .hint{text-align:center;padding:20px 0;color:var(--g4)}.hint .i{font-size:26px;display:block;margin-bottom:6px}.hint span{font-size:12px}
+#khu-pass{display:none;flex-direction:column;gap:10px}
 .lbl{display:block;font-size:11px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .inp{width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px;outline:none;transition:.2s;color:var(--dk)}
 .inp:focus{border-color:var(--xc);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+.tb-mac{background:#fff8e1;border:1px solid #ffe082;border-radius:5px;padding:7px 10px;font-size:11px;color:#6d4c00;display:none}
 .btn-login{padding:9px;background:linear-gradient(135deg,var(--xd),var(--xc));color:white;border:none;border-radius:var(--r);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.2s;width:100%}
 .btn-login:hover{opacity:.88;transform:translateY(-1px)}
+.btn-back{padding:8px;background:none;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px;color:var(--g5);cursor:pointer;width:100%}
 .err-txt{color:var(--red);font-size:12px;min-height:16px;text-align:center}
 .lr{background:var(--g1);border-left:1px solid var(--g2);display:flex;flex-direction:column;height:100%}
 .lr-head{padding:12px 14px;border-bottom:1px solid var(--g2);font-size:11px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.5px}
@@ -79,9 +77,11 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
 .dv-list::-webkit-scrollbar{width:4px}.dv-list::-webkit-scrollbar-thumb{background:var(--g3);border-radius:2px}
 .grp-lbl{padding:5px 10px 3px;font-size:10px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.5px;background:var(--g2);grid-column:1/-1}
 .dv-grid{display:grid;grid-template-columns:1fr 1fr;}
-.dv-item{padding:9px 10px;cursor:pointer;border-bottom:1px solid var(--g2);border-right:1px solid var(--g2);transition:.15s;display:flex;flex-direction:column;gap:1px;min-width:0}
+.dv-grid::-webkit-scrollbar{width:4px}.dv-grid::-webkit-scrollbar-thumb{background:var(--g3);border-radius:2px}
+.dv-item{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--g2);border-right:1px solid var(--g2);transition:.15s;display:flex;align-items:center;gap:6px;min-width:0}
 .dv-item:nth-child(even){border-right:none}
 .dv-item:hover{background:var(--xp)}.dv-item.sel{background:var(--xd);color:white}.dv-item.sel .ds{color:rgba(255,255,255,.55)}
+.chk{font-size:11px;flex-shrink:0;opacity:0;width:12px}.dv-item.sel .chk{opacity:1}
 .dn{font-size:12px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds{font-size:10px;color:var(--g4);margin-top:1px}
 #app{display:none;height:100vh}#app.on{display:flex}
 .sb{width:var(--sw);background:var(--xd);display:flex;flex-direction:column;flex-shrink:0}
@@ -90,22 +90,6 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
 .sb-logo .i{font-size:20px}.sb-logo .t{font-size:11px;font-weight:700;color:white;line-height:1.35}
 .sb-user{background:rgba(255,255,255,.07);border-radius:var(--r);padding:8px 10px}
 .sb-user .n{font-size:12px;font-weight:700;color:white}.sb-user .r{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px}
-.sb-ky{margin-top:8px}
-.sb-ky-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.sb-ky-ten{font-size:12px;font-weight:600;color:white;background:rgba(255,255,255,.07);border-radius:6px;padding:6px 9px}
-.sb-ky-sel{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:white;font-family:var(--font);font-size:12px;outline:none}
-.sb-ky-sel option{color:var(--dk)}
-.canh-bao-tra-lai{background:#fef2f2;border:1px solid #fecaca;color:var(--red);border-radius:var(--r);padding:9px 14px;margin-bottom:8px;font-size:12px;font-weight:600}
-/* Bước 8b-vá: khung Tiến độ dạng BẢNG PHẲNG kiểu bảng tính, theo mockup Mèo Đen
-   — không còn card riêng từng đơn vị, gộp ô Đơn vị bằng rowspan. */
-.tien-do-wrap{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;padding:16px 18px}
-.tien-do-table{width:100%;border-collapse:collapse;font-size:13px}
-.tien-do-table .td-title{color:var(--red,#c0392b);font-weight:800;font-size:15px;padding:2px 4px 10px}
-.tien-do-table .td-spacer{height:8px}
-.tien-do-table .td-nhan{font-weight:700;font-size:12px;color:var(--g5);white-space:nowrap;padding:2px 10px 2px 4px;vertical-align:middle}
-.tien-do-table .tr-head th{text-align:left;padding:7px 10px;font-size:12px;font-weight:700;color:var(--xd);border-bottom:2px solid var(--g3);background:var(--g1)}
-.tien-do-table td{padding:6px 10px;border-bottom:1px solid var(--g2);vertical-align:top}
-.tien-do-table .td-donvi{font-weight:700;color:var(--xd);vertical-align:middle;border-right:1px solid var(--g2)}
 .sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
 .sb-nav::-webkit-scrollbar{width:3px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
 .nlbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 3px}
@@ -117,17 +101,22 @@ body{font-family:var(--font);font-size:14px;color:var(--dk);background:var(--g1)
 .sb-btn{width:100%;padding:7px 10px;background:rgba(255,255,255,.06);border:none;border-radius:6px;color:rgba(255,255,255,.6);font-family:var(--font);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
 .sb-btn:hover{background:rgba(255,255,255,.12);color:white}
 .sb-btn.adm{background:rgba(255,200,80,.07);color:rgba(255,200,80,.8)}.sb-btn.adm:hover{background:rgba(255,200,80,.14);color:#ffd166}
-.locale-chip{width:100%;padding:6px 10px;background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18);border-radius:6px;color:rgba(255,255,255,.55);font-size:10px;cursor:pointer;text-align:center;transition:.15s}
-.locale-chip:hover{background:rgba(255,255,255,.1);color:white}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .topbar{height:50px;background:white;border-bottom:1px solid var(--g2);display:flex;align-items:center;padding:0 18px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .topbar-t{font-size:14px;font-weight:700;color:var(--xd);flex:1}
 .topbar-s{font-size:11px;color:var(--g4);font-weight:400;margin-left:6px}
 .content{flex:1;overflow:auto;padding:14px}
 .content::-webkit-scrollbar{width:6px}.content::-webkit-scrollbar-thumb{background:var(--g3);border-radius:3px}
+.nl-bar{background:white;border-radius:var(--r);padding:11px 15px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nl-bar .sp{flex:1}
+.btn-sm{padding:5px 12px;border:none;border-radius:5px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.btn-sm.g{background:var(--xc);color:white}.btn-sm.g:hover{opacity:.85}
+.btn-sm.gr{background:var(--g2);color:var(--g5)}.btn-sm.gr:hover{background:var(--g3)}
 .tieu-de-bang{background:white;border-radius:var(--r);padding:8px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
 .tieu-de-bang .d1{font-size:14px;font-weight:700;color:var(--xd);text-transform:uppercase}
 .tieu-de-bang .d2{font-size:12px;color:var(--g4);margin-top:2px;font-style:italic}
+.ky-tag{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;margin-right:3px}
+.ky-tag.mo{background:#d1fae5;color:#065f46}.ky-tag.khoa{background:var(--g2);color:var(--g5)}
 .tw{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto;max-height:calc(100vh - 210px)}
 .tw::-webkit-scrollbar{width:6px;height:6px}.tw::-webkit-scrollbar-thumb{background:var(--g3);border-radius:3px}
 table.t{width:max-content;min-width:100%;border-collapse:collapse;font-size:13px}
@@ -135,7 +124,8 @@ table.t thead{position:sticky;top:0;z-index:10}
 table.t th{background:var(--xd);color:white;padding:7px 9px;font-size:11px;font-weight:600;
   white-space:normal;word-break:break-word;border-right:1px solid rgba(255,255,255,.1);
   text-align:center;vertical-align:middle;line-height:1.35}
-table.t th.th-n{white-space:nowrap;text-align:left;min-width:250px;position:sticky;left:0;z-index:11;background:var(--xd)}
+table.t th.th-n{white-space:nowrap} 
+table.t th.th-n{text-align:left;min-width:250px;position:sticky;left:0;z-index:11;background:var(--xd)}
 table.t th.th-stt{width:36px}table.t th.th-id{width:62px}table.t th.th-u{width:70px}
 table.t th.th-mo{background:#1e5f3a}table.t th.th-kh{background:#3d5247}table.t th.th-gc{width:130px}
 table.t td{padding:3px 6px;border-bottom:1px solid var(--g2);border-right:1px solid var(--g2);vertical-align:middle}
@@ -143,24 +133,55 @@ table.t td.td-n{position:sticky;left:0;background:white;border-right:2px solid v
 table.t tr.tr-h td{background:var(--xp);font-weight:700;color:var(--xd);font-size:12px}
 table.t tr.tr-h td.td-n{background:var(--xp)}
 table.t tr:not(.tr-h):hover td{background:#f0fdf4}table.t tr:not(.tr-h):hover td.td-n{background:#f0fdf4}
+
+/* ── Highlight hàng đang được focus ── */
 table.t tr.tr-focused td{background:#e8f5e9 !important}
 table.t tr.tr-focused td.td-n{background:#e8f5e9 !important}
+
 table.t td.td-stt{text-align:center;color:var(--g4);font-size:11px;font-family:var(--mono)}
 table.t td.td-id{text-align:center;font-family:var(--mono);font-size:11px;color:var(--g4)}
 table.t td.td-u{text-align:center;font-size:11px;color:var(--g4)}
+
+/* ── Ô nhập liệu thường ── */
 .os{width:100%;padding:3px 7px;border:1.5px solid transparent;border-radius:4px;font-family:var(--mono);font-size:13px;text-align:right;background:transparent;outline:none;transition:border-color .15s, background .15s, box-shadow .15s}
-.os:focus{border-color:var(--xc);background:#ffffff;box-shadow:0 0 0 3px rgba(45,106,79,.18), inset 0 1px 3px rgba(0,0,0,.06);color:var(--xd);font-weight:700;position:relative;z-index:2}
+.os:focus{
+  border-color:var(--xc);
+  background:#ffffff;
+  box-shadow:0 0 0 3px rgba(45,106,79,.18), inset 0 1px 3px rgba(0,0,0,.06);
+  color:var(--xd);
+  font-weight:700;
+  position:relative;
+  z-index:2;
+}
 .os.has{color:var(--xd);font-weight:600}
 .os:disabled{background:var(--g1);color:var(--g5);cursor:default}
 .os.locked{background:#f8f0f0;color:var(--g4)}
+
+/* ── Ô ghi chú ── */
 .ot{width:100%;padding:3px 6px;border:1.5px solid transparent;border-radius:4px;font-family:var(--font);font-size:12px;background:transparent;outline:none;transition:border-color .15s, background .15s, box-shadow .15s}
-.ot:focus{border-color:var(--xn);background:#ffffff;box-shadow:0 0 0 3px rgba(82,183,136,.18), inset 0 1px 3px rgba(0,0,0,.05);position:relative;z-index:2}
+.ot:focus{
+  border-color:var(--xn);
+  background:#ffffff;
+  box-shadow:0 0 0 3px rgba(82,183,136,.18), inset 0 1px 3px rgba(0,0,0,.05);
+  position:relative;
+  z-index:2;
+}
 .ot:disabled{background:var(--g1);cursor:default}
+
+/* ── Cột so sánh (chỉ đọc, tự tính) — giống xembaocao.html ── */
 table.t th.th-cmp{background:#1e40af}
 table.t td.td-cmp{text-align:right;font-family:var(--mono);font-size:13px;font-weight:600;background:#f5f8ff;padding:3px 8px}
 table.t td.td-cmp.up{color:#15803d}table.t td.td-cmp.down{color:var(--red)}table.t td.td-cmp.na{color:var(--g3);font-weight:400}
 table.t tr:not(.tr-h):hover td.td-cmp{background:#eaf0ff}
 table.t tr.tr-focused td.td-cmp{background:#e8f5e9 !important}
+/* ── Ô CHỈ TIÊU TỔNG (có công thức) — khóa nhập tay, JS tự tính ── */
+table.t td.td-ctf{text-align:right;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--xd);background:#eef6f0;padding:3px 8px;cursor:help;position:relative;white-space:nowrap}
+table.t td.td-ctf.trong{color:var(--g3);font-weight:400}
+table.t td.td-ctf::before{content:"\03A3";position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:10px;color:#6f9c85;font-weight:700}
+table.t tr:not(.tr-h):hover td.td-ctf{background:#e2efe7}
+table.t tr.tr-focused td.td-ctf{background:#e8f5e9 !important}
+.ct-badge{display:inline-block;margin-right:5px;font-size:9px;font-weight:700;color:#fff;background:var(--xc);border-radius:3px;padding:1px 4px;vertical-align:middle;cursor:help;line-height:1.4}
+
 .td-id{display:none!important}
 .th-id{display:none!important}
 .th-ng{display:none!important}
@@ -171,6 +192,7 @@ table.t tr.tr-focused td.td-cmp{background:#e8f5e9 !important}
 .tieu-de-bang.hidden{display:none}
 .gs-wrap{overflow:hidden;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);background:white;height:calc(100vh - 130px);min-height:400px}
 .gs-wrap iframe{width:100%;height:calc(100% + 90px);margin-top:-90px;border:none;display:block}
+/* ── Thẻ Google Sheet (danh sách riêng) ── */
 .gs-card{background:white;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
 .gs-card-head{padding:10px 14px;border-bottom:1px solid var(--g2);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .gs-card-title{font-size:13px;font-weight:700;color:var(--xd)}
@@ -180,8 +202,7 @@ table.t tr.tr-focused td.td-cmp{background:#e8f5e9 !important}
 .gs-iframe{width:100%;border:none;display:block;min-height:420px}
 .btn-sm.send{background:#1b4332;color:white}.btn-sm.send:hover{opacity:.85}
 .btn-sm.send.done{background:var(--g3);color:var(--g5);cursor:default}
-.btn-sm.warn{background:#fef3c7;color:var(--amb)}.btn-sm.warn:hover{opacity:.85}
-.btn-sm.warn:disabled{opacity:.7;cursor:default}
+
 .resize-handle:hover{background:rgba(255,255,255,.3)}
 table.t th{position:relative;overflow:hidden}
 table.t tr.tr-locked td{background:#fafafa}
@@ -192,19 +213,16 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
 .btn-s{padding:7px 17px;background:var(--xc);color:white;border:none;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
 .btn-s:hover{opacity:.85}.btn-c{padding:7px 12px;background:var(--g2);color:var(--g5);border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer}
 .toast{position:fixed;top:58px;right:14px;padding:10px 16px;border-radius:var(--r);font-size:13px;color:white;box-shadow:0 2px 10px rgba(0,0,0,.15);transform:translateX(110%);transition:.3s;z-index:200}
-.toast.on{transform:translateX(0)}.toast.ok{background:#1b5e20}.toast.er{background:var(--red)}.toast.warn{background:var(--amb)}
+.toast.on{transform:translateX(0)}.toast.ok{background:#1b5e20}.toast.er{background:var(--red)}.toast.warn{background:#b45309}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
 .modal-bg.on{display:flex}
-.mbox{background:white;border-radius:14px;padding:26px;min-width:300px;max-width:420px;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+.mbox{background:white;border-radius:14px;padding:26px;min-width:300px;box-shadow:0 8px 28px rgba(0,0,0,.2)}
 .mbox h3{color:var(--xd);margin-bottom:5px}.mbox p{font-size:12px;color:var(--g4);margin-bottom:14px}
 .mrow{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}.mbtns{display:flex;gap:8px}
 .btn-p{padding:8px 18px;background:var(--xc);color:white;border:none;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer}
 .btn-g{padding:8px 14px;background:var(--g2);color:var(--g5);border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer}
-.btn-choice{width:100%;text-align:left;padding:10px 14px;background:var(--g1);border:1.5px solid var(--g2);border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s;color:var(--dk)}
-.btn-choice:hover,.btn-choice:focus{background:var(--xp);border-color:var(--xn);outline:none}
-.btn-choice.goi-y{border-color:var(--xc);background:var(--xp);font-weight:700}
-.btn-choice .sub{display:block;font-size:11px;font-weight:400;color:var(--g4);margin-top:2px}
 .empty{display:flex;flex-direction:column;align-items:center;padding:50px;color:var(--g4);gap:8px;font-size:13px}.empty .i{font-size:34px}
+/* ── Màn hình chào mừng (landing) ── */
 .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 130px);gap:18px;padding:30px 20px;text-align:center}
 .welcome-card{background:white;border-radius:16px;box-shadow:0 4px 24px rgba(27,67,50,.10);border:1px solid var(--g2);padding:38px 46px;max-width:560px;width:100%;position:relative;overflow:hidden}
 .welcome-card::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--xd),var(--xn),var(--xc))}
@@ -226,7 +244,7 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
 <body>
 <div id="login">
   <div class="lbox">
-    <!-- CỘT TRÁI: Logo + đăng nhập email/mật khẩu (Supabase Auth) -->
+    <!-- CỘT TRÁI: Logo + nhập user/pass -->
     <div class="ll">
       <div class="logo">
         <span class="i">🌾</span>
@@ -234,27 +252,36 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
         <p>Cổng nhập liệu nội bộ</p>
       </div>
       <div>
-        <label class="lbl">Email đăng nhập</label>
-        <input class="inp" type="email" id="inp-email" placeholder="donvi@snnmt.gov.vn"
-          autocomplete="username"
+        <label class="lbl">Tên đăng nhập (đơn vị)</label>
+        <input class="inp" type="text" id="inp-user" list="list-donvi" placeholder="Gõ hoặc chọn mũi tên..."
+          autocomplete="off" oninput="APP.filterDVByUser(this.value)" onchange="APP.filterDVByUser(this.value)"
+          onkeydown="if(event.key==='Enter')UTILS.el('inp-hoten').focus()">
+        <datalist id="list-donvi"></datalist>
+      </div>
+      <div>
+        <label class="lbl">Họ tên người nhập <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--g4)">(tuỳ chọn)</span></label>
+        <input class="inp" type="text" id="inp-hoten" list="list-hoten" placeholder="Nguyễn Văn A"
+          autocomplete="name"
           onkeydown="if(event.key==='Enter')UTILS.el('inp-pass').focus()">
+        <datalist id="list-hoten"></datalist>
       </div>
       <div>
         <label class="lbl">Mật khẩu</label>
         <input class="inp" type="password" id="inp-pass" placeholder="••••••••"
-          autocomplete="current-password"
           onkeydown="if(event.key==='Enter')APP.dangNhap()">
       </div>
-      <button class="btn-login" id="btn-dang-nhap" onclick="APP.dangNhap()">Đăng nhập →</button>
+      <div class="tb-mac" id="tb-mac">
+        🔑 Mật khẩu mặc định: <strong id="mk-mac"></strong>
+      </div>
+      <button class="btn-login" onclick="APP.dangNhap()">Đăng nhập →</button>
       <div class="err-txt" id="err-login"></div>
     </div>
-    <!-- CỘT PHẢI: Chọn nhanh đơn vị — CHỈ điền sẵn email, KHÔNG xác thực
-         (danh sách tĩnh, không đọc CSDL trước khi đăng nhập vì RLS chặn anon) -->
+    <!-- CỘT PHẢI: Chọn nhanh tài khoản -->
     <div class="lr">
       <div class="lr-head">⚡ Chọn nhanh đơn vị</div>
       <input class="inp-s" type="text" id="inp-s" placeholder="🔍 Lọc tên đơn vị..."
         oninput="APP.filterDV(this.value)">
-      <div id="dv-list"></div>
+      <div id="dv-list"><div class="loading"><span class="spin"></span> Đang tải...</div></div>
     </div>
   </div>
 </div>
@@ -268,13 +295,10 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
         <div class="t">Báo cáo định kỳ<br><span style="opacity:.55;font-weight:400">Sở NN và MT</span></div>
       </div>
       <div class="sb-user"><div class="n" id="sb-name"></div><div class="r" id="sb-role"></div></div>
-      <div class="sb-ky" id="sb-ky"></div>
     </div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot">
-      <button class="locale-chip" id="locale-chip" onclick="APP.moModalLocale()" title="Định dạng số máy này đang dùng — bấm để đổi tay"></button>
       <button class="sb-btn" style="background:rgba(82,183,136,.16);color:#95d5b2" onclick="APP.moXemBaoCao()">📊 Xem báo cáo</button>
-      <button class="sb-btn" style="background:rgba(59,130,246,.16);color:#93c5fd" onclick="APP.moTienDo()">📈 Tiến độ nộp</button>
       <button class="sb-btn adm" onclick="APP.moAdmin()">⚙️ Trang quản trị</button>
       <button class="sb-btn" onclick="APP.moModalPass()">🔐 Đổi mật khẩu</button>
       <button class="sb-btn" onclick="APP.dangXuat()">↩ Đăng xuất</button>
@@ -300,12 +324,6 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
           <button class="btn-xembc" onclick="APP.moXemBaoCao()"><span class="ic">📊</span> Xem báo cáo</button>
           <div class="btn-xembc-sub">Xem, tra cứu và so sánh số liệu giữa các kỳ báo cáo</div>
         </div>
-        <div class="welcome-sep">HOẶC</div>
-        <div class="welcome-card card2">
-          <div class="welcome-ico ico2" style="background:linear-gradient(135deg,#dbeafe,#93c5fd)">📈</div>
-          <button class="btn-xembc" style="background:linear-gradient(135deg,#1e40af,#3b82f6)" onclick="APP.moTienDo()"><span class="ic">📈</span> Tiến độ nộp báo cáo</button>
-          <div class="btn-xembc-sub">Biểu nào đã nộp, đang chờ duyệt, hay quá hạn ở kỳ báo cáo đang chọn</div>
-        </div>
       </div>
     </div>
   </main>
@@ -318,1049 +336,869 @@ table.t tr.tr-locked td.td-n{background:#fafafa;color:var(--g4)}
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Đổi mật khẩu — V2: chỉ cần mật khẩu mới (Supabase Auth đã xác thực phiên).
-     Bước 6d: cũng dùng làm màn hình BUỘC đổi khi ho_so.phai_doi_mat_khau=true
-     (admin vừa tạo TK/đặt lại mật khẩu) — khi đó ẩn nút Đóng, không cho thoát. -->
 <div class="modal-bg" id="modal-pass">
   <div class="mbox">
-    <h3 id="modal-pass-title">🔐 Đổi mật khẩu</h3><p id="modal-pass-sub">Mật khẩu mới tối thiểu 8 ký tự.</p>
+    <h3>🔐 Đổi mật khẩu</h3><p id="mp-sub">Mật khẩu mới tối thiểu 4 ký tự.</p>
     <div class="mrow">
+      <div><label class="lbl">Mật khẩu hiện tại</label><input class="inp" type="password" id="p-cu" placeholder="••••••••"></div>
       <div><label class="lbl">Mật khẩu mới</label><input class="inp" type="password" id="p-moi" placeholder="••••••••"></div>
       <div><label class="lbl">Nhập lại</label><input class="inp" type="password" id="p-moi2" placeholder="••••••••"></div>
     </div>
     <div class="mbtns">
       <button class="btn-p" onclick="APP.luuPass()">Lưu mật khẩu</button>
-      <button class="btn-g" id="btn-dong-pass" onclick="UTILS.dongModal('modal-pass')">Đóng</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-pass')">Đóng</button>
     </div>
     <div class="err-txt" id="err-pass" style="margin-top:8px"></div>
   </div>
 </div>
 
-<!-- Xác nhận chung (dùng bởi UTILS.xacNhan — gửi báo cáo, v.v.) -->
-<div class="modal-bg" id="modal-xn">
-  <div class="mbox">
-    <h3 id="xn-title">Xác nhận</h3><p id="xn-msg"></p>
-    <div class="mbtns">
-      <button class="btn-p" id="xn-ok">Đồng ý</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-xn')">Huỷ</button>
-    </div>
-  </div>
-</div>
-
-<!-- Đề nghị chỉnh sửa lại một biểu ĐÃ NỘP ở kỳ đang chọn (Bước 8b — thay "Đề nghị mở khóa" cũ) -->
-<div class="modal-bg" id="modal-de-nghi">
-  <div class="mbox">
-    <h3>✏️ Đề nghị chỉnh sửa</h3>
-    <p>Biểu này đã nộp ở kỳ đang chọn và đang bị khóa. Gửi đề nghị để Phòng Kế hoạch – Tài chính xem xét mở lại.</p>
-    <div class="mrow">
-      <div><label class="lbl">Lý do (tuỳ chọn)</label>
-        <input class="inp" type="text" id="dn-ly-do" placeholder="Vd: cần sửa số liệu tháng 7..."></div>
-    </div>
-    <div class="mbtns">
-      <button class="btn-p" onclick="APP.guiDeNghiChinhSua()">Gửi đề nghị</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-de-nghi')">Huỷ</button>
-    </div>
-  </div>
-</div>
-
-<!-- Ghi lý do sửa (MỚI Bước 6d) — hiện khi admin/admin_han_che sửa số liệu
-     của bảng KHÔNG do đơn vị mình nhập. Lý do tuỳ chọn, chép vào lich_su_so_lieu. -->
-<div class="modal-bg" id="modal-ly-do-sua">
-  <div class="mbox">
-    <h3>📝 Ghi lý do sửa? (tuỳ chọn)</h3>
-    <p>Bạn đang sửa số liệu của một đơn vị khác. Có thể ghi lại lý do để đơn vị đó và người xem nhật ký sau này hiểu vì sao có thay đổi.</p>
-    <div class="mrow">
-      <div><label class="lbl">Lý do (bỏ trống nếu không cần)</label>
-        <input class="inp" type="text" id="lds-ly-do" placeholder="Vd: chỉnh theo số liệu Sở đã đối chiếu..."></div>
-    </div>
-    <div class="mbtns">
-      <button class="btn-p" onclick="APP.xacNhanLuuLyDo()">💾 Lưu</button>
-      <button class="btn-g" onclick="APP.huyLuuLyDo()">Huỷ</button>
-    </div>
-  </div>
-</div>
-
-<!-- Hộp hỏi hệ định dạng số — 2 nút, ca "mâu thuẫn trong khối" / "mơ hồ chưa biết" -->
-<div class="modal-bg" id="modal-hoi-he">
-  <div class="mbox">
-    <h3>🔢 Máy này dùng định dạng số nào?</h3>
-    <p id="hh-msg">Không chắc định dạng số của khối vừa dán.</p>
-    <div class="mrow">
-      <button class="btn-choice" id="hh-vn" onclick="APP.chonHeDon('vn')">Việt Nam <span class="sub">1.234,5 — chấm ngăn nghìn, phẩy thập phân</span></button>
-      <button class="btn-choice" id="hh-us" onclick="APP.chonHeDon('us')">Anh - Mỹ <span class="sub">1,234.5 — phẩy ngăn nghìn, chấm thập phân</span></button>
-    </div>
-  </div>
-</div>
-
-<!-- Hộp xung đột: khối dán NGƯỢC với locale đã đặt tay cho máy này — 4 lối ra -->
-<div class="modal-bg" id="modal-xung-dot">
-  <div class="mbox">
-    <h3>⚠️ Định dạng số không khớp cài đặt máy</h3>
-    <p id="xd-msg">Máy này đang đặt một định dạng, nhưng khối vừa dán có vẻ định dạng khác.</p>
-    <div class="mrow">
-      <button class="btn-choice" onclick="APP.locChon('locChiLanNay')">Chỉ đọc lần này theo khối vừa dán <span class="sub">Giữ nguyên cài đặt máy cho các lần sau</span></button>
-      <button class="btn-choice" onclick="APP.locChon('locDoiCaiDat')">Đổi cài đặt máy sang định dạng này <span class="sub">Áp dụng luôn cho các lần dán sau trên máy này</span></button>
-      <button class="btn-choice" onclick="APP.locChon('locDungHoiTrongPhien')">Đừng hỏi lại trong phiên này <span class="sub">Tự đọc theo khối, không đổi cài đặt máy</span></button>
-      <button class="btn-choice" onclick="APP.locChon('locDocTheoCaiDat')">Số này vốn đúng theo cài đặt máy <span class="sub">Đọc thẳng theo định dạng máy, bỏ qua manh mối vừa thấy</span></button>
-    </div>
-  </div>
-</div>
-
-<!-- Hộp "auto gặp ngược": đang tự đọc 1 hệ trong phiên, lại gặp manh mối RÕ về đúng máy -->
-<div class="modal-bg" id="modal-auto-nguoc">
-  <div class="mbox">
-    <h3>🔄 Vừa thấy định dạng đúng máy này</h3>
-    <p id="an-msg">Phiên này đang tự đọc theo một định dạng khác, nhưng khối vừa dán trông giống định dạng gốc của máy.</p>
-    <div class="mrow">
-      <button class="btn-choice" onclick="APP.locChon('locChuyenVeMay')">Đúng, chuyển về đọc theo máy</button>
-      <button class="btn-choice" onclick="APP.locChon('locVanGiuAuto')">Không, vẫn đọc như phiên đang dùng</button>
-    </div>
-  </div>
-</div>
-
-<!-- Cài đặt định dạng số thủ công cho máy này -->
-<div class="modal-bg" id="modal-locale">
-  <div class="mbox">
-    <h3>🌐 Định dạng số của máy này</h3>
-    <p>Áp dụng cho ô nhập tay và dán từ Excel/Word trên máy này. Không ảnh hưởng máy khác.</p>
-    <div class="mrow">
-      <button class="btn-choice" onclick="APP.datLocaleTay('vn')">Việt Nam <span class="sub">1.234,5</span></button>
-      <button class="btn-choice" onclick="APP.datLocaleTay('us')">Anh - Mỹ <span class="sub">1,234.5</span></button>
-      <button class="btn-choice" onclick="APP.boLocaleTay()">Quay lại tự động nhận diện <span class="sub">Xoá cài đặt tay, để hệ thống tự suy theo khối dán</span></button>
-    </div>
-    <div class="mbtns"><button class="btn-g" onclick="UTILS.dongModal('modal-locale')">Đóng</button></div>
-  </div>
-</div>
-
 <script>
-const DANH_SACH_DON_VI = [{"email": "admin@sonmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kế hoạch - Tài chính", "vai_tro": "admin"}, {"email": "ttbvtv@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Trồng trọt và BVTV", "vai_tro": "editor"}, {"email": "channuoi@snnmt.gov.vn", "ho_ten": "Võ Lâm Chiêu Dương", "don_vi": "Chi cục Chăn nuôi và Thú y", "vai_tro": "editor"}, {"email": "kiemlam@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Kiểm lâm", "vai_tro": "editor"}, {"email": "cctskn@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Thủy sản và Kiểm ngư", "vai_tro": "editor"}, {"email": "trongtrot@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Bảo vệ môi trường", "vai_tro": "editor"}, {"email": "cctl@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục Thủy lợi", "vai_tro": "editor"}, {"email": "ccptnt@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Chi cục phát triển nông thôn", "vai_tro": "editor"}, {"email": "vanphongso@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Văn phòng Sở", "vai_tro": "editor"}, {"email": "kiemtra@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kiểm tra và GQKNTC", "vai_tro": "editor"}, {"email": "phapche@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Pháp chế", "vai_tro": "editor"}, {"email": "dautu@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý đầu tư", "vai_tro": "editor"}, {"email": "khcn@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Khoa học và Công nghệ", "vai_tro": "editor"}, {"email": "qlydat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý đất", "vai_tro": "editor"}, {"email": "kinhtedat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Kinh tế đất", "vai_tro": "editor"}, {"email": "boithuong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Bồi thường, hỗ trợ, tái định cư", "vai_tro": "editor"}, {"email": "dodac@snnmt.gov.vn", "ho_ten": "Phạm Thị Ngọc Nhung", "don_vi": "Phòng Đo đạc, Bản đồ và Viễn thám", "vai_tro": "editor"}, {"email": "chatthairanx@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Quản lý chất thải rắn", "vai_tro": "editor"}, {"email": "tainuyennuoc@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Tài nguyên nước, KSBĐ", "vai_tro": "editor"}, {"email": "khituong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Phòng Khí tượng Thủy văn và BĐKH", "vai_tro": "editor"}, {"email": "ntmgmbv@snnmt.gov.vn", "ho_ten": "Trương Công Thắng", "don_vi": "Văn phòng NTM&GMBV", "vai_tro": "editor"}, {"email": "dangkydat@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Văn phòng Đăng ký đất đai", "vai_tro": "editor"}, {"email": "ttdodac@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Trung tâm Đo đạc bản đồ", "vai_tro": "editor"}, {"email": "khuyennong@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Trung tâm Khuyến nông", "vai_tro": "editor"}, {"email": "qbvmt@snnmt.gov.vn", "ho_ten": "Chuyên viên 1", "don_vi": "Quỹ Bảo vệ môi trường", "vai_tro": "editor"}];
+const APP={
+  user:null, dsTK:[], dsBang:[], dsKy:[], dsSoSanh:[], bangHT:null, changes:{},
+  ctPrep:null, ctById:{}, _dangPaste:false,   // công thức chỉ tiêu tổng (congthuc.js)
 
-const APP = {
-  user: null, dsBang: [], dsCot: [], dsSoSanh: [], dsGSheet: [],
-  bangHT: null, changes: {}, ctMap: {},
-  // Bước 8b: kỳ báo cáo
-  kyChonId: null, dsKyDeChon: [], trangThaiNopHT: null, lichSuNopHT: [], khoaGhiToanBo: false,
-
-  async init() {
-    document.title = CONFIG.TEN_HE_THONG + ' – ' + CONFIG.TEN_CO_QUAN;
-    UTILS.el('login-h1').innerHTML = CONFIG.TEN_HE_THONG + '<br>' + CONFIG.TEN_CO_QUAN;
-    this.renderDV(DANH_SACH_DON_VI);
-    DB.onAuthChange((event) => { if (event === 'SIGNED_OUT') this.veManHinhDangNhap(); });
-    const nguoiDung = await UTILS.kiemTraDangNhap();
-    if (nguoiDung) { this.user = nguoiDung; await this.khoiDong(); }
+  async init(){
+    document.title=CONFIG.TEN_HE_THONG+' – '+CONFIG.TEN_CO_QUAN;
+    UTILS.el('login-h1').innerHTML=CONFIG.TEN_HE_THONG+'<br>'+CONFIG.TEN_CO_QUAN;
+    UTILS.el('mk-mac').textContent=CONFIG.MAT_KHAU_MAC_DINH;
+    await this.loadTK();
+    const sv=UTILS.laySession();
+    if(sv){try{this.user=sv;await this.khoiDong();return}catch{UTILS.xoaSession()}}
   },
 
-  veManHinhDangNhap() {
-    UTILS.el('app').classList.remove('on'); UTILS.el('login').style.display = 'flex';
-    this.user = null; this.bangHT = null; this.changes = {};
-    UTILS.el('inp-email').value = ''; UTILS.el('inp-pass').value = ''; UTILS.el('inp-s').value = '';
-    UTILS.el('err-login').textContent = '';
-    this.renderDV(DANH_SACH_DON_VI);
-  },
+  async loadTK(){
+    try{
+      this.dsTK=await DB.layDanhSachTaiKhoan();
+      this.renderDV(this.dsTK);
 
-  renderDV(ds) {
-    const el = UTILS.el('dv-list');
-    if (!ds.length) { el.innerHTML = '<div style="padding:12px;color:var(--g4);font-size:12px;grid-column:1/-1">Không tìm thấy</div>'; return }
-    const adm = ds.filter(r => r.vai_tro === 'admin'), edt = ds.filter(r => r.vai_tro === 'editor');
-    let h = '<div class="dv-grid">';
-    if (adm.length) {
-      h += `<div class="grp-lbl">Quản trị</div>`;
-      adm.forEach(r => h += this.dvRow(r));
-      if (adm.length % 2 !== 0) h += '<div></div>';
+      const dlDonVi=UTILS.el('list-donvi');
+      if(dlDonVi){
+        const uniqueDonVi=[...new Set(this.dsTK.map(r=>r.don_vi).filter(Boolean))];
+        dlDonVi.innerHTML=uniqueDonVi.map(dv=>`<option value="${dv}">`).join('');
+      }
+      this.capNhatListHoTen('');
+    }catch(e){
+      UTILS.el('dv-list').innerHTML=`<div style="padding:12px;color:var(--red);font-size:12px">Lỗi: ${e.message}</div>`;
     }
-    if (edt.length) {
-      h += `<div class="grp-lbl">Đơn vị báo cáo</div>`;
-      edt.forEach(r => h += this.dvRow(r));
-    }
-    h += '</div>';
-    el.innerHTML = h;
   },
 
-  dvRow(r) {
-    const cur = (UTILS.el('inp-email')?.value || '').trim().toLowerCase();
-    const s = cur === r.email.toLowerCase() ? 'sel' : '';
-    return `<div class="dv-item ${s}" onclick="APP.chonDV('${r.email}')">
-      <div class="dn">${r.don_vi}</div>
-      <div class="ds">${r.ho_ten || ''}</div>
+  capNhatListHoTen(tenDonVi){
+    const dlHoTen=UTILS.el('list-hoten');
+    if(!dlHoTen)return;
+    let names=[];
+    if(tenDonVi){
+      names=this.dsTK.filter(r=>r.don_vi===tenDonVi).map(r=>r.ho_ten).filter(Boolean);
+    }else{
+      names=this.dsTK.map(r=>r.ho_ten).filter(Boolean);
+    }
+    const uniqueNames=[...new Set(names)];
+    dlHoTen.innerHTML=uniqueNames.map(n=>`<option value="${n}">`).join('');
+  },
+
+  renderDV(ds){
+    const el=UTILS.el('dv-list');
+    if(!ds.length){el.innerHTML='<div style="padding:12px;color:var(--g4);font-size:12px;grid-column:1/-1">Không tìm thấy</div>';return}
+    const adm=ds.filter(r=>r.vai_tro==='admin'),edt=ds.filter(r=>r.vai_tro==='editor');
+    let h='<div class="dv-grid">';
+    if(adm.length){
+      h+=`<div class="grp-lbl">Quản trị</div>`;
+      adm.forEach(r=>h+=this.dvRow(r));
+      if(adm.length%2!==0)h+='<div></div>';
+    }
+    if(edt.length){
+      h+=`<div class="grp-lbl">Đơn vị báo cáo</div>`;
+      edt.forEach(r=>h+=this.dvRow(r));
+    }
+    h+='</div>';
+    el.innerHTML=h;
+  },
+
+  dvRow(r){
+    const s=this.user?.id===r.id?'sel':'';
+    return`<div class="dv-item ${s}" onclick="APP.chonDV(${r.id})" style="padding:9px 10px;">
+      <span class="chk">✓</span>
+      <div class="dn" style="white-space:normal;overflow:visible;">${r.don_vi}</div>
     </div>`;
   },
 
-  filterDV(q) {
-    const s = q.trim().toLowerCase();
-    const ds = s
-      ? DANH_SACH_DON_VI.filter(r => r.don_vi.toLowerCase().includes(s) || (r.ho_ten || '').toLowerCase().includes(s) || r.email.toLowerCase().includes(s))
-      : DANH_SACH_DON_VI;
+  filterDV(q){
+    const ds=q.trim()
+      ?this.dsTK.filter(r=>r.don_vi.toLowerCase().includes(q.toLowerCase())||r.ho_ten.toLowerCase().includes(q.toLowerCase()))
+      :this.dsTK;
     this.renderDV(ds);
   },
 
-  chonDV(email) {
-    UTILS.el('inp-email').value = email;
-    UTILS.el('err-login').textContent = '';
-    const q = UTILS.el('inp-s').value.trim();
+  filterDVByUser(q){
     this.filterDV(q);
-    setTimeout(() => { UTILS.el('inp-pass').focus() }, 80);
+    const val=q.trim().toLowerCase();
+    if(val){
+      const match=this.dsTK.find(r=>r.don_vi.toLowerCase()===val);
+      if(match){
+        if(match.id!==this.user?.id)this.chonDV(match.id,true);
+      }else{
+        this.capNhatListHoTen('');
+      }
+    }else{
+      this.capNhatListHoTen('');
+    }
   },
 
-  async dangNhap() {
-    const err = UTILS.el('err-login'); err.textContent = '';
-    const email = UTILS.el('inp-email').value.trim();
-    const pass = UTILS.el('inp-pass').value;
-    if (!email) { err.textContent = 'Vui lòng nhập email.'; UTILS.el('inp-email').focus(); return }
-    if (!pass) { err.textContent = 'Vui lòng nhập mật khẩu.'; return }
-    const btn = UTILS.el('btn-dang-nhap'); btn.disabled = true; btn.textContent = '⏳ Đang đăng nhập...';
-    try {
-      const nguoiDung = await DB.dangNhap(email, pass);
-      this.user = nguoiDung;
-      UTILS.luuSession(nguoiDung);
-      UTILS.datHeGoiY(nguoiDung.he_dinh_dang || null);
-      UTILS.el('inp-pass').value = '';
+  chonDV(id,skipPassFocus=false){
+    this.user=this.dsTK.find(r=>r.id===id);if(!this.user)return;
+    this.renderDV(
+      UTILS.el('inp-s').value.trim()
+        ?this.dsTK.filter(r=>r.don_vi.toLowerCase().includes(UTILS.el('inp-s').value.toLowerCase()))
+        :this.dsTK
+    );
+    UTILS.el('inp-user').value=this.user.don_vi;
+    this.capNhatListHoTen(this.user.don_vi);
+    if(this.user.ho_ten)UTILS.el('inp-hoten').value=this.user.ho_ten;
+    const mac=!this.user.mat_khau||this.user.mat_khau===CONFIG.MAT_KHAU_MAC_DINH;
+    UTILS.el('tb-mac').style.display=mac?'block':'none';
+    UTILS.el('err-login').textContent='';
+    if(!skipPassFocus){
+      UTILS.el('inp-pass').value='';
+      setTimeout(()=>{UTILS.el('inp-pass').focus()},80);
+    }
+  },
+
+  async dangNhap(){
+    const err=UTILS.el('err-login');
+    err.textContent='';
+    const userVal=UTILS.el('inp-user').value.trim();
+    const pass=UTILS.el('inp-pass').value;
+    if(!userVal){err.textContent='Vui lòng nhập tên đăng nhập.';UTILS.el('inp-user').focus();return}
+    if(!pass){err.textContent='Vui lòng nhập mật khẩu.';return}
+
+    if(!this.user||this.user.don_vi.toLowerCase()!==userVal.toLowerCase()){
+      const found=this.dsTK.find(r=>r.don_vi.toLowerCase()===userVal.toLowerCase());
+      if(!found){
+        const partial=this.dsTK.filter(r=>r.don_vi.toLowerCase().includes(userVal.toLowerCase()));
+        if(partial.length===1){this.user=partial[0]}
+        else{err.textContent='❌ Không tìm thấy tài khoản "'+userVal+'".';return}
+      }else{this.user=found}
+    }
+    if(this.user.trang_thai===false){err.textContent='❌ Tài khoản đã bị khoá. Liên hệ quản trị viên.';return}
+    const mk=this.user.mat_khau||CONFIG.MAT_KHAU_MAC_DINH;
+    if(pass!==mk){err.textContent='❌ Mật khẩu không đúng.';UTILS.el('inp-pass').value='';return}
+    try{
+      this.user=await DB.layTaiKhoanDayDu(this.user.id);
+      if(this.user.trang_thai===false){err.textContent='❌ Tài khoản đã bị khoá. Liên hệ quản trị viên.';return}
+      const hoTen=UTILS.el('inp-hoten').value.trim();
+      this.user._nguoi_nhap=hoTen||this.user.don_vi;
+      UTILS.luuSession(this.user);
       await this.khoiDong();
-    } catch (e) {
-      err.textContent = '❌ ' + (e.message === 'Invalid login credentials' ? 'Email hoặc mật khẩu không đúng.' : e.message);
-    }
-    btn.disabled = false; btn.textContent = 'Đăng nhập →';
+      if(mk===CONFIG.MAT_KHAU_MAC_DINH)setTimeout(()=>this.moModalPass(true),700);
+    }catch(e){err.textContent='Lỗi: '+e.message}
   },
 
-  async dangXuat() {
-    try { await DB.dangXuat(); } catch (e) { /* bỏ qua, vẫn về màn đăng nhập */ }
-    UTILS.xoaSession();
-    this.veManHinhDangNhap();
+  dangXuat(){
+    UTILS.xoaSession();this.user=null;this.bangHT=null;this.changes={};
+    UTILS.el('app').classList.remove('on');UTILS.el('login').style.display='flex';
+    UTILS.el('inp-user').value='';
+    UTILS.el('inp-hoten').value='';
+    UTILS.el('inp-pass').value='';
+    UTILS.el('inp-s').value='';
+    UTILS.el('err-login').textContent='';
+    UTILS.el('tb-mac').style.display='none';
+    this.capNhatListHoTen('');
+    this.renderDV(this.dsTK);
   },
 
-  async khoiDong() {
-    UTILS.el('login').style.display = 'none'; UTILS.el('app').classList.add('on');
-    UTILS.el('sb-name').textContent = this.user.don_vi || this.user.email;
-    const roleLabel = UTILS.nhanVaiTro(this.user.vai_tro);
-    UTILS.el('sb-role').textContent = (this.user.ho_ten ? this.user.ho_ten + ' · ' : '') + roleLabel;
-    this.renderLocaleChip();
-    await this.loadBang();
-    await Promise.all([this.loadKyBaoCao(), this.loadGSheet()]);
-    await this.loadCotCuaKy();
-    this.renderKySelector();
+  async khoiDong(){
+    UTILS.el('login').style.display='none';UTILS.el('app').classList.add('on');
+    UTILS.el('sb-name').textContent=this.user.don_vi;
+    const roleLabel=this.user.vai_tro==='admin'?'⚙️ Quản trị viên':'✏️ Người nhập liệu';
+    const hoTenSB=this.user._nguoi_nhap&&this.user._nguoi_nhap!==this.user.don_vi?this.user._nguoi_nhap:'';
+    UTILS.el('sb-role').textContent=hoTenSB?hoTenSB+' · '+roleLabel:roleLabel;
+    await Promise.all([this.loadBang(),this.loadKy(),this.loadGSheet()]);
     this.buildMenu();
-    // MỚI Bước 6d: admin vừa tạo TK / đặt lại mật khẩu → buộc đổi ngay, không
-    // cho dùng tiếp tới khi đổi xong (modal không có nút Đóng ở chế độ này).
-    if (this.user.phai_doi_mat_khau) this.moModalPass(true);
   },
 
-  renderLocaleChip() {
-    const heTay = UTILS.layHeDatTay();
-    const he = heTay || UTILS.layHeMay();
-    const tenHe = he === 'vn' ? 'Việt Nam (1.234,5)' : he === 'us' ? 'Anh-Mỹ (1,234.5)' : 'chưa xác định — tự nhận diện';
-    UTILS.el('locale-chip').innerHTML = `🌐 Định dạng số: ${tenHe}${heTay ? ' 📌' : ''}`;
+  async loadBang(){this.dsBang=this.user.vai_tro==='admin'?await DB.layTatCaBang():await DB.layBangDuocPhep(this.user.id)},
+  async loadKy(){
+    this.dsKy=await DB.layKyHienThi();
+    // Cấu hình cột so sánh (thiết lập tại admin.html → Kỳ báo cáo).
+    // Chỉ giữ cột mà CẢ HAI kỳ (tử & mẫu) đều đang hiển thị trong bảng nhập.
+    // Bảng cau_hinh_so_sanh có thể chưa tồn tại → coi như không có cột nào.
+    try{
+      const ss=await DB.laySoSanh(true);
+      const ma=new Set(this.dsKy.map(k=>k.ky_bao_cao));
+      this.dsSoSanh=ss.filter(c=>ma.has(c.ky_tu)&&ma.has(c.ky_mau));
+    }catch(e){this.dsSoSanh=[];}
+  },
+  dsGSheet:[],
+  async loadGSheet(){
+    // Bảng danh_sach_gsheet có thể chưa tồn tại → coi như không có sheet nào
+    try{ this.dsGSheet = await DB.layGSheet(true); }catch(e){ this.dsGSheet=[]; }
   },
 
-  async loadBang() { this.dsBang = UTILS.laAdmin(this.user) ? await DB.layTatCaBang() : await DB.layBangDuocNhap(this.user.don_vi_id) },
-
-  // ── Bước 8b: kỳ báo cáo — thay hẳn loadCot() cũ (layCotHienThi TOÀN CỤC).
-  // Nay cột hiện phụ thuộc KỲ ĐANG CHỌN (đặc tả v4 mục 3.3): cột hiện =
-  // ky_bao_cao_cot(kỳ đang chọn) ∩ dua_vao_bieu=true.
-  async loadKyBaoCao() {
-    const laAdmin = UTILS.laAdmin(this.user);
-    try { this.dsKyDeChon = await DB.layDsKyDeChon((this.dsBang || []).map(b => b.bang), laAdmin); }
-    catch (e) { this.dsKyDeChon = []; }
-    let macDinh = null;
-    try { macDinh = await DB.kyDangThuThap(); } catch (e) { macDinh = null; }
-    if (macDinh && this.dsKyDeChon.some(k => k.id === macDinh)) this.kyChonId = macDinh;
-    else this.kyChonId = this.dsKyDeChon[0]?.id || null;
-  },
-
-  async loadCotCuaKy() {
-    if (!this.kyChonId) { this.dsCot = []; this.dsSoSanh = []; return; }
-    try {
-      const all = await DB.layCotCuaKy(this.kyChonId);
-      this.dsCot = all.filter(c => c.dua_vao_bieu);
-    } catch (e) { this.dsCot = []; }
-    try {
-      const ss = await DB.laySoSanh(true);
-      const ma = new Set(this.dsCot.map(k => k.id));
-      this.dsSoSanh = ss.filter(c => ma.has(c.cot_tu) && ma.has(c.cot_mau));
-    } catch (e) { this.dsSoSanh = []; }
-  },
-
-  // Ô chọn kỳ báo cáo ở sidebar — MỘT kỳ thì hiện nhãn cố định (không cần
-  // chọn), TỪ HAI kỳ trở lên mới hiện <select> (đặc tả v4 mục 11 Luồng B).
-  renderKySelector() {
-    const el = UTILS.el('sb-ky'); if (!el) return;
-    if (!this.dsKyDeChon || !this.dsKyDeChon.length) {
-      el.innerHTML = `<div class="sb-ky-lbl">🗓️ Kỳ báo cáo</div><div class="sb-ky-ten" style="opacity:.6">Chưa có kỳ nào đang mở</div>`;
-      return;
+  buildMenu(){
+    const nav=UTILS.el('sb-nav');
+    const coBang=this.dsBang.length>0, coGS=this.dsGSheet.length>0;
+    if(!coBang&&!coGS){nav.innerHTML=`<div style="padding:10px;color:rgba(255,255,255,.4);font-size:12px">Chưa được phân công bảng nào.</div>`;return}
+    let html='';
+    if(coBang){
+      html+=`<div class="nlbl">📊 Bảng báo cáo</div>`+
+        this.dsBang.map(b=>`<div class="ni" id="ni-${b.bang}" onclick="APP.moNhap('${b.bang}')"><span class="i">📋</span><span>${b.ten_bang}</span></div>`).join('');
     }
-    if (this.dsKyDeChon.length === 1) {
-      el.innerHTML = `<div class="sb-ky-lbl">🗓️ Kỳ báo cáo</div><div class="sb-ky-ten">${this.dsKyDeChon[0].ten}</div>`;
-      return;
+    if(coGS){
+      html+=`<div class="nlbl" style="margin-top:${coBang?'10px':'0'}">📈 Dữ liệu Google Sheet</div>`+
+        this.dsGSheet.map(s=>`<div class="ni" id="ni-gs-${s.id}" onclick="APP.moGSheet(${s.id})"><span class="i">📈</span><span>${s.ten_sheet}</span></div>`).join('');
     }
-    const opts = this.dsKyDeChon.map(k => `<option value="${k.id}" ${String(this.kyChonId) === String(k.id) ? 'selected' : ''}>${k.ten}</option>`).join('');
-    el.innerHTML = `<div class="sb-ky-lbl">🗓️ Kỳ báo cáo</div><select class="sb-ky-sel" onchange="APP.doiKyBaoCao(this.value)">${opts}</select>`;
+    nav.innerHTML=html;
   },
 
-  // Đổi kỳ đang chọn → nạp lại cột của kỳ mới, render lại bảng đang mở (nếu có).
-  async doiKyBaoCao(kyId) {
-    this.kyChonId = kyId ? parseInt(kyId) : null;
-    await this.loadCotCuaKy();
-    if (this.bangHT) await this.moNhap(this.bangHT);
-  },
-
-  dsGSheetCache: null,
-  async loadGSheet() {
-    try { this.dsGSheet = await DB.layGSheet(true); } catch (e) { this.dsGSheet = []; }
-  },
-
-  buildMenu() {
-    const nav = UTILS.el('sb-nav');
-    const coBang = this.dsBang.length > 0, coGS = this.dsGSheet.length > 0;
-    if (!coBang && !coGS) { nav.innerHTML = `<div style="padding:10px;color:rgba(255,255,255,.4);font-size:12px">Chưa được phân công bảng nào.</div>`; return }
-    let html = '';
-    if (coBang) {
-      html += `<div class="nlbl">📊 Bảng báo cáo</div>` +
-        this.dsBang.map(b => `<div class="ni" id="ni-${b.bang}" onclick="APP.moNhap('${b.bang}')"><span class="i">📋</span><span>${b.ten_bang}</span></div>`).join('');
-    }
-    if (coGS) {
-      html += `<div class="nlbl" style="margin-top:${coBang ? '10px' : '0'}">📈 Dữ liệu Google Sheet</div>` +
-        this.dsGSheet.map(s => `<div class="ni" id="ni-gs-${s.id}" onclick="APP.moGSheet(${s.id})"><span class="i">📈</span><span>${s.ten_sheet}</span></div>`).join('');
-    }
-    nav.innerHTML = html;
-  },
-
-  toEmbedUrl(url) {
-    if (!url) return '';
-    url = String(url).trim();
-    if (/\/pubhtml|output=html|\/htmlview|\/preview/.test(url)) return url;
-    const gid = (url.match(/[#?&]gid=(\d+)/) || [])[1];
-    const m = url.match(/\/spreadsheets\/d\/(e\/)?([\w-]+)/);
-    if (m) return `https://docs.google.com/spreadsheets/d/${m[1] || ''}${m[2]}/htmlview${gid ? `?gid=${gid}#gid=${gid}` : ''}`;
+  // Chuyển MỌI dạng link Google Sheet → dạng nhúng được trong iframe.
+  // Đã là dạng nhúng (pubhtml/htmlview/preview/output=html) → giữ nguyên.
+  // Còn lại: rút fileId (kể cả /d/e/…) → /htmlview, giữ gid (tab) nếu có.
+  toEmbedUrl(url){
+    if(!url)return'';
+    url=String(url).trim();
+    if(/\/pubhtml|output=html|\/htmlview|\/preview/.test(url)) return url;
+    const gid=(url.match(/[#?&]gid=(\d+)/)||[])[1];
+    const m=url.match(/\/spreadsheets\/d\/(e\/)?([\w-]+)/);
+    if(m) return `https://docs.google.com/spreadsheets/d/${m[1]||''}${m[2]}/htmlview${gid?`?gid=${gid}#gid=${gid}`:''}`;
     return url;
   },
 
-  moGSheet(id) {
+  moGSheet(id){
     this.closeSidebar();
-    this.changes = {}; UTILS.tat('sbar');
-    document.querySelectorAll('.ni').forEach(e => e.classList.remove('act'));
-    UTILS.el('ni-gs-' + id)?.classList.add('act');
-    const s = this.dsGSheet.find(x => x.id === id);
-    UTILS.el('topbar-t').innerHTML = `📈 ${s?.ten_sheet || 'Google Sheet'}<span class="topbar-s">${s?.mo_ta ? ' / ' + s.mo_ta : ''}</span>`;
-    const ta = UTILS.el('topbar-actions'); if (ta) ta.innerHTML = '';
-    const h = s?.chieu_cao || 520;
-    UTILS.el('content').innerHTML = `
+    this.changes={};UTILS.tat('sbar');
+    document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act'));
+    UTILS.el('ni-gs-'+id)?.classList.add('act');
+    const s=this.dsGSheet.find(x=>x.id===id);
+    UTILS.el('topbar-t').innerHTML=`📈 ${s?.ten_sheet||'Google Sheet'}<span class="topbar-s">${s?.mo_ta?' / '+s.mo_ta:''}</span>`;
+    const ta=UTILS.el('topbar-actions'); if(ta) ta.innerHTML='';
+    const h=s?.chieu_cao||520;
+    UTILS.el('content').innerHTML=`
       <div class="gs-card">
         <div class="gs-card-head">
           <div>
-            <div class="gs-card-title">📈 ${s?.ten_sheet || ''}</div>
-            ${s?.mo_ta ? `<div class="gs-card-desc">${s.mo_ta}</div>` : ''}
+            <div class="gs-card-title">📈 ${s?.ten_sheet||''}</div>
+            ${s?.mo_ta?`<div class="gs-card-desc">${s.mo_ta}</div>`:''}
           </div>
-          <a href="${s?.embed_url || ''}" target="_blank" rel="noopener">🔗 Mở trong Google Sheet</a>
+          <a href="${s?.embed_url||''}" target="_blank" rel="noopener">🔗 Mở trong Google Sheet</a>
         </div>
-        <iframe class="gs-iframe" src="${this.toEmbedUrl(s?.embed_url || '')}" style="height:${h}px"
-          allowfullscreen loading="lazy" title="${s?.ten_sheet || ''}"></iframe>
+        <iframe class="gs-iframe" src="${this.toEmbedUrl(s?.embed_url||'')}" style="height:${h}px"
+          allowfullscreen loading="lazy" title="${s?.ten_sheet||''}"></iframe>
       </div>`;
   },
 
-  async moNhap(maBang) {
+  async moNhap(maBang){
     this.closeSidebar();
-    this.bangHT = maBang; this.changes = {}; UTILS.tat('sbar');
-    const _bl1 = UTILS.el('btn-luu-top'); if (_bl1) { _bl1.style.background = '#c5d0c9'; _bl1.style.color = '#3d5247'; _bl1.style.cursor = 'default'; }
-    document.querySelectorAll('.ni').forEach(e => e.classList.remove('act'));
-    UTILS.el('ni-' + maBang)?.classList.add('act');
-    const b = this.dsBang.find(x => x.bang === maBang);
-    UTILS.el('topbar-t').innerHTML = `${b?.ten_bang || maBang}<span class="topbar-s"> / ${b?.don_vi_bao_cao || ''}</span>`;
+    this.bangHT=maBang;this.changes={};UTILS.tat('sbar');const _bl1=UTILS.el('btn-luu-top');if(_bl1){_bl1.style.background='#c5d0c9';_bl1.style.color='#3d5247';_bl1.style.cursor='default';}
+    document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act'));
+    UTILS.el('ni-'+maBang)?.classList.add('act');
+    const b=this.dsBang.find(x=>x.bang===maBang);
+    UTILS.el('topbar-t').innerHTML=`${b?.ten_bang||maBang}<span class="topbar-s"> / ${b?.don_vi_bao_cao||''}</span>`;
 
-    if (!this.kyChonId) {
-      UTILS.el('content').innerHTML = `<div class="empty"><span class="i">🗓️</span><span>Chưa có kỳ báo cáo nào đang mở để nhập.<br>Liên hệ quản trị viên.</span></div>`;
-      const ta0 = UTILS.el('topbar-actions'); if (ta0) ta0.innerHTML = '';
-      return;
+    if(!this.dsKy.length){
+      UTILS.el('content').innerHTML=`<div class="empty"><span class="i">📅</span><span>Chưa có kỳ báo cáo nào được mở.<br>Vào trang quản trị để thêm kỳ báo cáo.</span></div>`;return;
     }
-    if (!this.dsCot.length) {
-      UTILS.el('content').innerHTML = `<div class="empty"><span class="i">📅</span><span>Kỳ báo cáo này chưa có kỳ dữ liệu (cột) nào được đưa vào biểu.<br>Vào trang quản trị để gắn cột (mục "Kỳ báo cáo" → ngăn "Chọn kỳ báo cáo").</span></div>`;
-      const ta0 = UTILS.el('topbar-actions'); if (ta0) ta0.innerHTML = '';
-      return;
-    }
-
-    let ct0;
-    try { ct0 = await DB.layChiTieuTheoBang(maBang); }
-    catch (e) { UTILS.el('content').innerHTML = `<div class="empty"><span class="i">⚠️</span><span>Lỗi tải chỉ tiêu: ${e.message}</span></div>`; return; }
-    this.ctMap = {}; ct0.forEach(c => { this.ctMap[c.id] = c; });
-
-    // Bước 8b: trạng thái nộp của biểu này Ở KỲ ĐANG CHỌN (khác biểu có thể
-    // đã nộp ở MỘT kỳ khác — kỳ gối đầu, đặc tả v4 mục 3.5/11). "Đã nộp"
-    // hoặc "Đề nghị chỉnh sửa" → khoá TOÀN BỘ lưới của biểu này Ở KỲ NÀY.
-    this.trangThaiNopHT = null;
-    try { this.trangThaiNopHT = await DB.layTrangThaiNopMotBieu(this.kyChonId, maBang); } catch (e) { this.trangThaiNopHT = null; }
-    const trangThaiDV = this.trangThaiNopHT?.trang_thai_don_vi;
-    this.khoaGhiToanBo = trangThaiDV === 'da_nop' || trangThaiDV === 'de_nghi_sua';
-
-    // Lý do bị trả lại gần nhất (nếu đơn vị đang ở trạng thái "đã mở lại để sửa")
-    this.lichSuNopHT = [];
-    try { this.lichSuNopHT = await DB.layLichSuNop(this.kyChonId, maBang); } catch (e) { this.lichSuNopHT = []; }
-
-    const gsUrl = b?.gsheet_url || '';
-    const coGSheet = !!gsUrl;
-    const _ta = UTILS.el('topbar-actions');
-    if (_ta) {
-      let _btnExcel = '';
-      if (!coGSheet) {
-        _btnExcel = '<button class="btn-sm gr" onclick="APP.xuatExcel(false)">📥 Excel mẫu trống</button>'
-          + '<button class="btn-sm gr" onclick="APP.xuatExcel(true)">📊 Excel + dữ liệu</button>'
-          + '<label class="btn-sm gr" style="cursor:pointer">📤 Upload Excel'
-          + '<input type="file" id="inp-upload" accept=".xlsx,.xls" style="display:none" onchange="APP.uploadExcel(this)">'
-          + '</label>';
+    const ct0=await DB.layChiTieuTheoBang(maBang);
+    const daNhap=ct0.filter(c=>!c.la_tieu_de);
+    const tatCaKhoa=daNhap.length>0&&daNhap.every(c=>c.cho_phep_nhap===false);
+    const gsUrl=b?.gsheet_url||'';
+    const coGSheet=!!gsUrl;
+    const _ta=UTILS.el('topbar-actions');
+    if(_ta){
+      let _btnExcel='';
+      if(!coGSheet){
+        _btnExcel='<button class="btn-sm gr" onclick="APP.xuatExcel(false)">📥 Excel mẫu trống</button>'
+          +'<button class="btn-sm gr" onclick="APP.xuatExcel(true)">📊 Excel + dữ liệu</button>'
+          +'<label class="btn-sm gr" style="cursor:pointer">📤 Upload Excel'
+          +'<input type="file" id="inp-upload" accept=".xlsx,.xls" style="display:none" onchange="APP.uploadExcel(this)">'
+          +'</label>';
       }
-      let _btnNop;
-      if (!this.khoaGhiToanBo) {
-        _btnNop = '<button id="btn-nop" class="btn-sm send" onclick="APP.xacNhanNopBaoCao()">📨 Nộp báo cáo</button>';
-      } else {
-        const dangCho = trangThaiDV === 'de_nghi_sua';
-        const daNop = '<button class="btn-sm send done" disabled>' + (dangCho ? '⏳ Chờ duyệt chỉnh sửa' : '✅ Đã nộp') + '</button>';
-        const btnDeNghi = dangCho ? '' : '<button class="btn-sm warn" onclick="APP.moModalDeNghi()">✏️ Đề nghị chỉnh sửa</button>';
-        _btnNop = daNop + btnDeNghi;
-      }
-      const _btnLuu = '<button id="btn-luu-top" class="btn-sm" style="background:#c5d0c9;color:#3d5247;cursor:default" onclick="APP.luuDuLieu()">💾 Lưu</button>';
-      _ta.innerHTML = _btnExcel + _btnLuu + _btnNop;
+      const _btnGui='<button id="btn-gui" class="btn-sm send'+(tatCaKhoa?' done':'')+'" onclick="APP.guiBaoCao()" '+(tatCaKhoa?'disabled':'')+'>'+( tatCaKhoa?'✅ Đã gửi':'📨 Gửi báo cáo')+'</button>';
+      const _btnLuu='<button id="btn-luu-top" class="btn-sm" style="background:#c5d0c9;color:#3d5247;cursor:default" onclick="APP.luuDuLieu()">💾 Lưu</button>';
+      _ta.innerHTML=_btnExcel+_btnLuu+_btnGui;
     }
 
-    // Cảnh báo "vừa bị trả lại" — chỉ hiện khi trạng thái là da_mo_lai VÀ có
-    // vết trả_lai gần nhất (không hiện nếu do_nghi_sua vừa được admin đồng ý).
-    let ghiChuTraLai = '';
-    if (trangThaiDV === 'da_mo_lai') {
-      const vetGanNhat = (this.lichSuNopHT || [])[0];
-      if (vetGanNhat && vetGanNhat.hanh_dong === 'tra_lai') {
-        ghiChuTraLai = `<div class="canh-bao-tra-lai">⚠️ Biểu này vừa được quản trị viên TRẢ LẠI để sửa${vetGanNhat.ly_do ? ': ' + vetGanNhat.ly_do.replace(/</g,'&lt;') : ''}. Sửa xong bấm "Nộp báo cáo" lại.</div>`;
-      }
-    }
+    UTILS.el('content').innerHTML=`
 
-    UTILS.el('content').innerHTML = `
-      <div class="tieu-de-bang${coGSheet ? ' hidden' : ''}">
-        <div class="d1">${b?.tieu_de_chinh || b?.ten_bang?.toUpperCase() || ''}</div>
-        <div class="d2">${b?.tieu_de_phu || '(Đính kèm Công văn số …. của ….)'}</div>
+      <div class="tieu-de-bang${coGSheet?' hidden':''}">
+        <div class="d1">${b?.tieu_de_chinh||b?.ten_bang?.toUpperCase()||''}</div>
+        <div class="d2">${b?.tieu_de_phu||'(Đính kèm Công văn số …. của ….)'}</div>
       </div>
-      ${ghiChuTraLai}
       <div id="tw-area"></div>`;
 
-    if (coGSheet) { this._moGSheet(gsUrl); return; }
+    if(coGSheet){this._moGSheet(gsUrl);return;}
 
-    const twEl = UTILS.el('tw-area');
-    twEl.innerHTML = `<div class="tw" id="tw"><div class="loading"><span class="spin"></span> Đang tải...</div></div>`;
-    if (!ct0.length) { UTILS.el('tw').innerHTML = `<div class="empty"><span class="i">📑</span><span>Chưa có chỉ tiêu nào trong bảng này.</span></div>`; return }
-    try {
-      const dl = await DB.layDuLieu(maBang, this.dsCot.map(k => k.id));
-      const idx = {}; dl.forEach(r => { idx[`${r.id_chi_tieu}|${r.cot_id}`] = r; });
-      this.renderBang(ct0, idx, b);
-    } catch (e) { UTILS.el('tw').innerHTML = `<div class="empty"><span class="i">⚠️</span><span>Lỗi: ${e.message}</span></div>`; console.error(e) }
+    const twEl=UTILS.el('tw-area');
+    twEl.innerHTML=`<div class="tw" id="tw"><div class="loading"><span class="spin"></span> Đang tải...</div></div>`;
+    try{
+      const[ct,dl]=await Promise.all([DB.layChiTieuTheoBang(maBang),DB.layDuLieu(maBang,this.dsKy.map(k=>k.ky_bao_cao))]);
+      if(!ct.length){UTILS.el('tw').innerHTML=`<div class="empty"><span class="i">📑</span><span>Chưa có chỉ tiêu nào trong bảng này.</span></div>`;return}
+      // Công thức chỉ tiêu tổng — nếu chưa chạy SQL thì ctPrep rỗng, bảng chạy như cũ
+      this.ctById={};ct.forEach(c=>{this.ctById[c.id]=c});
+      this.ctPrep=await CT.nap(maBang,ct);
+      if(this.ctPrep.loi.length){
+        console.warn('[Công thức] '+this.ctPrep.loi.join(' | '));
+        UTILS.toast('⚠️ '+this.ctPrep.loi.length+' công thức sai — xem trang Quản trị → Công thức','warn');
+      }
+      const idx={};dl.forEach(r=>{idx[`${r.id_chi_tieu}|${r.ky_bao_cao}`]=r});
+      this.renderBang(ct,idx,b);
+    }catch(e){UTILS.el('tw').innerHTML=`<div class="empty"><span class="i">⚠️</span><span>Lỗi: ${e.message}</span></div>`;console.error(e)}
   },
 
-  _moGSheet(url) {
-    if (!url) return;
-    const twArea = UTILS.el('tw-area');
-    const finalUrl = this.toEmbedUrl(url);
-    twArea.innerHTML = `<div style="text-align:right;margin-bottom:6px"><a href="${url.trim()}" target="_blank" rel="noopener" style="font-size:12px;color:var(--xc);font-weight:600;text-decoration:none">🔗 Mở trong Google Sheet</a></div>
+  _moGSheet(url){
+    if(!url)return;
+    const twArea=UTILS.el('tw-area');
+    const finalUrl=this.toEmbedUrl(url);   // tự chuyển mọi dạng link sang dạng nhúng
+    twArea.innerHTML=`<div style="text-align:right;margin-bottom:6px"><a href="${url.trim()}" target="_blank" rel="noopener" style="font-size:12px;color:var(--xc);font-weight:600;text-decoration:none">🔗 Mở trong Google Sheet</a></div>
       <div class="gs-wrap"><iframe src="${finalUrl}" allowfullscreen loading="lazy"></iframe></div>`;
   },
 
-  // ── Bước 8b: Nộp báo cáo / Đề nghị chỉnh sửa THEO KỲ — thay hẳn
-  // guiBaoCao()/deNghiMoKhoa() cũ (Bước 5, đã bỏ khoá chéo tầng ở 8a-vá).
-  xacNhanNopBaoCao() {
-    if (!this.bangHT || !this.kyChonId) return;
-    UTILS.xacNhan('📨 Nộp báo cáo',
-      'Sau khi nộp, TOÀN BỘ ô nhập liệu của bảng này (ở kỳ đang chọn) sẽ bị khóa. Muốn sửa lại phải bấm "Đề nghị chỉnh sửa" và chờ Phòng Kế hoạch – Tài chính mở lại.<br><br>Bạn có chắc muốn nộp báo cáo này không?',
-      () => this.napBaoCao());
-  },
-
-  async napBaoCao() {
-    const maBang = this.bangHT; const kyId = this.kyChonId; if (!maBang || !kyId) return;
-    try {
-      await DB.nopBaoCao(kyId, maBang);
-      UTILS.toast('✅ Đã nộp báo cáo!', 'ok');
+  async guiBaoCao(){
+    const maBang=this.bangHT;
+    if(!maBang)return;
+    const btn=UTILS.el('btn-gui');
+    if(!btn||btn.disabled)return;
+    if(!confirm('⚠️ Sau khi gửi, toàn bộ ô nhập liệu sẽ bị khóa và bạn không thể chỉnh sửa thêm.\n\nBạn có chắc muốn gửi báo cáo này không?'))return;
+    btn.disabled=true;btn.textContent='⏳ Đang gửi...';
+    try{
+      const{error}=await sb.from(CONFIG.BANG.CHI_TIEU)
+        .update({cho_phep_nhap:false})
+        .eq('bang',maBang)
+        .eq('la_tieu_de',false);
+      if(error)throw error;
+      UTILS.toast('✅ Đã gửi báo cáo! Bảng đã được khóa.','ok');
       await this.moNhap(maBang);
-    } catch (e) { UTILS.toast('❌ Lỗi nộp: ' + e.message, 'er'); }
-  },
-
-  moModalDeNghi() {
-    UTILS.el('dn-ly-do').value = '';
-    UTILS.moModal('modal-de-nghi');
-  },
-
-  async guiDeNghiChinhSua() {
-    const maBang = this.bangHT; const kyId = this.kyChonId; if (!maBang || !kyId) return;
-    const lyDo = UTILS.el('dn-ly-do').value.trim();
-    try {
-      await DB.deNghiChinhSuaKy(kyId, maBang, lyDo);
-      UTILS.dongModal('modal-de-nghi');
-      UTILS.toast('✅ Đã gửi đề nghị chỉnh sửa — chờ Phòng Kế hoạch – Tài chính duyệt.', 'ok');
-      await this.moNhap(maBang);
-    } catch (e) { UTILS.toast('❌ Lỗi: ' + e.message, 'er'); }
-  },
-
-  // ── Bước 8b: Tiến độ nộp (khung thứ ba màn hình chính) — đơn vị thấy tiến
-  // độ đơn vị mình, admin thấy toàn cơ quan (tự nhiên qua RLS của tien_do_dot,
-  // không cần phân nhánh giao diện riêng). Chỉ ĐỌC — duyệt/từ chối/trả lại là
-  // việc của admin.html mục "Theo dõi". ──
-  async moTienDo() {
-    this.closeSidebar();
-    document.querySelectorAll('.ni').forEach(e => e.classList.remove('act'));
-    this.bangHT = null;
-    UTILS.el('topbar-t').innerHTML = '📈 Tiến độ nộp báo cáo';
-    const ta = UTILS.el('topbar-actions'); if (ta) ta.innerHTML = '';
-    if (!this.kyChonId) {
-      UTILS.el('content').innerHTML = `<div class="empty"><span class="i">🗓️</span><span>Chưa có kỳ báo cáo nào để xem tiến độ.</span></div>`;
-      return;
+    }catch(e){
+      UTILS.toast('❌ Lỗi gửi: '+e.message,'er');
+      btn.disabled=false;btn.textContent='📨 Gửi báo cáo';
     }
-    UTILS.el('content').innerHTML = `<div class="loading"><span class="spin"></span> Đang tải...</div>`;
-    let ds = [], dsLichSu = [];
-    try {
-      [ds, dsLichSu] = await Promise.all([
-        DB.tienDoDot(this.kyChonId),
-        DB.layLichSuNopTheoKy(this.kyChonId),
-      ]);
-    } catch (e) { UTILS.el('content').innerHTML = `<div class="empty"><span class="i">⚠️</span><span>Lỗi: ${e.message}</span></div>`; return; }
-
-    const kySelHtml = (this.dsKyDeChon && this.dsKyDeChon.length > 1)
-      ? `<select class="inp" style="width:auto;min-width:220px" onchange="APP.doiKyTienDo(this.value)">${
-          this.dsKyDeChon.map(k => `<option value="${k.id}" ${String(this.kyChonId)===String(k.id)?'selected':''}>${k.ten}</option>`).join('')
-        }</select>`
-      : `<strong>${this.dsKyDeChon?.[0]?.ten || ''}</strong>`;
-
-    // Nhóm lịch sử theo biểu để dựng tường thuật cột "Ghi chú"
-    const lsTheoBang = {};
-    dsLichSu.forEach(h => { (lsTheoBang[h.bang] = lsTheoBang[h.bang] || []).push(h); });
-
-    // Bước 8b-vá (theo mockup Mèo Đen): MỘT bảng phẳng, gộp ô Đơn vị bằng
-    // rowspan thay vì tách card riêng từng đơn vị. tien_do_dot() đã ORDER BY
-    // don_vi_ten, thu_tu nên các dòng cùng đơn vị luôn liền nhau — chỉ cần
-    // duyệt tuần tự và gộp, không cần tự sắp lại.
-    let rows = '';
-    let i = 0;
-    while (i < ds.length) {
-      const donVi = ds[i].don_vi_ten || '(chưa gán đơn vị)';
-      let j = i;
-      while (j < ds.length && (ds[j].don_vi_ten || '(chưa gán đơn vị)') === donVi) j++;
-      const soDong = j - i;
-      for (let k = i; k < j; k++) {
-        const r = ds[k];
-        const mauDV = r.mau_don_vi || '#374151';
-        const gc = UTILS.tuongThuatLichSuNop(lsTheoBang[r.bang] || []).join('<br>');
-        rows += '<tr>';
-        if (k === i) rows += `<td class="td-donvi" rowspan="${soDong}">${donVi}</td>`;
-        rows += `<td>${r.ten_bang}</td>
-          <td>${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:#1e40af;font-size:11px">(riêng)</span>' : ''}</td>
-          <td style="color:${mauDV};font-weight:700">${r.ten_trang_thai_don_vi || r.trang_thai_don_vi}</td>
-          <td style="font-size:12px;color:var(--g5)">${gc}</td>
-        </tr>`;
-      }
-      i = j;
-    }
-
-    UTILS.el('content').innerHTML = `
-      <div class="tien-do-wrap">
-        <table class="tien-do-table">
-          <tr><td colspan="5" class="td-title">Tiến độ nộp báo cáo</td></tr>
-          <tr><td colspan="5" class="td-spacer"></td></tr>
-          <tr><td class="td-nhan">Kỳ báo cáo:</td><td colspan="4">${kySelHtml}</td></tr>
-          <tr><td colspan="5" class="td-spacer"></td></tr>
-          <tr class="tr-head"><th>Đơn vị</th><th>Biểu</th><th>Hạn nộp</th><th>Trạng thái</th><th>Ghi chú</th></tr>
-          ${rows || '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--g4)">Chưa có biểu nào phải báo ở kỳ này.</td></tr>'}
-        </table>
-      </div>`;
   },
 
-  async doiKyTienDo(kyId) {
-    this.kyChonId = kyId ? parseInt(kyId) : null;
-    await this.loadCotCuaKy();
-    await this.moTienDo();
-  },
-
-  renderBang(ct, idx, b) {
-    const wTen = b?.do_rong_ten || 280, wDvt = b?.do_rong_dvt || 70, wGc = b?.do_rong_ghichu || 140;
-    let th = `<tr>
+  renderBang(ct,idx,b){
+    const wTen=b?.do_rong_ten||280,wDvt=b?.do_rong_dvt||70,wGc=b?.do_rong_ghichu||140;
+    let th=`<tr>
       <th class="th-stt" style="width:46px">STT</th>
       <th class="th-id">Mã</th>
       <th class="th-n" style="min-width:${wTen}px;width:${wTen}px">Tên chỉ tiêu</th>
       <th class="th-u" style="width:${wDvt}px">ĐVT</th>`;
-    this.dsCot.forEach(k => {
-      const w = k.do_rong_cot || 120;
-      th += `<th class="${k.khoa_nhap_lieu ? 'th-kh' : 'th-mo'}" style="min-width:${w}px;width:${w}px" data-cot="${k.id}" title="${k.ma_cot}">
+    this.dsKy.forEach(k=>{
+      const w=k.do_rong_cot||120;
+      th+=`<th class="${k.khoa_nhap_lieu?'th-kh':'th-mo'}" style="min-width:${w}px;width:${w}px" data-ky="${k.ky_bao_cao}" title="${k.ky_bao_cao}">
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-right:4px">
-          ${k.khoa_nhap_lieu ? '<span style="font-size:12px;line-height:1;opacity:.85">🔒</span>' : ''}
-          <span>${k.tieu_de || ('T' + k.thang + '/' + k.nam)}</span>
+          ${k.khoa_nhap_lieu?'<span style="font-size:12px;line-height:1;opacity:.85">🔒</span>':''}
+          <span>${k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)}</span>
         </div>
-        <div class="resize-handle" onmousedown="APP.startResize(event,${k.id})"></div>
+        <div class="resize-handle" onmousedown="APP.startResize(event,'${k.ky_bao_cao}')"></div>
       </th>`;
     });
-    (this.dsSoSanh || []).forEach(cp => {
-      const w = cp.do_rong_cot || 128;
-      th += `<th class="th-cmp" style="min-width:${w}px;width:${w}px" title="${this._tenCotNgan(cp.cot_tu)} ÷ ${this._tenCotNgan(cp.cot_mau)} × 100%">
+    // ── Cột so sánh (Kỳ A ÷ Kỳ B × 100%) — chỉ đọc, cấu hình tại admin ──
+    (this.dsSoSanh||[]).forEach(cp=>{
+      const w=cp.do_rong_cot||128;
+      th+=`<th class="th-cmp" style="min-width:${w}px;width:${w}px" title="${this._tenKyNgan(cp.ky_tu)} ÷ ${this._tenKyNgan(cp.ky_mau)} × 100%">
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-          <span>${this._tenCotNgan(cp.cot_tu)}</span>
-          <span style="opacity:.75;font-weight:400">÷ ${this._tenCotNgan(cp.cot_mau)} × 100%</span>
+          <span>${this._tenKyNgan(cp.ky_tu)}</span>
+          <span style="opacity:.75;font-weight:400">÷ ${this._tenKyNgan(cp.ky_mau)} × 100%</span>
         </div></th>`;
     });
-    th += `<th class="th-gc" style="width:${wGc}px">Ghi chú</th>
+    th+=`<th class="th-gc" style="width:${wGc}px">Ghi chú</th>
          <th class="th-ng" style="width:100px">Nguồn số liệu</th></tr>`;
+    // Kỳ dùng để LƯU ghi chú & nguồn số liệu:
+    // = kỳ "Ước thực hiện" có thu_tu_hien_thi LỚN NHẤT trong các cột đang hiển thị
+    // (fallback: kỳ đang mở nhập đầu tiên nếu không có kỳ Ước thực hiện nào).
+    const kmGC=this._kyGhiChu();
+    let tb='';
+    ct.forEach(c=>{
+      const ind=UTILS.demKhoang(c.chi_tieu)*4;
+      const sttHT=c.stt_hien_thi!=null&&c.stt_hien_thi!==''?c.stt_hien_thi:'';
+      if(c.la_tieu_de){
+        tb+=`<tr class="tr-h"><td class="td-stt">${sttHT}</td><td class="td-id" style="font-size:10px">${c.id}</td><td class="td-n" style="padding-left:${ind+10}px">${c.chi_tieu.trim()}</td><td class="td-u"></td>${this.dsKy.map(()=>'<td></td>').join('')}${(this.dsSoSanh||[]).map(()=>'<td></td>').join('')}<td></td><td></td></tr>`;
+      }else{
+        const kgc=kmGC?`${c.id}|${kmGC.ky_bao_cao}`:null;
+        const gc=kgc?(idx[kgc]?.ghi_chu||''):'';
+        const ng=kgc?(idx[kgc]?.nguon_so_lieu||''):'';
 
-    const kmGC = this._cotGhiChu();
-    let tb = '';
-    ct.forEach(c => {
-      const ind = UTILS.demKhoang(c.chi_tieu) * 4;
-      const sttHT = c.stt_hien_thi != null && c.stt_hien_thi !== '' ? c.stt_hien_thi : '';
-      if (c.la_tieu_de) {
-        tb += `<tr class="tr-h"><td class="td-stt">${sttHT}</td><td class="td-id" style="font-size:10px">${c.id}</td><td class="td-n" style="padding-left:${ind + 10}px">${c.chi_tieu.trim()}</td><td class="td-u"></td>${this.dsCot.map(() => '<td></td>').join('')}${(this.dsSoSanh || []).map(() => '<td></td>').join('')}<td></td><td></td></tr>`;
-        return;
+        const isTextRow=c.kieu_du_lieu==='text';
+        let tdk='';
+        this.dsKy.forEach(k=>{
+          const key=`${c.id}|${k.ky_bao_cao}`;
+          const v=idx[key]?.gia_tri;
+          const hasV=v!==null&&v!==undefined&&v!=='';
+          const isLocked=k.khoa_nhap_lieu||c.cho_phep_nhap===false;
+          const isText=c.kieu_du_lieu==='text';
+          // Ô chỉ tiêu tổng: KHÓA nhập tay hoàn toàn, giá trị do công thức tính
+          const itCT=this.ctPrep&&this.ctPrep.map[c.id];
+          if(itCT&&CT.apDungChoKy(itCT,k)){
+            tdk+=`<td class="td-ctf trong" data-ctf="1" data-id="${c.id}" data-ky="${k.ky_bao_cao}"${c.cho_phep_nhap===false?' data-khoa="1"':''} onclick="APP.nhacCongThuc(this)">–</td>`;
+            return;
+          }
+          tdk+=`<td style="padding:2px 4px"><input
+            type="text" ${isText?'':'inputmode="decimal"'}
+            class="os${hasV?' has':''}${isLocked?' locked':''}"
+            data-key="${key}" data-id="${c.id}" data-ky="${k.ky_bao_cao}"
+            value="${hasV?(c.kieu_du_lieu==='text'?v:UTILS.formatSo(v)):''}"
+            ${isLocked?'disabled':''}
+            style="text-align:${isText?'left':'right'}"
+            onchange="APP.ghiNhan(this)"
+            onpaste="${isText?'':"APP.handlePaste(event,this)"}"
+            onfocus="APP.setFocusRow(this)"
+            onblur="APP.clearFocusRow(this)"
+            onkeydown="APP.navKey(event,this)"></td>`;
+        });
+        // Ô so sánh chỉ đọc — giá trị được tính lại bằng JS sau khi render / khi nhập
+        let tdc='';
+        (this.dsSoSanh||[]).forEach(cp=>{
+          tdc+=`<td class="td-cmp na" data-cmp="1"${isTextRow?' data-text="1"':''} data-tu="${cp.ky_tu}" data-mau="${cp.ky_mau}">–</td>`;
+        });
+        const bdgCT=(this.ctPrep&&this.ctPrep.map[c.id])
+          ?`<span class="ct-badge" title="${this._moTaCT(c.id).replace(/"/g,'&quot;')}">&Sigma;</span>`:'';
+        tb+=`<tr><td class="td-stt">${sttHT}</td><td class="td-id">${c.id}</td><td class="td-n" style="padding-left:${ind+10}px">${bdgCT}${c.chi_tieu.trim()}</td><td class="td-u">${c.don_vi||''}</td>${tdk}${tdc}<td style="padding:2px 4px"><input type="text" class="ot" data-gc="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${gc}" ${!kmGC?'disabled':''} onchange="APP.ghiNhan(this,'gc')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td><td class="td-ng" style="padding:2px 4px"><input type="text" class="ot" data-ng="${c.id}|${kmGC?kmGC.ky_bao_cao:''}" value="${ng}" ${!kmGC?'disabled':''} onchange="APP.ghiNhan(this,'ng')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td></tr>`;
       }
-      // Bước 8b (đặc tả v4 mục 6): áp dụng tần suất theo Ô, không theo dòng.
-      // Ẩn CẢ DÒNG chỉ khi KHÔNG cột nào trong kỳ đang chọn áp dụng chỉ tiêu
-      // này (vd biểu hàng quý ở kỳ tháng không phải cuối quý).
-      const apDungMang = this.dsCot.map(k => UTILS.apDungTanSuat(c, k.thang, k.nam));
-      if (apDungMang.length && apDungMang.every(x => !x)) return;
-
-      const kgc = kmGC ? `${c.id}|${kmGC.id}` : null;
-      const gc = kgc ? (idx[kgc]?.ghi_chu || '') : '';
-      const ng = kgc ? (idx[kgc]?.nguon_so_lieu || '') : '';
-      const isTextRow = c.kieu_du_lieu === 'text';
-      let tdk = '';
-      this.dsCot.forEach((k, i) => {
-        const key = `${c.id}|${k.id}`;
-        const rowData = idx[key];
-        const v = isTextRow ? rowData?.gia_tri_text : rowData?.gia_tri;
-        const hasV = v !== null && v !== undefined && v !== '';
-        const apDungO = apDungMang[i];
-        const isLocked = k.khoa_nhap_lieu || c.cho_phep_nhap === false || !apDungO || this.khoaGhiToanBo;
-        tdk += `<td style="padding:2px 4px"><input
-          type="text" ${isTextRow ? '' : 'inputmode="decimal"'}
-          class="os o-so${hasV ? ' has' : ''}${isLocked ? ' locked' : ''}"
-          data-key="${key}" data-id="${c.id}" data-cot="${k.id}"
-          value="${hasV ? (isTextRow ? v : UTILS.formatSo(v)) : ''}"
-          ${isLocked ? 'disabled' : ''}
-          ${!apDungO ? 'title="Chỉ tiêu này không áp dụng cho kỳ dữ liệu này (theo tần suất)"' : ''}
-          style="text-align:${isTextRow ? 'left' : 'right'}"
-          onchange="APP.ghiNhan(this)"
-          onpaste="${isTextRow ? '' : "APP.handlePasteWrap(event,this)"}"
-          onfocus="APP.setFocusRow(this)"
-          onblur="APP.clearFocusRow(this)"
-          onkeydown="APP.navKey(event,this)"></td>`;
-      });
-      let tdc = '';
-      (this.dsSoSanh || []).forEach(cp => {
-        tdc += `<td class="td-cmp na" data-cmp="1"${isTextRow ? ' data-text="1"' : ''} data-tu="${cp.cot_tu}" data-mau="${cp.cot_mau}">–</td>`;
-      });
-      tb += `<tr><td class="td-stt">${sttHT}</td><td class="td-id">${c.id}</td><td class="td-n" style="padding-left:${ind + 10}px">${c.chi_tieu.trim()}</td><td class="td-u">${c.don_vi || ''}</td>${tdk}${tdc}<td style="padding:2px 4px"><input type="text" class="ot" data-gc="${c.id}|${kmGC ? kmGC.id : ''}" value="${gc}" ${!kmGC || this.khoaGhiToanBo ? 'disabled' : ''} onchange="APP.ghiNhan(this,'gc')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td><td class="td-ng" style="padding:2px 4px"><input type="text" class="ot" data-ng="${c.id}|${kmGC ? kmGC.id : ''}" value="${ng}" ${!kmGC || this.khoaGhiToanBo ? 'disabled' : ''} onchange="APP.ghiNhan(this,'ng')" onfocus="APP.setFocusRow(this)" onblur="APP.clearFocusRow(this)"></td></tr>`;
     });
-    UTILS.el('tw').innerHTML = `<table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table>`;
+    UTILS.el('tw').innerHTML=`<table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table>`;
+    this.tinhCongThucTatCa();
+  },
+
+  // ══ CHỈ TIÊU TỔNG (công thức) ═══════════════════════════════
+  _moTaCT(id){
+    return CT.moTa(this.ctPrep,id,ma=>{
+      const c=this.ctById[ma];
+      return c?c.chi_tieu.trim().substring(0,42):'(không có mã này)';
+    });
+  },
+
+  // Tính lại TOÀN BỘ ô công thức theo giá trị đang có trên màn hình,
+  // rồi tính lại các cột so sánh (vì tử/mẫu có thể là ô tổng).
+  tinhCongThucTatCa(){
+    const prep=this.ctPrep;
+    if(prep&&prep.order&&prep.order.length){
+      // Ảnh chụp giá trị đang gõ trong các ô nhập tay
+      const dom={};
+      document.querySelectorAll('#tw .os[data-key]').forEach(i=>{dom[i.dataset.key]=UTILS.parseSo(i.value)});
+      this.dsKy.forEach(k=>{
+        const ky=k.ky_bao_cao;
+        const kq=CT.tinhChoKy(prep,k,id=>{
+          const v=dom[`${id}|${ky}`];
+          return (v===undefined)?null:v;
+        });
+        Object.keys(kq.vals).forEach(id=>{
+          const v=kq.vals[id];
+          if(v===undefined)return;                 // kỳ bị loại trừ → ô vẫn là ô nhập tay
+          const td=document.querySelector(`#tw td[data-ctf][data-id="${id}"][data-ky="${ky}"]`);
+          if(!td)return;
+          td.dataset.raw=(v===null?'':String(v));
+          td.textContent=(v===null?'–':UTILS.formatSo(v));
+          td.classList.toggle('trong',v===null);
+          const th=kq.thieu[id]||[];
+          td.title=this._moTaCT(id)+(th.length?`\n⚠ Chưa có số liệu: ${th.join(', ')}`:'');
+        });
+      });
+    }
     this.tinhTatCaSoSanh();
   },
 
-  _tenCotNgan(id) {
-    const k = this.dsCot.find(x => x.id === id);
-    return k ? (k.tieu_de || ('T' + k.thang + '/' + k.nam)) : id;
-  },
-
-  _cotGhiChu() {
-    const uoc = this.dsCot.filter(k => k.loai === 'uoc');
-    if (uoc.length) return uoc.reduce((a, b) => ((Number(a.thu_tu_hien_thi) || 0) >= (Number(b.thu_tu_hien_thi) || 0) ? a : b));
-    return this.dsCot.find(k => !k.khoa_nhap_lieu) || null;
-  },
-
-  tinhSoSanhRow(tr) {
-    if (!tr) return;
-    tr.querySelectorAll('td[data-cmp]').forEach(td => {
-      if (td.dataset.text === '1') { td.textContent = '–'; td.className = 'td-cmp na'; td.title = 'Chỉ tiêu dạng chữ'; return }
-      const inpTu = tr.querySelector(`.os[data-cot="${td.dataset.tu}"]`);
-      const inpMau = tr.querySelector(`.os[data-cot="${td.dataset.mau}"]`);
-      const tu = inpTu ? UTILS.parseSo(inpTu.value) : null;
-      const mau = inpMau ? UTILS.parseSo(inpMau.value) : null;
-      if (tu === null || mau === null || mau === 0) {
-        td.textContent = '–'; td.className = 'td-cmp na'; td.title = 'Thiếu số liệu hoặc mẫu số = 0'; return;
-      }
-      const pct = tu / mau * 100;
-      td.className = 'td-cmp ' + (pct > 100 ? 'up' : (pct < 100 ? 'down' : ''));
-      td.textContent = UTILS.formatSo(Math.round(pct * 10) / 10) + '%';
-      td.title = '';
-    });
-  },
-  tinhTatCaSoSanh() {
-    document.querySelectorAll('table.t tbody tr:not(.tr-h)').forEach(tr => this.tinhSoSanhRow(tr));
-  },
-
-  setFocusRow(el) {
-    document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r => r.classList.remove('tr-focused'));
-    const tr = el.closest('tr');
-    if (tr) tr.classList.add('tr-focused');
-    if (el.classList.contains('os') && el.inputMode === 'decimal') {
-      const raw = UTILS.parseSo(el.value);
-      el.value = raw !== null ? String(raw) : '';
-      setTimeout(() => el.select(), 0);
+  // Nhắc khi người dùng bấm vào ô tổng
+  nhacCongThuc(td){
+    const id=td.dataset.id;
+    const it=this.ctPrep&&this.ctPrep.map[id];
+    if(!it)return;
+    const tr=td.closest('tr');
+    if(tr){
+      document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r=>r.classList.remove('tr-focused'));
+      tr.classList.add('tr-focused');
     }
-  },
-  clearFocusRow(el) {
-    if (el.classList.contains('os') && el.inputMode === 'decimal') {
-      const raw = UTILS.parseSo(el.value);
-      el.value = raw !== null ? UTILS.formatSo(raw) : '';
-    }
-    setTimeout(() => {
-      if (!document.activeElement?.closest('tr.tr-focused'))
-        document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r => r.classList.remove('tr-focused'));
-    }, 80);
+    UTILS.toast(`🔒 ${id} là chỉ tiêu tổng — tự tính = ${it.bieuThuc}. Sửa các dòng thành phần, ô này tự cập nhật.`,'warn');
   },
 
-  ghiNhan(el, loai) {
-    const key = el.dataset.key || el.dataset.gc || el.dataset.ng;
-    this.changes[`${loai || 'so'}|${key}`] = el.value;
-    if (!loai) this.tinhSoSanhRow(el.closest('tr'));
-    UTILS.el('cnt').textContent = Object.keys(this.changes).length;
-    UTILS.bat('sbar');
-    const _bl = UTILS.el('btn-luu-top'); if (_bl) { _bl.style.background = '#2d6a4f'; _bl.style.color = '#fff'; _bl.style.cursor = 'pointer'; }
-  },
-
-  handlePasteWrap(e, el) {
-    UTILS.xuLyPaste(e, el, {
-      onXong: (msg, type) => UTILS.toast(msg, type),
-      onLuuSQL: (he) => { DB.luuHeDinhDang(he).catch(() => { }); },
-      onHoiHe: (pt, lyDo, heChonSan) => APP.moHopHoiHe(pt, lyDo, heChonSan),
-    });
-  },
-
-  moHopHoiHe(pt, lyDo, heChonSan) {
-    if (lyDo === 'xung_dot_cai_tay') {
-      UTILS.el('xd-msg').textContent = `Máy này đang đặt định dạng ${pt.heTay === 'vn' ? 'Việt Nam' : 'Anh-Mỹ'}, nhưng khối vừa dán có vẻ là định dạng ${pt.he === 'vn' ? 'Việt Nam' : 'Anh-Mỹ'}.`;
-      UTILS.moModal('modal-xung-dot');
-      return;
-    }
-    if (lyDo === 'auto_gap_nguoc') {
-      const heAuto = UTILS.layAutoDocNguoc();
-      UTILS.el('an-msg').textContent = `Phiên này đang tự đọc theo định dạng ${heAuto === 'vn' ? 'Việt Nam' : 'Anh-Mỹ'}, nhưng khối vừa dán trông giống định dạng gốc của máy (${pt.heTay === 'vn' ? 'Việt Nam' : 'Anh-Mỹ'}).`;
-      UTILS.moModal('modal-auto-nguoc');
-      return;
-    }
-    UTILS.el('hh-msg').textContent = lyDo === 'mau_thuan'
-      ? 'Khối vừa dán có cả số kiểu Việt Nam lẫn Anh-Mỹ — không nhất quán. Máy này đang dùng định dạng nào?'
-      : 'Không đủ manh mối để tự nhận diện định dạng số của máy này. Bạn đang dùng định dạng nào?';
-    UTILS.el('hh-vn').classList.toggle('goi-y', heChonSan === 'vn');
-    UTILS.el('hh-us').classList.toggle('goi-y', heChonSan === 'us');
-    UTILS.moModal('modal-hoi-he');
-    setTimeout(() => { (heChonSan === 'us' ? UTILS.el('hh-us') : UTILS.el('hh-vn')).focus(); }, 50);
-  },
-
-  chonHeDon(he) {
-    UTILS.dongModal('modal-hoi-he');
-    UTILS.apDungHeChoODan(he);
-    this.renderLocaleChip();
-  },
-
-  locChon(tenHam) {
-    UTILS.dongModal('modal-xung-dot');
-    UTILS.dongModal('modal-auto-nguoc');
-    if (typeof UTILS[tenHam] === 'function') UTILS[tenHam]();
-    this.renderLocaleChip();
-  },
-
-  moModalLocale() { UTILS.moModal('modal-locale'); },
-  datLocaleTay(he) {
-    UTILS.luuHeDatTay(he);
-    UTILS.dongModal('modal-locale');
-    this.renderLocaleChip();
-    UTILS.toast(`✅ Đã đặt định dạng số máy này: ${he === 'vn' ? 'Việt Nam' : 'Anh-Mỹ'}`, 'ok');
-  },
-  boLocaleTay() {
-    UTILS.xoaHeDatTay();
-    UTILS.dongModal('modal-locale');
-    this.renderLocaleChip();
-    UTILS.toast('↩ Đã quay lại tự nhận diện định dạng số theo khối dán.', 'ok');
-  },
-
-  navKey(e, el) {
-    const tr = el.closest('tr');
-    const allTR = [...document.querySelectorAll('table.t tbody tr:not(.tr-h)')];
-    const trIdx = allTR.indexOf(tr);
-    const cells = [...tr.querySelectorAll('.os:not(:disabled)')];
-    const ci = cells.indexOf(el);
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      const ntr = allTR[trIdx + 1];
-      if (ntr) { const t = [...ntr.querySelectorAll('.os:not(:disabled)')][ci]; if (t) { t.focus(); t.select(); return } }
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const ptr = allTR[trIdx - 1];
-      if (ptr) { const t = [...ptr.querySelectorAll('.os:not(:disabled)')][ci]; if (t) { t.focus(); t.select(); return } }
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const all = [...document.querySelectorAll('.os:not(:disabled)')];
-      const i = all.indexOf(el);
-      const next = e.shiftKey ? all[i - 1] : all[i + 1];
-      if (next) { next.focus(); next.select() }
-    }
-  },
-
-  huyThayDoi() { this.changes = {}; UTILS.tat('sbar'); const _bl2 = UTILS.el('btn-luu-top'); if (_bl2) { _bl2.style.background = '#c5d0c9'; _bl2.style.color = '#3d5247'; _bl2.style.cursor = 'default'; } if (this.bangHT) this.moNhap(this.bangHT) },
-
-  _resizing: null,
-  startResize(e, cotId) {
-    e.preventDefault(); e.stopPropagation();
-    const th = e.target.closest('th');
-    const startX = e.clientX;
-    const startW = th.offsetWidth;
-    this._resizing = { th, cotId, startX, startW };
-    document.addEventListener('mousemove', this._onResize);
-    document.addEventListener('mouseup', this._endResize);
-  },
-  _onResize(e) {
-    const r = APP._resizing; if (!r) return;
-    const newW = Math.max(60, r.startW + e.clientX - r.startX);
-    r.th.style.minWidth = newW + 'px'; r.th.style.width = newW + 'px';
-    const idx = [...r.th.parentElement.children].indexOf(r.th);
-    document.querySelectorAll(`table.t tbody tr`).forEach(tr => {
-      if (tr.children[idx]) tr.children[idx].style.width = newW + 'px';
-    });
-  },
-  _endResize(e) {
-    const r = APP._resizing; if (!r) return;
-    document.removeEventListener('mousemove', APP._onResize);
-    document.removeEventListener('mouseup', APP._endResize);
-    const newW = Math.max(60, r.startW + e.clientX - r.startX);
-    APP._resizing = null;
-    DB.luuDoRongCot(r.cotId, newW).then(() => UTILS.toast('📐 Đã lưu độ rộng cột', 'ok')).catch(() => { });
-    const k = APP.dsCot.find(x => x.id === r.cotId);
-    if (k) k.do_rong_cot = newW;
-  },
-
-  async luuDuLieu() {
-    if (!Object.keys(this.changes).length) return;
-    const nut = UTILS.el('btn-luu'); nut.textContent = '⏳'; nut.disabled = true;
-    const rows = {};
-    for (const [k, v] of Object.entries(this.changes)) {
-      const parts = k.split('|');
-      const loai = parts[0], id = parts[1], cotIdStr = parts.slice(2).join('|');
-      const cotId = parseInt(cotIdStr, 10);
-      const rk = `${id}|${cotId}`;
-      if (!rows[rk]) rows[rk] = { id_chi_tieu: id, cot_id: cotId };
-      if (loai === 'so') {
-        const isText = this.ctMap[id]?.kieu_du_lieu === 'text';
-        if (isText) {
-          rows[rk].gia_tri_text = (v === '' || v === null || v === undefined) ? null : v;
-        } else {
-          rows[rk].gia_tri = (v === '' || v === null || v === undefined) ? null : UTILS.parseSo(v);
-        }
-      }
-      if (loai === 'gc') rows[rk].ghi_chu = v;
-      if (loai === 'ng') rows[rk].nguon_so_lieu = v;
-    }
-    const danhSach = Object.values(rows);
-    await this.xinLyDoNeuCan(danhSach, () => {
-      UTILS.toast(`✅ Đã lưu ${danhSach.length} dòng!`, 'ok');
-      this.changes = {}; UTILS.tat('sbar');
-      const _bl3 = UTILS.el('btn-luu-top'); if (_bl3) { _bl3.style.background = '#c5d0c9'; _bl3.style.color = '#3d5247'; _bl3.style.cursor = 'default'; }
-      document.querySelectorAll('.os').forEach(i => i.classList.toggle('has', i.value !== ''));
-    });
-    nut.textContent = '💾 Lưu'; nut.disabled = false;
-  },
-
-  // ── GHI LÝ DO SỬA (MỚI Bước 6d) — khi admin/admin_han_che sửa số liệu của
-  // bảng KHÔNG do đơn vị mình nhập, hỏi (tuỳ chọn) lý do trước khi lưu thật.
-  // Dùng chung cho cả nhập tay (luuDuLieu) lẫn nhập từ Excel (uploadExcel).
-  _lyDoPending: null,
-  async xinLyDoNeuCan(rows, onSuccess) {
-    if (!rows.length) return;
-    const b = this.dsBang.find(x => x.bang === this.bangHT);
-    if (UTILS.canHoiLyDoSua(this.user, b)) {
-      this._lyDoPending = { rows, onSuccess };
-      UTILS.el('lds-ly-do').value = '';
-      UTILS.moModal('modal-ly-do-sua');
-      return;
-    }
-    await this._luuRoiChay(rows, onSuccess);
-  },
-
-  async xacNhanLuuLyDo() {
-    const lyDo = UTILS.el('lds-ly-do').value.trim();
-    const p = this._lyDoPending; this._lyDoPending = null;
-    UTILS.dongModal('modal-ly-do-sua');
-    if (!p) return;
-    if (lyDo) p.rows.forEach(r => r.ly_do_sua = lyDo);
-    await this._luuRoiChay(p.rows, p.onSuccess);
-  },
-
-  huyLuuLyDo() { this._lyDoPending = null; UTILS.dongModal('modal-ly-do-sua'); },
-
-  async _luuRoiChay(rows, onSuccess) {
-    try {
-      await DB.luuDuLieu(rows);
-      if (onSuccess) await onSuccess();
-    } catch (e) { UTILS.toast('❌ Lỗi: ' + e.message, 'er'); console.error('luuDuLieu:', e); }
-  },
-
-  async xuatExcel(coData = false) {
-    if (typeof XLSX === 'undefined') { UTILS.toast('Thiếu thư viện XLSX', 'er'); return }
-    const b = this.dsBang.find(x => x.bang === this.bangHT);
-    const ct = await DB.layChiTieuTheoBang(this.bangHT);
-
-    let idx = {};
-    if (coData) {
-      const dl = await DB.layDuLieu(this.bangHT, this.dsCot.map(k => k.id));
-      dl.forEach(r => { idx[r.id_chi_tieu + '|' + r.cot_id] = r });
-    }
-
-    const headersMaCot = ['id_chi_tieu', 'ten_chi_tieu', 'don_vi', ...this.dsCot.map(k => k.ma_cot), 'ghi_chu', 'nguon_so_lieu'];
-    const headersHienThi = ['STT', 'Tên chỉ tiêu', 'ĐVT', ...this.dsCot.map(k => k.tieu_de || ('T' + k.thang + '/' + k.nam)), 'Ghi chú', ''];
-
-    const kmGC = this._cotGhiChu();
-    const rowsMaCot = [headersMaCot];
-    ct.forEach(c => {
-      const sttHT = c.stt_hien_thi != null && c.stt_hien_thi !== '' ? c.stt_hien_thi : '';
-      const cotVals = this.dsCot.map(k => {
-        if (!coData) return '';
-        const row = idx[c.id + '|' + k.id];
-        const v = c.kieu_du_lieu === 'text' ? row?.gia_tri_text : row?.gia_tri;
-        if (v === null || v === undefined || v === '') return '';
-        if (c.kieu_du_lieu === 'text') return v;
-        const n = parseFloat(v);
-        return isNaN(n) ? v : n;
+  // Gom giá trị các ô tổng đang hiển thị thành các dòng sẵn sàng ghi CSDL
+  // (bỏ qua kỳ đã khóa và chỉ tiêu đã khóa)
+  _gomOCongThuc(){
+    const out=[];
+    if(!this.ctPrep||!this.ctPrep.order||!this.ctPrep.order.length)return out;
+    const nguoi=this.user._nguoi_nhap||this.user.email||this.user.don_vi;
+    const tg=new Date().toISOString();
+    document.querySelectorAll('#tw td[data-ctf]').forEach(td=>{
+      if(td.dataset.khoa==='1')return;
+      const k=this.dsKy.find(x=>x.ky_bao_cao===td.dataset.ky);
+      if(!k||k.khoa_nhap_lieu)return;
+      out.push({
+        id_chi_tieu:td.dataset.id, ky_bao_cao:td.dataset.ky,
+        gia_tri:(td.dataset.raw===''||td.dataset.raw===undefined)?null:Number(td.dataset.raw),
+        nguoi_nhap:nguoi, thoi_gian_nhap:tg
       });
-      const gc = coData ? (idx[c.id + '|' + (kmGC ? kmGC.id : '')]?.ghi_chu || '') : '';
-      rowsMaCot.push([c.id, c.chi_tieu.trim(), c.don_vi || '', ...cotVals, gc, '']);
+    });
+    return out;
+  },
+
+  // Lấy giá trị của một kỳ trên 1 dòng: ô nhập tay hoặc ô tổng
+  _giaTriO(tr,ky){
+    const inp=tr.querySelector(`.os[data-ky="${ky}"]`);
+    if(inp)return UTILS.parseSo(inp.value);
+    const td=tr.querySelector(`td[data-ctf][data-ky="${ky}"]`);
+    if(td)return (td.dataset.raw==='' || td.dataset.raw===undefined)?null:Number(td.dataset.raw);
+    return null;
+  },
+
+  // ── CỘT SO SÁNH (Kỳ A ÷ Kỳ B × 100%) — chỉ đọc, tự tính lại khi nhập ──
+  _tenKyNgan(code){
+    const k=this.dsKy.find(x=>x.ky_bao_cao===code);
+    return k?(k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)):code;
+  },
+
+  // Kỳ lưu ghi chú/nguồn: kỳ "Ước thực hiện" có thu_tu_hien_thi LỚN NHẤT
+  // trong các cột đang hiển thị; fallback = kỳ đang mở nhập đầu tiên.
+  _kyGhiChu(){
+    const uoc=this.dsKy.filter(k=>(k.loai_so_lieu||'').trim().toLowerCase()==='ước thực hiện');
+    if(uoc.length) return uoc.reduce((a,b)=>((Number(a.thu_tu_hien_thi)||0)>=(Number(b.thu_tu_hien_thi)||0)?a:b));
+    return this.dsKy.find(k=>!k.khoa_nhap_lieu)||null;
+  },
+
+  // Tính % cho các ô so sánh trong 1 dòng, dựa trên giá trị ĐANG NHẬP trong ô
+  tinhSoSanhRow(tr){
+    if(!tr)return;
+    tr.querySelectorAll('td[data-cmp]').forEach(td=>{
+      if(td.dataset.text==='1'){td.textContent='–';td.className='td-cmp na';td.title='Chỉ tiêu dạng chữ';return}
+      const tu=this._giaTriO(tr,td.dataset.tu);
+      const mau=this._giaTriO(tr,td.dataset.mau);
+      if(tu===null||mau===null||mau===0){
+        td.textContent='–';td.className='td-cmp na';td.title='Thiếu số liệu hoặc mẫu số = 0';return;
+      }
+      const pct=tu/mau*100;
+      td.className='td-cmp '+(pct>100?'up':(pct<100?'down':''));
+      td.textContent=UTILS.formatSo(Math.round(pct*10)/10)+'%';
+      td.title='';
+    });
+  },
+  tinhTatCaSoSanh(){
+    document.querySelectorAll('table.t tbody tr:not(.tr-h)').forEach(tr=>this.tinhSoSanhRow(tr));
+  },
+
+  // ── Highlight hàng đang focus ──
+  setFocusRow(el){
+    document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r=>r.classList.remove('tr-focused'));
+    const tr=el.closest('tr');
+    if(tr)tr.classList.add('tr-focused');
+    // Khi focus ô số: chuyển về số thô để dễ nhập
+    if(el.classList.contains('os')&&el.inputMode==='decimal'){
+      const raw=UTILS.parseSo(el.value);
+      el.value=raw!==null?String(raw):'';
+      setTimeout(()=>el.select(),0);
+    }
+  },
+  clearFocusRow(el){
+    // Format số khi rời ô
+    if(el.classList.contains('os')&&el.inputMode==='decimal'){
+      const raw=UTILS.parseSo(el.value);
+      el.value=raw!==null?UTILS.formatSo(raw):'';
+    }
+    setTimeout(()=>{
+      if(!document.activeElement?.closest('tr.tr-focused'))
+        document.querySelectorAll('table.t tbody tr.tr-focused').forEach(r=>r.classList.remove('tr-focused'));
+    },80);
+  },
+
+  ghiNhan(el,loai){
+    const key=el.dataset.key||el.dataset.gc||el.dataset.ng;
+    this.changes[`${loai||'so'}|${key}`]=el.value;
+    // Ô số đổi → tính lại chỉ tiêu tổng + các cột so sánh
+    // (khi đang paste hàng loạt thì bỏ qua, tính một lần ở cuối cho nhanh)
+    if(!loai&&!this._dangPaste)this.tinhCongThucTatCa();
+    UTILS.el('cnt').textContent=Object.keys(this.changes).length;
+    UTILS.bat('sbar');
+    const _bl=UTILS.el('btn-luu-top');if(_bl){_bl.style.background='#2d6a4f';_bl.style.color='#fff';_bl.style.cursor='pointer';}
+  },
+
+  handlePaste(e,el){
+    const clip=(e.clipboardData||window.clipboardData).getData('text');
+    if(!clip.includes('\t')&&!clip.includes('\n'))return;
+    e.preventDefault();
+    const pasteRows=clip.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trimEnd().split('\n').map(r=>r.split('\t'));
+    // Căn cột theo MÃ KỲ chứ không theo thứ tự ô input: dòng có ô tổng (Σ) hoặc
+    // ô bị khóa sẽ có ít ô nhập hơn, đếm theo input sẽ dán lệch cột.
+    const dsMaKy=this.dsKy.map(k=>k.ky_bao_cao);
+    const allTR=[...document.querySelectorAll('#tw table.t tbody tr:not(.tr-h)')];
+    const trIdx=allTR.indexOf(el.closest('tr'));
+    const startCol=dsMaKy.indexOf(el.dataset.ky);
+    if(trIdx<0||startCol<0)return;
+    let pasted=0,boQuaCT=0;
+    this._dangPaste=true;
+    pasteRows.forEach((row,ri)=>{
+      const tr=allTR[trIdx+ri];if(!tr)return;
+      row.forEach((val,ci)=>{
+        const ky=dsMaKy[startCol+ci];if(!ky)return;
+        const inp=tr.querySelector(`.os[data-ky="${ky}"]:not(:disabled)`);
+        if(!inp){ if(tr.querySelector(`td[data-ctf][data-ky="${ky}"]`))boQuaCT++; return; }
+        const raw=val.trim().replace(/\./g,'').replace(',','.');
+        const num=parseFloat(raw);
+        inp.value=isNaN(num)?(val.trim()||''):num;
+        inp.classList.toggle('has',inp.value!=='');
+        inp.dispatchEvent(new Event('change'));
+        pasted++;
+      });
+    });
+    this._dangPaste=false;
+    this.tinhCongThucTatCa();
+    UTILS.toast(`✅ Đã paste ${pasted} ô từ Excel`+(boQuaCT?` (bỏ qua ${boQuaCT} ô tổng tự tính)`:''),'ok');
+  },
+
+  navKey(e,el){
+    const dsMaKy=this.dsKy.map(k=>k.ky_bao_cao);
+    const allTR=[...document.querySelectorAll('#tw table.t tbody tr:not(.tr-h)')];
+    const trIdx=allTR.indexOf(el.closest('tr'));
+    const ci=dsMaKy.indexOf(el.dataset.ky);
+    if(trIdx<0||ci<0)return;
+    // Nhảy tới ô nhập được gần nhất theo hướng buoc (bỏ qua ô khóa và ô tổng Σ)
+    const nhay=(bd,buoc)=>{
+      for(let i=bd;i>=0&&i<allTR.length;i+=buoc){
+        const t=allTR[i].querySelector(`.os[data-ky="${dsMaKy[ci]}"]:not(:disabled)`);
+        if(t){t.focus();t.select();return true}
+      }
+      return false;
+    };
+    if(e.key==='Enter'||e.key==='ArrowDown'){e.preventDefault();nhay(trIdx+1,1);return}
+    if(e.key==='ArrowUp'){e.preventDefault();nhay(trIdx-1,-1);return}
+    if(e.key==='Tab'){
+      e.preventDefault();
+      const all=[...document.querySelectorAll('#tw .os:not(:disabled)')];
+      const i=all.indexOf(el);
+      const next=e.shiftKey?all[i-1]:all[i+1];
+      if(next){next.focus();next.select()}
+    }
+  },
+
+  huyThayDoi(){this.changes={};UTILS.tat('sbar');const _bl2=UTILS.el('btn-luu-top');if(_bl2){_bl2.style.background='#c5d0c9';_bl2.style.color='#3d5247';_bl2.style.cursor='default';}if(this.bangHT)this.moNhap(this.bangHT)},
+
+  _resizing:null,
+  startResize(e,maKy){
+    e.preventDefault();e.stopPropagation();
+    const th=e.target.closest('th');
+    const startX=e.clientX;
+    const startW=th.offsetWidth;
+    this._resizing={th,maKy,startX,startW};
+    document.addEventListener('mousemove',this._onResize);
+    document.addEventListener('mouseup',this._endResize);
+  },
+  _onResize(e){
+    const r=APP._resizing;if(!r)return;
+    const newW=Math.max(60,r.startW+e.clientX-r.startX);
+    r.th.style.minWidth=newW+'px';r.th.style.width=newW+'px';
+    const idx=[...r.th.parentElement.children].indexOf(r.th);
+    document.querySelectorAll(`table.t tbody tr`).forEach(tr=>{
+      if(tr.children[idx])tr.children[idx].style.width=newW+'px';
+    });
+  },
+  _endResize(e){
+    const r=APP._resizing;if(!r)return;
+    document.removeEventListener('mousemove',APP._onResize);
+    document.removeEventListener('mouseup',APP._endResize);
+    const newW=Math.max(60,r.startW+e.clientX-r.startX);
+    APP._resizing=null;
+    DB.luuDoRongKy(r.maKy,newW).then(()=>UTILS.toast('📐 Đã lưu độ rộng cột','ok')).catch(()=>{});
+    const k=APP.dsKy.find(x=>x.ky_bao_cao===r.maKy);
+    if(k)k.do_rong_cot=newW;
+  },
+
+  async luuDuLieu(){
+    if(!Object.keys(this.changes).length)return;
+    const nut=UTILS.el('btn-luu');nut.textContent='⏳';nut.disabled=true;
+    const rows={};
+    for(const[k,v] of Object.entries(this.changes)){
+      const parts=k.split('|');
+      const loai=parts[0],id=parts[1],ky=parts.slice(2).join('|');
+      const rk=`${id}|${ky}`;
+      if(!rows[rk])rows[rk]={id_chi_tieu:id,ky_bao_cao:ky,nguoi_nhap:this.user._nguoi_nhap||this.user.email||this.user.don_vi,thoi_gian_nhap:new Date().toISOString()};
+      if(loai==='so'){
+        // v==='' nghĩa là người dùng xóa trắng → lưu null để xóa số cũ
+        // v!=='' → parse bình thường, nếu không phải số hợp lệ thì cũng lưu null
+        rows[rk].gia_tri = (v===''||v===null||v===undefined) ? null : UTILS.parseSo(v);
+      }
+      if(loai==='gc')rows[rk].ghi_chu=v;
+      if(loai==='ng')rows[rk].nguon_so_lieu=v;
+    }
+    // ── Ghi kèm các ô CHỈ TIÊU TỔNG để CSDL luôn khớp với biểu hiển thị ──
+    this._gomOCongThuc().forEach(r=>{
+      const rk=`${r.id_chi_tieu}|${r.ky_bao_cao}`;
+      if(!rows[rk])rows[rk]=r; else rows[rk].gia_tri=r.gia_tri;
+    });
+    try{
+      await DB.luuDuLieu(this.bangHT,Object.values(rows));
+      UTILS.toast(`✅ Đã lưu ${Object.values(rows).length} dòng!`,'ok');
+      this.changes={};UTILS.tat('sbar');const _bl3=UTILS.el('btn-luu-top');if(_bl3){_bl3.style.background='#c5d0c9';_bl3.style.color='#3d5247';_bl3.style.cursor='default';}
+      document.querySelectorAll('.os').forEach(i=>i.classList.toggle('has',i.value!==''));
+    }catch(e){UTILS.toast('❌ Lỗi: '+e.message,'er');console.error('luuDuLieu:',e)}
+    nut.textContent='💾 Lưu';nut.disabled=false;
+  },
+
+  async xuatExcel(coData=false){
+    if(typeof XLSX==='undefined'){UTILS.toast('Thiếu thư viện XLSX','er');return}
+    const b=this.dsBang.find(x=>x.bang===this.bangHT);
+    const ct=await DB.layChiTieuTheoBang(this.bangHT);
+
+    let idx={};
+    if(coData){
+      const dl=await DB.layDuLieu(this.bangHT,this.dsKy.map(k=>k.ky_bao_cao));
+      dl.forEach(r=>{idx[r.id_chi_tieu+'|'+r.ky_bao_cao]=r});
+      // Áp công thức tổng để file Excel khớp với bảng đang hiển thị
+      if(this.ctPrep)CT.apDungVaoIdx(idx,this.ctPrep,this.dsKy);
+    }
+
+    const headersMaKy=['id_chi_tieu','ten_chi_tieu','don_vi',...this.dsKy.map(k=>k.ky_bao_cao),'ghi_chu','nguon_so_lieu'];
+    const headersHienThi=['STT','Tên chỉ tiêu','ĐVT',...this.dsKy.map(k=>k.ky_bao_cao_tieu_de||('T'+k.thang_bao_cao+'/'+k.nam_bao_cao)),'Ghi chú',''];
+
+    const rowsMaKy=[headersMaKy];
+    ct.forEach(c=>{
+      const sttHT=c.stt_hien_thi!=null&&c.stt_hien_thi!==''?c.stt_hien_thi:'';
+      const kyVals=this.dsKy.map(k=>{
+        if(!coData)return'';
+        const v=idx[c.id+'|'+k.ky_bao_cao]?.gia_tri;
+        // FIX: dùng parseFloat để ép về number thực sự, tránh lỗi locale khi Excel mở file
+        if(v===null||v===undefined||v==='')return'';
+        const n=parseFloat(v);   // parseFloat luôn dùng dấu chấm chuẩn quốc tế (giống JSON)
+        return isNaN(n)?v:n;     // trả về number -> SheetJS ghi đúng kiểu số, Excel không đọc sai
+      });
+      const gc=coData?(idx[c.id+'|'+(this._kyGhiChu()?.ky_bao_cao)]?.ghi_chu||''):'';
+      rowsMaKy.push([c.id,c.chi_tieu.trim(),c.don_vi||'',...kyVals,gc,'']);
     });
 
-    const wb = XLSX.utils.book_new();
-    const sheetData = [headersMaCot, headersHienThi, ...rowsMaCot.slice(1)];
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    const fixedCols = 3; const cotCols = this.dsCot.length;
+    const wb=XLSX.utils.book_new();
+    const sheetData=[headersMaKy,headersHienThi,...rowsMaKy.slice(1)];
+    const ws=XLSX.utils.aoa_to_sheet(sheetData);
+    const range=XLSX.utils.decode_range(ws['!ref']);
+    const fixedCols=3;const kyCols=this.dsKy.length;
 
-    ws['!cols'] = [{ wch: 0.1 }, { wch: 45 }, { wch: 10 }, ...this.dsCot.map(k => ({ wch: Math.round((k.do_rong_cot || 120) / 7) })), { wch: 20 }, { wch: 0.1 }];
-    ws['!rows'] = [{ hidden: true }];
+    ws['!cols']=[{wch:0.1},{wch:45},{wch:10},...this.dsKy.map(k=>({wch:Math.round((k.do_rong_cot||120)/7)})),{wch:20},{wch:0.1}];
+    ws['!rows']=[{hidden:true}];
 
-    for (let R = 0; R <= range.e.r; R++) {
-      for (let C = 0; C <= range.e.c; C++) {
-        const addr = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[addr]) ws[addr] = { v: '', t: 's' };
-        const isHeaderRow = R <= 1;
-        const isFixedCol = C < fixedCols || C >= fixedCols + cotCols;
-        const ctRow = R > 1 ? ct[R - 2] : null;
-        const isLockedRow = ctRow && (ctRow.la_tieu_de || ctRow.cho_phep_nhap === false);
-        const isLockedCot = !isHeaderRow && !isFixedCol && this.dsCot[C - fixedCols]?.khoa_nhap_lieu;
-        const locked = isHeaderRow || isFixedCol || isLockedRow || isLockedCot;
-        ws[addr].s = {
-          fill: { fgColor: { rgb: R === 1 ? '1B4332' : isLockedRow ? 'F0F0F0' : isFixedCol ? 'EAEDED' : isLockedCot ? 'E0E0E0' : 'FFFFFF' } },
-          font: { bold: R === 1 || (ctRow?.la_tieu_de), color: { rgb: R === 1 ? 'FFFFFF' : '000000' } },
-          alignment: { vertical: 'center', wrapText: false },
-          protection: { locked }
+    for(let R=0;R<=range.e.r;R++){
+      for(let C=0;C<=range.e.c;C++){
+        const addr=XLSX.utils.encode_cell({r:R,c:C});
+        if(!ws[addr])ws[addr]={v:'',t:'s'};
+        const isHeaderRow=R<=1;
+        const isFixedCol=C<fixedCols||C>=fixedCols+kyCols;
+        const ctRow=R>1?ct[R-2]:null;
+        const isLockedRow=ctRow&&(ctRow.la_tieu_de||ctRow.cho_phep_nhap===false);
+        const isLockedKy=!isHeaderRow&&!isFixedCol&&this.dsKy[C-fixedCols]?.khoa_nhap_lieu;
+        const locked=isHeaderRow||isFixedCol||isLockedRow||isLockedKy;
+        ws[addr].s={
+          fill:{fgColor:{rgb:R===1?'1B4332':isLockedRow?'F0F0F0':isFixedCol?'EAEDED':isLockedKy?'E0E0E0':'FFFFFF'}},
+          font:{bold:R===1||(ctRow?.la_tieu_de),color:{rgb:R===1?'FFFFFF':'000000'}},
+          alignment:{vertical:'center',wrapText:false},
+          protection:{locked}
         };
       }
     }
-    XLSX.utils.book_append_sheet(wb, ws, b?.ten_bang || 'Bieu mau');
-    XLSX.writeFile(wb, `${coData ? 'DL' : 'BM'}_${b?.ten_bang || this.bangHT}.xlsx`);
-    UTILS.toast(coData ? '📊 Đã xuất Excel kèm dữ liệu!' : '📥 Đã xuất Excel mẫu trống!', 'ok');
+    XLSX.utils.book_append_sheet(wb,ws,b?.ten_bang||'Bieu mau');
+    XLSX.writeFile(wb,`${coData?'DL':'BM'}_${b?.ten_bang||this.bangHT}.xlsx`);
+    UTILS.toast(coData?'📊 Đã xuất Excel kèm dữ liệu!':'📥 Đã xuất Excel mẫu trống!','ok');
   },
 
-  async uploadExcel(input) {
-    const file = input.files[0]; if (!file) return;
-    if (typeof XLSX === 'undefined') { UTILS.toast('Thiếu thư viện XLSX', 'er'); return }
-    UTILS.toast('⏳ Đang đọc file Excel...', 'ok');
-    try {
-      const raw = await UTILS.docExcel(file);
-      if (raw.length < 2) { UTILS.toast('File Excel không có dữ liệu', 'er'); return }
+  async uploadExcel(input){
+    const file=input.files[0];if(!file)return;
+    if(typeof XLSX==='undefined'){UTILS.toast('Thiếu thư viện XLSX','er');return}
+    UTILS.toast('⏳ Đang đọc file Excel...','ok');
+    const reader=new FileReader();
+    reader.onload=async(e)=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(raw.length<2){UTILS.toast('File Excel không có dữ liệu','er');return}
 
-      const headers = raw[0].map(h => String(h ?? '').trim());
-      const idxId = headers.indexOf('id_chi_tieu');
-      if (idxId === -1) { UTILS.toast('Không tìm thấy cột id_chi_tieu', 'er'); return }
+        const headers=raw[0].map(h=>String(h||'').trim());
+        const idxId=headers.indexOf('id_chi_tieu');
+        if(idxId===-1){UTILS.toast('Không tìm thấy cột id_chi_tieu','er');return}
 
-      const fixedCols = new Set(['id_chi_tieu', 'ten_chi_tieu', 'don_vi', 'ghi_chu', 'nguon_so_lieu', '']);
-      const cotHeaders = headers.map((h, i) => ({ h, i })).filter(x => !fixedCols.has(x.h) && x.i > idxId);
-      const gcIdx = headers.indexOf('ghi_chu');
-      const ngIdx = headers.indexOf('nguon_so_lieu');
+        const fixedCols=new Set(['id_chi_tieu','ten_chi_tieu','don_vi','ghi_chu','nguon_so_lieu','']);
+        const kyHeaders=headers.map((h,i)=>({h,i})).filter(x=>!fixedCols.has(x.h)&&x.i>idxId);
+        const gcIdx=headers.indexOf('ghi_chu');
+        const ngIdx=headers.indexOf('nguon_so_lieu');
 
-      const maCotHienThi = this.dsCot.map(k => k.ma_cot);
-      const cotHopLe = cotHeaders.filter(x => maCotHienThi.includes(x.h));
-      if (!cotHopLe.length) { UTILS.toast('Không tìm thấy cột báo cáo hợp lệ trong file', 'er'); return }
+        const maKyHienThi=this.dsKy.map(k=>k.ky_bao_cao);
+        const kyHopLe=kyHeaders.filter(x=>maKyHienThi.includes(x.h));
+        if(!kyHopLe.length){UTILS.toast('Không tìm thấy kỳ báo cáo hợp lệ trong file','er');return}
 
-      const ct = await DB.layChiTieuTheoBang(this.bangHT);
-      const ctMap = {}; ct.forEach(c => { ctMap[c.id] = c; });
+        const rows=[];
+        let boQuaCT=0;
+        for(let ri=1;ri<raw.length;ri++){
+          const row=raw[ri];
+          const id=String(row[idxId]||'').trim();
+          if(!id||id==='')continue;
+          const itCT=this.ctPrep&&this.ctPrep.map[id];
 
-      const rows = [];
-      for (let ri = 1; ri < raw.length; ri++) {
-        const row = raw[ri]; if (!row) continue;
-        const id = String(row[idxId] ?? '').trim();
-        if (!id) continue;
-        const ctRow = ctMap[id];
-        if (!ctRow || ctRow.la_tieu_de) continue;   // bỏ qua dòng tiêu đề hiển thị / id không khớp chỉ tiêu thật
+          kyHopLe.forEach(ky=>{
+            const ky_info=this.dsKy.find(k=>k.ky_bao_cao===ky.h);
+            if(ky_info?.khoa_nhap_lieu)return;
+            // Chỉ tiêu tổng do công thức quyết định → không nhận từ Excel
+            if(itCT&&CT.apDungChoKy(itCT,ky_info)){boQuaCT++;return}
 
-        cotHopLe.forEach(cotH => {
-          const cotInfo = this.dsCot.find(k => k.ma_cot === cotH.h);
-          if (!cotInfo || cotInfo.khoa_nhap_lieu || ctRow.cho_phep_nhap === false) return;
+            const val=String(row[ky.i]||'').trim();
+            if(val==='')return;
 
-          const rawV = row[cotH.i];
-          if (rawV === null || rawV === undefined || rawV === '') return;
+            const raw_n=val.replace(/\./g,'').replace(',','.');
+            const num=parseFloat(raw_n);
+            if(isNaN(num))return;
 
-          const isText = ctRow.kieu_du_lieu === 'text';
-          const rowObj = {
-            id_chi_tieu: id,
-            cot_id: cotInfo.id,
-            ghi_chu: gcIdx >= 0 ? String(row[gcIdx] ?? '').trim() : '',
-            nguon_so_lieu: ngIdx >= 0 ? String(row[ngIdx] ?? '').trim() : '',
-          };
-          if (isText) {
-            rowObj.gia_tri_text = String(rawV).trim();
-          } else {
-            const num = UTILS.oThanhSo(rawV);
-            if (num === null) return;
-            rowObj.gia_tri = num;
-          }
-          rows.push(rowObj);
-        });
-      }
+            rows.push({
+              id_chi_tieu:id,
+              ky_bao_cao:ky.h,
+              gia_tri:num,
+              ghi_chu:gcIdx>=0?String(row[gcIdx]||'').trim():'',
+              nguon_so_lieu:ngIdx>=0?String(row[ngIdx]||'').trim():'',
+              nguoi_nhap:this.user._nguoi_nhap||this.user.email||this.user.don_vi,
+              thoi_gian_nhap:new Date().toISOString()
+            });
+          });
+        }
 
-      if (!rows.length) { UTILS.toast('Không có dữ liệu hợp lệ để import', 'warn'); return }
+        if(!rows.length){UTILS.toast('Không có dữ liệu hợp lệ để import','warn');return}
 
-      await this.xinLyDoNeuCan(rows, async () => {
-        UTILS.toast(`✅ Đã import ${rows.length} ô dữ liệu từ Excel!`, 'ok');
-        input.value = '';
+        await DB.luuDuLieu(this.bangHT,rows);
+        UTILS.toast(`✅ Đã import ${rows.length} ô dữ liệu từ Excel!`+(boQuaCT?` (bỏ qua ${boQuaCT} ô chỉ tiêu tổng)`:''),'ok');
+        input.value='';
         await this.moNhap(this.bangHT);
-      });
-    } catch (err) {
-      UTILS.toast('❌ Lỗi đọc file: ' + err.message, 'er');
-      console.error(err);
-    }
+        // Ghi lại các ô tổng theo số liệu vừa import
+        const rCT=this._gomOCongThuc();
+        if(rCT.length){try{await DB.luuDuLieu(this.bangHT,rCT)}catch(e2){console.warn('Ghi ô tổng:',e2.message)}}
+      }catch(err){
+        UTILS.toast('❌ Lỗi đọc file: '+err.message,'er');
+        console.error(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
   },
 
-  moModalPass(forced = false) {
-    UTILS.el('err-pass').textContent = '';
-    ['p-moi', 'p-moi2'].forEach(id => UTILS.el(id).value = '');
-    this._buocDoiMK = !!forced;
-    const btnDong = UTILS.el('btn-dong-pass');
-    if (btnDong) btnDong.style.display = forced ? 'none' : '';
-    UTILS.el('modal-pass-title').textContent = forced ? '🔐 Bắt buộc đổi mật khẩu' : '🔐 Đổi mật khẩu';
-    UTILS.el('modal-pass-sub').textContent = forced
-      ? 'Quản trị viên vừa tạo hoặc đặt lại mật khẩu cho tài khoản này. Vui lòng đặt mật khẩu mới (≥8 ký tự) trước khi tiếp tục sử dụng.'
-      : 'Mật khẩu mới tối thiểu 8 ký tự.';
+  moModalPass(batBuoc=false){
+    UTILS.el('err-pass').textContent='';
+    ['p-cu','p-moi','p-moi2'].forEach(id=>UTILS.el(id).value='');
+    UTILS.el('mp-sub').textContent=batBuoc?'⚠️ Đang dùng mật khẩu mặc định. Vui lòng đổi ngay!':'Mật khẩu mới tối thiểu 4 ký tự.';
     UTILS.moModal('modal-pass');
   },
 
-  async luuPass() {
-    const moi = UTILS.el('p-moi').value, moi2 = UTILS.el('p-moi2').value;
-    const err = UTILS.el('err-pass'); err.textContent = '';
-    if (moi.length < 8) { err.textContent = 'Mật khẩu mới phải có ít nhất 8 ký tự.'; return }
-    if (moi !== moi2) { err.textContent = 'Mật khẩu nhập lại không khớp.'; return }
-    try {
-      await DB.doiMatKhauCuaToi(moi);
-      this.user.phai_doi_mat_khau = false;
-      UTILS.luuSession(this.user);
-      this._buocDoiMK = false;
-      UTILS.dongModal('modal-pass'); UTILS.toast('✅ Đổi mật khẩu thành công!', 'ok');
-    } catch (e) { err.textContent = 'Lỗi: ' + e.message }
+  async luuPass(){
+    const cu=UTILS.el('p-cu').value,moi=UTILS.el('p-moi').value,moi2=UTILS.el('p-moi2').value;
+    const err=UTILS.el('err-pass');err.textContent='';
+    if(cu!==(this.user.mat_khau||CONFIG.MAT_KHAU_MAC_DINH)){err.textContent='Mật khẩu hiện tại không đúng.';return}
+    if(moi.length<4){err.textContent='Mật khẩu mới phải có ít nhất 4 ký tự.';return}
+    if(moi!==moi2){err.textContent='Mật khẩu nhập lại không khớp.';return}
+    if(moi===CONFIG.MAT_KHAU_MAC_DINH){err.textContent='Không được dùng lại mật khẩu mặc định.';return}
+    try{
+      await DB.doiMatKhau(this.user.id,moi);
+      this.user.mat_khau=moi;UTILS.luuSession(this.user);
+      UTILS.dongModal('modal-pass');UTILS.toast('✅ Đổi mật khẩu thành công!','ok');
+    }catch(e){err.textContent='Lỗi: '+e.message}
   },
 
-  toggleSidebar() {
+  toggleSidebar(){
     UTILS.el('sb')?.classList.toggle('open');
     UTILS.el('sb-overlay')?.classList.toggle('on');
   },
-  closeSidebar() {
+  closeSidebar(){
     UTILS.el('sb')?.classList.remove('open');
     UTILS.el('sb-overlay')?.classList.remove('on');
   },
 
-  moAdmin() { window.open('admin.html', '_blank') },
+  moAdmin(){window.open('admin.html','_blank')},
 
-  moXemBaoCao() { window.location.href = 'xembaocao.html' },
+  moXemBaoCao(){window.location.href='xembaocao.html'},
 };
-window.addEventListener('load', () => APP.init());
-
+window.addEventListener('load',()=>APP.init());
 </script>
 </body>
 </html>

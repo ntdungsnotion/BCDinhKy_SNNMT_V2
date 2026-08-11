@@ -1,42 +1,15 @@
-<!-- Phiên bản ứng dụng: V2 — Nâng cấp bảo mật (Supabase Auth + RLS + mô hình 3 chiều) -->
-<!-- Phiên bản file: Bước 8b-vá3 — admin.html v8, cập nhật 2026/07/29 09:24 (GMT+7):
-     (1) Wizard "Tạo kỳ báo cáo": dropdown "Loại kỳ" đủ 6 mục theo TCTK
-     (tháng/quý/6 tháng/năm/đột xuất dùng ngay; "Báo cáo tuần" khoá + tooltip
-     "Sắp hỗ trợ", đúng quyết định 8b-vá2); "Quý" có ô chọn Quý 1-4 (tự quy
-     đổi sang tháng cuối quý 3/6/9/12 khi gọi RPC); "Đột xuất" hiện đúng bước
-     2 "kỳ RỖNG, không có cột mặc định". (2) Lọc "Loại kỳ báo cáo" thêm vào
-     mục "Kỳ báo cáo" (bảng danh sách) và "Theo dõi" (thu hẹp ô chọn kỳ).
-     (3) "Theo dõi" nâng cấp theo mockup TCTK 27/07: bỏ bảng phẳng rowspan,
-     thay bằng khối GOM THEO ĐƠN VỊ thu/mở được, mỗi khối tách "⚠️ Cần chú ý"
-     (luôn hiện) / "✅ Đã duyệt" (ẩn mặc định); ô lọc nổi (Trạng thái nhiều lựa
-     chọn + Loại kỳ báo cáo); Thao tác đổi từ nút chữ sang ICON + TOOLTIP
-     (xem lịch sử/duyệt/từ chối/trả lại/ghi chú quản trị; "nhắc báo cáo" để
-     chỗ trống, khoá); thêm checkbox chọn hàng loạt + thanh thao tác hàng
-     loạt (duyệt/từ chối/trả lại theo lô, chỉ bật khi các dòng chọn CÙNG
-     trạng thái). Xem nhat_ky_buoc_08b_va3.md mục quyết định riêng. -->
-<!-- Phiên bản trước: Bước 8b-vá — admin.html v7, cập nhật 2026/07/27 13:53 (GMT+7):
-     mục "Theo dõi" vẽ lại theo mockup Mèo Đen — MỘT bảng phẳng (gộp ô Đơn vị
-     bằng rowspan), bỏ card "hàng đợi" riêng, thêm cột Thao tác (theo trạng
-     thái) + Ghi chú quản trị (lý do trả lại/từ chối gần nhất), cột Ghi chú
-     dựng tường thuật nhiều dòng từ lich_su_nop (DB.layLichSuNopTheoKy mới). -->
-<!-- Phiên bản trước nữa: Bước 8b — admin.html v6, cập nhật 2026/07/27 10:14 (GMT+7):
-     (1) mục "Cột báo cáo" đổi nhãn "Kỳ dữ liệu" + ngăn trên "Chọn kỳ báo cáo"
-     (Luồng A2) + lọc tháng + phân trang 100 dòng; (2) mục MỚI "Kỳ báo cáo"
-     (Luồng A1 — wizard 3 bước + trang chi tiết: cột, hạn, phát hành/đóng);
-     (3) mục MỚI "Theo dõi" (Luồng C — hàng đợi đề nghị chỉnh sửa, danh sách
-     GOM THEO ĐƠN VỊ, quản lý "phải báo cáo", quản lý danh mục trạng thái nộp). -->
-<!-- Phiên bản trước nữa: Bước 7a — admin.html v5, cập nhật 2026/07/25 22:57 (GMT+7): (1) nút gạt Khoá/Hoạt động gọi RPC dat_trang_thai_tai_khoan (đồng bộ banned_until, hết lỗi "User is banned"); (2) modal Thêm tài khoản & Đặt lại MK: nút "Đóng" LUÔN có (đang thao tác dở = huỷ bỏ), sau khi xong có nút "Chép mật khẩu" RIÊNG tách khỏi "Đóng" -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản trị – BC định kỳ NN và MT (V2)</title>
+<title>Quản trị – BC định kỳ NN và MT</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="db.js"></script>
 <script src="utils.js"></script>
+<script src="congthuc.js"></script>
 <style>
 :root{--xd:#1b4332;--xc:#2d6a4f;--xn:#52b788;--xp:#d8f3dc;--w:#fff;--g1:#f4f6f5;--g2:#e4e9e6;--g3:#c5d0c9;--g4:#7a9485;--g5:#3d5247;--dk:#1a2e22;--red:#c0392b;--yellow:#d97706;--blue:#1e40af;--sw:210px;--font:'Be Vietnam Pro',sans-serif;--mono:'JetBrains Mono',monospace;--r:7px;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -79,7 +52,6 @@ table.dt thead th:not(.sort-asc):not(.sort-desc) .sort-icon::after{content:'↕'
 table.dt td{padding:8px 12px;border-bottom:1px solid var(--g2)}
 table.dt tr:last-child td{border-bottom:none}
 table.dt tr:hover td{background:#f7faf8}
-table.dt .td-donvi{font-weight:700;color:var(--xd);vertical-align:middle;border-right:1px solid var(--g2)}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
 .badge.green{background:#d1fae5;color:#065f46}.badge.red{background:#fee2e2;color:#991b1b}
 .badge.blue{background:#dbeafe;color:var(--blue)}.badge.gray{background:var(--g2);color:var(--g5)}
@@ -120,27 +92,6 @@ table.dt .td-donvi{font-weight:700;color:var(--xd);vertical-align:middle;border-
 .btn-g{padding:8px 14px;background:var(--g2);color:var(--g5);border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer}
 .num-inp{width:60px;padding:4px 6px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono);font-size:12px;text-align:center;outline:none}
 .num-inp:focus{border-color:var(--xc)}
-
-/* ── Bước 8b-vá3: Theo dõi — khối gom theo đơn vị (thu/mở), icon+tooltip, ô lọc nổi, thanh hàng loạt ── */
-.tdg{border:1px solid var(--g2);border-radius:8px;margin-bottom:10px;overflow:hidden;background:white}
-.tdg-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--g1);cursor:pointer;user-select:none}
-.tdg-head:hover{background:var(--g2)}
-.tdg-head .car{font-size:10px;color:var(--g4);transition:transform .15s;display:inline-block}
-.tdg-head.mo .car{transform:rotate(90deg)}
-.tdg-head .ten{font-weight:700;color:var(--xd);flex:1}
-.tdg-sub-head{display:flex;align-items:center;gap:6px;padding:6px 14px;background:#fafbfa;font-size:11px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.3px;cursor:pointer;border-top:1px solid var(--g2);user-select:none}
-.tdg-sub-head:hover{background:var(--g1)}
-.tdg-sub-head.fixed{cursor:default}
-.tdg-sub-head.fixed:hover{background:#fafbfa}
-.icon-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:3px 6px;border-radius:5px;transition:.15s;line-height:1;vertical-align:middle}
-.icon-btn:hover{background:var(--g2)}
-.icon-btn:disabled{opacity:.3;cursor:not-allowed}
-.icon-btn:disabled:hover{background:none}
-.loc-wrap{position:relative;display:inline-block}
-.loc-panel{position:absolute;top:calc(100% + 6px);left:0;background:white;border:1px solid var(--g2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;min-width:260px;z-index:60}
-.loc-panel h4{font-size:10px;text-transform:uppercase;color:var(--g5);letter-spacing:.4px;margin-bottom:5px}
-.loc-chk-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;color:var(--dk)}
-.bulk-bar{position:sticky;bottom:8px;background:white;border:1.5px solid var(--xc);border-radius:8px;box-shadow:0 -2px 14px rgba(0,0,0,.12);padding:9px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;z-index:10}
 
 /* Bảng chỉ tiêu — kéo thả cột */
 table.ct-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
@@ -194,7 +145,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
         <div class="r" id="sb-role"></div>
       </div>
     </div>
-    <nav class="sb-nav" id="sb-nav"><div class="loading"><span class="spin"></span> Đang tải...</div></nav>
+    <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot">
       <button class="sb-btn" onclick="window.close()">✕ Đóng trang này</button>
     </div>
@@ -206,7 +157,7 @@ table.ct-tbl tr.tr-locked{opacity:.55}
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Modal xác nhận (dùng chung cho các hộp thoại động: thêm loại, tạo kỳ mới, thêm bảng, gắn GSheet…) -->
+<!-- Modal xác nhận -->
 <div class="modal-bg" id="modal-xn">
   <div class="mbox">
     <h3 id="xn-title">Xác nhận</h3><p id="xn-msg"></p>
@@ -217,38 +168,46 @@ table.ct-tbl tr.tr-locked{opacity:.55}
   </div>
 </div>
 
-<!-- Modal thêm/sửa cột báo cáo (kỳ × loại) -->
-<div class="modal-bg" id="modal-cot">
+<!-- Modal thêm/sửa kỳ -->
+<div class="modal-bg" id="modal-ky">
   <div class="mbox">
-    <h3 id="cot-modal-title">Thêm cột báo cáo</h3>
-    <p>Mã cột và tiêu đề tự sinh — bạn có thể chỉnh lại.</p>
+    <h3 id="ky-modal-title">Thêm kỳ báo cáo</h3>
+    <p>Mã kỳ tự động sinh — bạn có thể chỉnh lại.</p>
     <div class="mrow">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="fg" id="cot-thang-wrap"><label>Tháng</label>
-          <input class="inp" id="cot-thang" type="number" min="1" max="12" placeholder="7" oninput="ADMIN.sinhCotAuto()"></div>
+        <div class="fg"><label>Tháng</label>
+          <input class="inp" id="ky-thang" type="number" min="1" max="12" placeholder="3"
+            oninput="sinhMaKy()"></div>
         <div class="fg"><label>Năm</label>
-          <input class="inp" id="cot-nam" type="number" placeholder="2026" oninput="ADMIN.sinhCotAuto()"></div>
+          <input class="inp" id="ky-nam" type="number" placeholder="2026"
+            oninput="sinhMaKy()"></div>
       </div>
       <div class="fg"><label>Loại số liệu</label>
-        <select class="inp" id="cot-loai" onchange="ADMIN.sinhCotAuto()"></select></div>
-      <div class="fg" id="cot-hauto-wrap" style="display:none"><label>Hậu tố mã kế hoạch <span style="color:var(--g4);font-weight:400">(tuỳ chọn, vd T7/2026)</span></label>
-        <input class="inp mono" id="cot-hauto" type="text" placeholder="T7/2026" oninput="ADMIN.sinhCotAuto()"></div>
-      <div class="fg"><label>Mã cột <span style="color:var(--g4);font-weight:400">(tự sinh, có thể sửa)</span></label>
-        <input class="inp mono" id="cot-ma" type="text" placeholder="uoc_07/2026"></div>
-      <div class="fg"><label>Tiêu đề cột</label>
-        <input class="inp" id="cot-ten" type="text" placeholder="Ước tháng 7 năm 2026" oninput="this.dataset.auto='0'"></div>
+        <select class="inp" id="ky-loai" onchange="sinhMaKy()">
+          <option value="Ước thực hiện">Ước thực hiện</option>
+          <option value="Ước lũy kế">Ước lũy kế</option>
+          <option value="Chính thức">Chính thức</option>
+          <option value="Lũy kế chính thức">Lũy kế chính thức</option>
+          <option value="So cùng kỳ">So cùng kỳ</option>
+        </select></div>
+      <div class="fg"><label>Mã kỳ <span style="color:var(--g4);font-weight:400">(tự sinh, có thể sửa)</span></label>
+        <input class="inp mono" id="ky-ma" type="text" placeholder="uoc_03/2026"></div>
+      <div class="fg"><label>Tên kỳ đầy đủ</label>
+        <input class="inp" id="ky-ten" type="text" placeholder="Ước tháng 3 năm 2026"></div>
+      <div class="fg"><label>Nguồn số liệu mặc định</label>
+        <input class="inp" id="ky-nguon" type="text" placeholder="Dữ liệu ngành"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="fg"><label>Thứ tự hiển thị</label>
-          <input class="inp" id="cot-thutu" type="number" placeholder="1" min="1"></div>
+          <input class="inp" id="ky-thutu" type="number" placeholder="1" min="1"></div>
         <div class="fg"><label>Độ rộng cột (px)</label>
-          <input class="inp" id="cot-dorong" type="number" placeholder="120" min="60" max="400"></div>
+          <input class="inp" id="ky-dorong" type="number" placeholder="120" min="60" max="300"></div>
       </div>
     </div>
     <div class="mbtns">
-      <button class="btn-p" onclick="ADMIN.luuCot()">💾 Lưu cột</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-cot')">Huỷ</button>
+      <button class="btn-p" onclick="ADMIN.luuKy()">💾 Lưu kỳ</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-ky')">Huỷ</button>
     </div>
-    <div class="err-txt" id="err-cot" style="margin-top:8px"></div>
+    <div class="err-txt" id="err-ky" style="margin-top:8px"></div>
   </div>
 </div>
 
@@ -256,69 +215,35 @@ table.ct-tbl tr.tr-locked{opacity:.55}
 <div class="modal-bg" id="modal-tk">
   <div class="mbox">
     <h3 id="tk-modal-title">Thêm tài khoản</h3>
-    <p id="tk-modal-sub">Tài khoản mới sẽ đăng nhập bằng email + mật khẩu bên dưới.</p>
+    <p>Mật khẩu mặc định: <strong id="mk-mac-admin"></strong></p>
     <div class="mrow">
-      <div class="fg" id="tk-email-wrap"><label>Email đăng nhập</label>
-        <input class="inp mono" id="tk-email" type="email" placeholder="donvi@snnmt.gov.vn"></div>
-      <div class="fg" id="tk-mk-wrap">
-        <label>Mật khẩu ban đầu (≥8 ký tự)</label>
-        <div style="display:flex;gap:6px">
-          <input class="inp mono" id="tk-mk" type="text" placeholder="••••••••" style="flex:1">
-          <button type="button" class="btn ghost" style="white-space:nowrap" onclick="ADMIN.sinhMKNgauNhien()">🎲 Tạo mật khẩu ngẫu nhiên</button>
-        </div>
-      </div>
-      <div class="fg"><label>Đơn vị / phòng ban</label>
-        <select class="inp" id="tk-donvi"></select></div>
+      <div class="fg"><label>Tên đơn vị / phòng ban</label>
+        <input class="inp" id="tk-donvi" placeholder="Chi cục Thủy sản"></div>
       <div class="fg"><label>Họ tên người phụ trách</label>
         <input class="inp" id="tk-hoten" placeholder="Nguyễn Văn A"></div>
+      <div class="fg"><label>Email (tuỳ chọn)</label>
+        <input class="inp" id="tk-email" type="email" placeholder="a@sonmt.gov.vn"></div>
       <div class="fg"><label>Vai trò</label>
         <select class="inp" id="tk-vaitro">
           <option value="editor">Người nhập liệu (Editor)</option>
-          <option value="admin_han_che">Quản trị hạn chế (không xoá, không đụng tài khoản)</option>
-          <option value="admin">Quản trị viên toàn quyền</option>
+          <option value="admin">Quản trị viên (Admin)</option>
         </select></div>
     </div>
     <div class="mbtns">
       <button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Đóng</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Huỷ</button>
     </div>
     <div class="err-txt" id="err-tk" style="margin-top:8px"></div>
   </div>
 </div>
 
-<!-- Modal đặt lại mật khẩu (chỉ admin toàn quyền) -->
-<div class="modal-bg" id="modal-dlmk">
-  <div class="mbox">
-    <h3>🔑 Đặt lại mật khẩu</h3>
-    <p>Tài khoản: <strong class="mono" id="dlmk-email"></strong></p>
-    <div class="mrow">
-      <div class="fg">
-        <label>Mật khẩu mới (≥8 ký tự)</label>
-        <div style="display:flex;gap:6px">
-          <input class="inp mono" id="dlmk-mk" type="text" placeholder="••••••••" style="flex:1">
-          <button type="button" class="btn ghost" style="white-space:nowrap" onclick="ADMIN.sinhMKDatLai()">🎲 Tạo mật khẩu ngẫu nhiên</button>
-        </div>
-      </div>
-    </div>
-    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;font-size:12px;color:#92400e;margin-bottom:12px">
-      ⚠️ Sẽ huỷ phiên đăng nhập hiện tại của người này (nếu đang mở) và buộc họ đổi mật khẩu ngay lần vào tiếp theo.
-    </div>
-    <div class="mbtns">
-      <button class="btn-p" onclick="ADMIN.luuDatLaiMK()">💾 Đặt lại</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>
-    </div>
-    <div class="err-txt" id="err-dlmk" style="margin-top:8px"></div>
-  </div>
-</div>
-
-
-<!-- Modal gán bảng xem thêm (đơn vị) -->
+<!-- Modal phân quyền -->
 <div class="modal-bg" id="modal-pq">
   <div class="mbox">
-    <h3 id="pq-title">Bảng xem thêm</h3><p id="pq-sub"></p>
+    <h3 id="pq-title">Phân quyền bảng</h3><p id="pq-sub"></p>
     <div id="pq-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
     <div class="mbtns">
-      <button class="btn-p" onclick="ADMIN.luuPQ()">💾 Lưu</button>
+      <button class="btn-p" onclick="ADMIN.luuPQ()">💾 Lưu phân quyền</button>
       <button class="btn-g" onclick="UTILS.dongModal('modal-pq')">Đóng</button>
     </div>
   </div>
@@ -377,7 +302,29 @@ table.ct-tbl tr.tr-locked{opacity:.55}
   </div>
 </div>
 
+<!-- Modal xóa chỉ tiêu — yêu cầu mật khẩu cấp 2 -->
+<div class="modal-bg" id="modal-xoa-ct">
+  <div class="mbox" style="max-width:420px;width:95%">
+    <h3 style="color:var(--red)">🗑️ Xác nhận xóa chỉ tiêu</h3>
+    <p id="xoa-ct-info" style="margin:10px 0 14px;font-size:13px;line-height:1.6"></p>
+    <div class="mrow">
+      <div class="fg">
+        <label>Mật khẩu cấp 2 <span style="color:var(--red)">*</span></label>
+        <input class="inp" type="password" id="mk2-inp" placeholder="Nhập mật khẩu bảo vệ..."
+          onkeydown="if(event.key==='Enter')xacNhanXoaCT()">
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="btn-p" style="background:var(--red)" onclick="xacNhanXoaCT()">🗑️ Xác nhận xóa</button>
+      <button class="btn-g" onclick="UTILS.dongModal('modal-xoa-ct')">Huỷ</button>
+    </div>
+    <div class="err-txt" id="err-xoa-ct" style="margin-top:8px"></div>
+  </div>
+</div>
+
 <script>
+// Tham chiếu UTILS.xacNhan
+const xacNhan = (t,m,cb) => UTILS.xacNhan(t,m,cb);
 const toast = (m,t) => UTILS.toast(m,t);
 
 // ── Sidebar mobile ──
@@ -390,366 +337,138 @@ function closeSidebar(){
   document.getElementById('sb-overlay')?.classList.remove('on');
 }
 
-let user=null;
-let dsBang=[], dsLoai=[], dsCot=[], dsHoSo=[], dsSoSanh=[], dsGS=[];
-let dsDonVi=[], dsTaiKhoan=[], dsQuyenDoc=[];
-let editCotId=null, editHoSoId=null, xemDonViId=null;
-let sortCol='', sortDir=1;
-let filterNamBD='', filterNamKT='';
+let user=null, dsKy=[], dsTK=[], dsBang=[], editKyId=null, editTKId=null, pqTKId=null;
+let sortCol='', sortDir=1; // sort kỳ báo cáo
+let dsSoSanh=[], coBangSoSanh=true; // cấu hình cột so sánh (Kỳ A ÷ Kỳ B × 100%)
 
-// ── Bước 8b: Kỳ dữ liệu (mục "Cột báo cáo" đổi nhãn) — lọc tháng + phân trang ──
-let filterThangCot = '';
-let cotPage = 1;
-const COT_TRANG_SIZE = 100;
-// Ngăn trên "Chọn kỳ báo cáo" (Luồng A2)
-let dsKyBaoCaoChonNhanh = [];
-let kybcChonId = '';
-let kybcCotDuKien = [];
-let kybcCotTick = new Set();
-
-// ── Bước 8b: mục "Kỳ báo cáo" (Luồng A1 + chi tiết) ──
-let dsKyBaoCao = [];
-let filterKyNam = '', filterKyThang = '', filterKyLoai = '';
-let kybcW = null;                 // trạng thái wizard tạo kỳ (3 bước)
-let kyChiTietHienTai = null;       // kỳ đang mở chi tiết (nếu có)
-let cotCuaKyChiTiet = [];
-let hanNopBangChiTiet = [];
-
-// ── Bước 8b: mục "Theo dõi" (Luồng C) ──
-let dsKyMoTheoDoi = [];
-let theodoiKyId = null;
-let theodoiTienDo = [];
-let theodoiLichSu = [];            // Bước 8b-vá: toàn bộ lịch sử nộp của kỳ (dựng tường thuật cột Ghi chú/Ghi chú quản trị)
-let theodoiTrangThaiNop = [];      // TOÀN BỘ dòng trang_thai_nop của kỳ (kể cả phai_bao_cao=false)
-let dsDmTrangThaiNop = [];
-
-// ── Bước 8b-vá3: Theo dõi — thu/mở theo đơn vị, cần chú ý/đã duyệt, ô lọc
-// nổi, chọn hàng loạt (xem nhat_ky_buoc_08b_va3.md) ──
-let theodoiThuGon = new Set();       // tên đơn vị đang bị THU GỌN (mặc định mở hết)
-let theodoiMoDaDuyet = new Set();    // tên đơn vị đang MỞ khối "Đã duyệt" (mặc định ẩn)
-let theodoiChon = new Set();         // mã 'bang' đang được tick chọn hàng loạt
-let theodoiLocMo = false;            // ô lọc nổi đang mở/đóng
-let theodoiFilterTrangThai = new Set(); // rỗng = tất cả trạng thái nộp
-let theodoiFilterLoaiKy = '';        // '' = tất cả loại kỳ (lọc ô chọn Kỳ báo cáo)
-
-// ── INIT ── (trang này CHỈ dành cho admin — RLS cũng chặn ghi mọi danh mục
-// nếu vai_tro khác 'admin', đây chỉ là lớp UX chặn sớm)
+// ── INIT ──
 window.addEventListener('load', async () => {
-  DB.onAuthChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
-  const nguoiDung = await UTILS.kiemTraDangNhap();
-  if (!nguoiDung) { location.replace('index.html'); return; }
-  if (!UTILS.laAdmin(nguoiDung)) {
-    alert('Trang quản trị chỉ dành cho quản trị viên.');
-    location.replace('index.html');
-    return;
+  const sv = UTILS.laySession();
+  if (!sv) { alert('Vui lòng đăng nhập từ trang chính!'); window.close(); return; }
+  user = sv;
+  document.getElementById('sb-name').textContent = user.don_vi;
+  document.getElementById('sb-role').textContent = user.vai_tro==='admin'?'⚙️ Quản trị viên':'✏️ Người nhập liệu';
+  document.getElementById('mk-mac-admin').textContent = CONFIG.MAT_KHAU_MAC_DINH;
+
+  if (user.vai_tro === 'admin') {
+    buildMenuAdmin();
+    await Promise.all([loadKy(), loadTK(), loadBang()]);
+    hienKyBaoCao();
+  } else {
+    buildMenuUser();
+    hienDoiPass();
   }
-  user = nguoiDung;
-  document.title = 'Quản trị – ' + (CONFIG.TEN_CO_QUAN || '');
-  document.getElementById('sb-name').textContent = user.don_vi || user.ho_ten || '';
-  document.getElementById('sb-role').textContent = UTILS.nhanVaiTro(user.vai_tro);
-  buildMenu();
-  try {
-    [dsBang, dsLoai] = await Promise.all([DB.layTatCaBang(), DB.layLoaiSoLieu()]);
-  } catch (e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
-    return;
-  }
-  capNhatBadgeMoKhoa();
-  hienCotBaoCao();
 });
 
-function buildMenu() {
+function buildMenuAdmin() {
   document.getElementById('sb-nav').innerHTML = `
-    <div class="nlbl">Danh mục</div>
-    <div class="ni act" id="ni-cot" onclick="hienCotBaoCao()"><span class="i">📅</span> Kỳ dữ liệu</div>
-    <div class="ni" id="ni-loai" onclick="hienLoaiSoLieu()"><span class="i">📋</span> Loại số liệu</div>
+    <div class="nlbl">Quản lý</div>
+    <div class="ni act" id="ni-ky" onclick="hienKyBaoCao()"><span class="i">📅</span> Kỳ báo cáo</div>
+    <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
+    <div class="ni" id="ni-pq" onclick="hienPhanQuyen()"><span class="i">🔑</span> Phân quyền</div>
     <div class="ni" id="ni-ct" onclick="hienChiTieu()"><span class="i">📑</span> Chỉ tiêu</div>
+    <div class="ni" id="ni-ctct" onclick="hienCongThuc()"><span class="i">🧮</span> Công thức</div>
     <div class="ni" id="ni-bang" onclick="hienQuanLyBang()"><span class="i">🗂️</span> Quản lý bảng</div>
     <div class="ni" id="ni-tdb" onclick="hienTieuDeBang()"><span class="i">🏷️</span> Tiêu đề bảng</div>
-    <div class="ni" id="ni-donvi" onclick="hienDonVi()"><span class="i">🏢</span> Đơn vị</div>
-    <div class="nlbl">Kỳ báo cáo</div>
-    <div class="ni" id="ni-kybc" onclick="hienKyBaoCao()"><span class="i">🗓️</span> Kỳ báo cáo</div>
-    <div class="ni" id="ni-theodoi" onclick="hienTheoDoi()"><span class="i">📈</span> Theo dõi nộp</div>
-    <div class="nlbl">Vận hành</div>
-    <div class="ni" id="ni-mk" onclick="hienDuyetMoKhoa()"><span class="i">🔓</span> Duyệt mở khóa<span id="badge-mk"></span></div>
-    <div class="ni" id="ni-tk" onclick="hienTaiKhoan()"><span class="i">👤</span> Tài khoản</div>
-    <div class="ni" id="ni-ls" onclick="hienLichSu()"><span class="i">📜</span> Nhật ký sửa số liệu</div>`;
+    <div class="nlbl">Tài khoản</div>
+    <div class="ni" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
+}
+function buildMenuUser() {
+  document.getElementById('sb-nav').innerHTML = `
+    <div class="nlbl">Tài khoản</div>
+    <div class="ni act" onclick="hienDoiPass()"><span class="i">🔐</span> Đổi mật khẩu</div>`;
 }
 function setAct(id) { closeSidebar(); document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act')); document.getElementById(id)?.classList.add('act'); }
 
+async function loadKy(namBD, namKT) { dsKy = await DB.layTatCaKy(namBD, namKT); }
+async function loadTK() { dsTK = await DB.layTatCaTaiKhoan(); }
 async function loadBang() { dsBang = await DB.layTatCaBang(); }
-async function loadLoai() { dsLoai = await DB.layLoaiSoLieu(); }
-async function loadCot(namBD, namKT) { dsCot = await DB.layTatCaCot(namBD, namKT); }
-async function loadHoSo() { dsHoSo = await DB.layTatCaHoSo(); }
-async function loadDonVi() { dsDonVi = await DB.layTatCaDonVi(); }
-async function loadTaiKhoan() { dsTaiKhoan = await DB.dsTaiKhoanDayDu(); }
 
-async function capNhatBadgeMoKhoa() {
-  try {
-    const { count } = await sb.from('yeu_cau_mo_khoa').select('id', { count: 'exact', head: true }).eq('trang_thai', 'cho_duyet');
-    const el = document.getElementById('badge-mk');
-    if (el) el.textContent = count ? ` (${count})` : '';
-  } catch (e) { /* không chặn giao diện nếu lỗi đếm */ }
-}
+// ── KỲ BÁO CÁO ──
+let filterNamBD = '', filterNamKT = '';
 
-// ════════════════════════════════════════════════════════════
-// LOẠI SỐ LIỆU (dm_loai_so_lieu) — chiều thứ 3, MỚI ở V2
-// ════════════════════════════════════════════════════════════
-async function hienLoaiSoLieu() {
-  setAct('ni-loai');
-  document.getElementById('topbar-t').textContent = 'Danh mục loại số liệu';
-  await loadLoai();
-  renderLoaiSoLieu();
-}
-
-function renderLoaiSoLieu() {
-  const rows = dsLoai.map(l => `<tr>
-    <td class="mono" style="font-size:12px">${l.ma}</td>
-    <td><input class="ct-inp" value="${(l.ten||'').replace(/"/g,'&quot;')}" onchange="capNhatLoai('${l.ma}','ten',this.value)"></td>
-    <td><input class="ct-inp mono" value="${(l.mau_tieu_de||'').replace(/"/g,'&quot;')}" placeholder="VD: Ước tháng {t} năm {n}" onchange="capNhatLoai('${l.ma}','mau_tieu_de',this.value)"></td>
-    <td style="text-align:center;padding:4px 6px">
-      <input class="num-inp" type="number" value="${l.thu_tu||''}" placeholder="--" onchange="capNhatLoai('${l.ma}','thu_tu',this.value===''?null:parseInt(this.value))">
-    </td>
-    <td style="text-align:center">
-      <label class="sw-wrap" style="justify-content:center">
-        <label class="sw"><input type="checkbox" ${l.co_ban?'checked':''} onchange="capNhatLoai('${l.ma}','co_ban',this.checked)">
-          <span class="sw-slider"></span></label>
-        <span class="sw-lbl">${l.co_ban?'✅':'⬜'}</span>
-      </label>
-    </td>
-    <td style="text-align:center"><button class="btn danger" style="padding:4px 8px" onclick="xoaLoaiAdmin('${l.ma}','${(l.ten||'').replace(/'/g,"\\'")}')">🗑</button></td>
-  </tr>`).join('');
-
-  document.getElementById('content').innerHTML = `
-    <div class="card">
-      <div class="card-head">
-        <h3>📋 Loại số liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsLoai.length} loại — cột "Cơ bản" bật thì tự sinh khi bấm "Tạo kỳ mới")</span></h3>
-        <button class="btn primary" onclick="themLoaiMoi()">+ Thêm loại</button>
-      </div>
-      <div style="overflow-x:auto"><table class="dt">
-        <thead><tr>
-          <th style="width:90px">Mã</th><th>Tên</th><th>Khuôn tiêu đề cột <span style="font-weight:400">({t}=tháng, {n}=năm)</span></th>
-          <th style="width:80px;text-align:center">Thứ tự</th><th style="width:80px;text-align:center">Cơ bản</th><th style="width:50px"></th>
-        </tr></thead>
-        <tbody>${rows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--g4)">Chưa có loại số liệu nào</td></tr>'}</tbody>
-      </table></div>
-    </div>`;
-}
-
-async function capNhatLoai(ma, col, val) {
-  try { await DB.suaLoai(ma, {[col]: val}); toast('✅ Đã lưu!'); const l=dsLoai.find(x=>x.ma===ma); if(l) l[col]=val; }
-  catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
-
-function xoaLoaiAdmin(ma, ten) {
-  UTILS.xacNhan('🗑 Xoá loại số liệu', `Xoá loại <strong>${ten}</strong> (<code>${ma}</code>)?<br><span style="font-size:12px;color:var(--g4)">Sẽ thất bại nếu loại này đang được dùng ở cột báo cáo nào đó.</span>`,
-    async () => {
-      try { await DB.xoaLoai(ma); toast('✅ Đã xoá!'); await hienLoaiSoLieu(); }
-      catch(e) { toast('Lỗi: '+(/foreign key|violates/.test(e.message)?'Không thể xoá: loại này đang được dùng ở cột báo cáo.':e.message), 'er'); }
-    });
-}
-
-function themLoaiMoi() {
-  UTILS.xacNhan('+ Thêm loại số liệu mới',
-    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ (không dấu, không khoảng trắng) *</label>
-        <input id="loai-ma" type="text" placeholder="vd: cd_thuysan" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN *</label>
-        <input id="loai-ten" type="text" placeholder="VD: Chuyên đề thủy sản" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">KHUÔN TIÊU ĐỀ CỘT</label>
-        <input id="loai-mau" type="text" placeholder="VD: Chuyên đề thủy sản tháng {t}/{n}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:12px;outline:none"></div>
-      <div style="display:flex;gap:10px;align-items:flex-end">
-        <div style="flex:1"><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THỨ TỰ</label>
-          <input id="loai-thutu" type="number" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--g5);padding-bottom:10px">
-          <input type="checkbox" id="loai-coban" style="width:15px;height:15px;accent-color:var(--xc)"> Cơ bản (tự sinh khi tạo kỳ mới)</label>
-      </div>
-    </div>`,
-    async () => {
-      const ma = document.getElementById('loai-ma')?.value.trim();
-      const ten = document.getElementById('loai-ten')?.value.trim();
-      const mau = document.getElementById('loai-mau')?.value.trim();
-      const thutu = document.getElementById('loai-thutu')?.value;
-      const coban = document.getElementById('loai-coban')?.checked;
-      if (!ma || !ten) { toast('Vui lòng nhập Mã và Tên!','er'); return; }
-      try {
-        await DB.themLoai({ ma, ten, mau_tieu_de: mau||null, thu_tu: thutu?parseInt(thutu):null, co_ban: !!coban });
-        toast('✅ Đã thêm loại số liệu!');
-        await hienLoaiSoLieu();
-      } catch(e) { toast('Lỗi: '+(/duplicate/.test(e.message)?'Mã này đã tồn tại.':e.message),'er'); }
-    });
-}
-
-// ════════════════════════════════════════════════════════════
-// CỘT BÁO CÁO (cot_bao_cao = kỳ × loại — thay ky_bao_cao V1)
-// ════════════════════════════════════════════════════════════
-async function hienCotBaoCao() {
-  setAct('ni-cot');
-  document.getElementById('topbar-t').textContent = 'Quản lý kỳ dữ liệu (kỳ × loại)';
+async function hienKyBaoCao() {
+  setAct('ni-ky');
+  document.getElementById('topbar-t').textContent = 'Quản lý kỳ báo cáo';
   const namHienTai = new Date().getFullYear();
   if (!filterNamBD) filterNamBD = namHienTai - 1;
   if (!filterNamKT) filterNamKT = namHienTai + 1;
-  await loadCot(filterNamBD, filterNamKT);
-  if (!dsLoai.length) await loadLoai();
-  try { dsSoSanh = await DB.laySoSanh(false); } catch(e) { dsSoSanh = []; }
-  try { dsKyBaoCaoChonNhanh = await DB.layTatCaKyBaoCao(); } catch(e) { dsKyBaoCaoChonNhanh = []; }
-  cotPage = 1;
-  renderCotBaoCao();
+  await loadKy(filterNamBD, filterNamKT);
+  // Bảng cau_hinh_so_sanh có thể chưa được tạo → hiện hướng dẫn thay vì lỗi
+  try { dsSoSanh = await DB.laySoSanh(false); coBangSoSanh = true; }
+  catch(e) { dsSoSanh = []; coBangSoSanh = false; }
+  renderKyBaoCao();
 }
 
-// ── Bước 8b, Luồng A2: ngăn trên "Chọn kỳ báo cáo" — chọn 1 kỳ báo cáo, ra
-// ngay tập cột (kỳ dữ liệu) của kỳ đó, tick sẵn nhưng KHÔNG khoá, admin lược
-// bớt/thêm rồi "Đồng ý" mới ghi (đặc tả v4 mục 11 Luồng A2). ──
-async function chonKyBaoCaoNhanh(kyId) {
-  kybcChonId = kyId;
-  if (!kyId) { kybcCotDuKien = []; kybcCotTick = new Set(); renderCotBaoCao(); return; }
-  try {
-    kybcCotDuKien = await DB.layCotCuaKy(kyId);
-    kybcCotTick = new Set(kybcCotDuKien.map(c => c.id));
-  } catch (e) { toast('Lỗi tải cột của kỳ: ' + e.message, 'er'); kybcCotDuKien = []; kybcCotTick = new Set(); }
-  renderCotBaoCao();
-}
-
-function toggleKybcCot(id, checked) {
-  if (checked) kybcCotTick.add(id); else kybcCotTick.delete(id);
-}
-
-function dongYChonKyBaoCao() {
-  if (!kybcChonId) return;
-  const soTick = kybcCotTick.size;
-  UTILS.xacNhan('✅ Áp dụng kỳ báo cáo vào trang nhập',
-    `Bật "Hiện" cho ${soTick} kỳ dữ liệu đã tick, tự TẮT các kỳ dữ liệu đang hiện khác không được tick, và đặt kỳ này làm "đang thu thập" (mặc định cho ô chọn kỳ của đơn vị)?`,
-    async () => {
-      try {
-        const dangHien = await DB.layCotHienThi();
-        const dangHienIds = new Set(dangHien.map(c => c.id));
-        const batLen = [...kybcCotTick];
-        const tatDi = [...dangHienIds].filter(id => !kybcCotTick.has(id));
-        await Promise.all([
-          ...batLen.map(id => DB.capNhatCot(id, { dua_vao_bieu: true })),
-          ...tatDi.map(id => DB.capNhatCot(id, { dua_vao_bieu: false })),
-        ]);
-        await DB.datKyDangThuThap(kybcChonId);
-        toast(`✅ Đã áp dụng: bật ${batLen.length}, tắt ${tatDi.length} kỳ dữ liệu — đã đặt làm kỳ đang thu thập!`);
-        kybcChonId = ''; kybcCotDuKien = []; kybcCotTick = new Set();
-        await hienCotBaoCao();
-      } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-    });
-}
-
-function renderChonKyBaoCaoPanel() {
-  const opts = dsKyBaoCaoChonNhanh.map(k =>
-    `<option value="${k.id}" ${String(kybcChonId) === String(k.id) ? 'selected' : ''}>${(k.ten||'').replace(/</g,'&lt;')} (${k.trang_thai_ky})</option>`
-  ).join('');
-  let phanDuoi = '';
-  if (kybcChonId && kybcCotDuKien.length) {
-    const rows = kybcCotDuKien.map(c => {
-      const checked = kybcCotTick.has(c.id) ? 'checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--g2);border-radius:6px;font-size:12px;background:${checked?'var(--xp)':'white'}">
-        <input type="checkbox" ${checked} onchange="toggleKybcCot(${c.id},this.checked)">
-        <span>${c.tieu_de || c.ma_cot}</span>
-        ${c.dua_vao_bieu ? '<span style="font-size:10px;color:var(--xc)">(đang hiện)</span>' : ''}
-      </label>`;
-    }).join('');
-    phanDuoi = `<div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px">${rows}</div>
-      <div class="form-actions">
-        <button class="btn primary" onclick="dongYChonKyBaoCao()">✅ Đồng ý — áp dụng vào trang nhập</button>
-        <span style="font-size:11px;color:var(--g4);align-self:center">Bật "Hiện" cho cột đã tick, tắt cột đang hiện KHÔNG được tick, đặt kỳ này là "đang thu thập".</span>
-      </div>`;
-  } else if (kybcChonId) {
-    phanDuoi = `<div class="empty" style="padding:16px"><span class="i">📭</span><span>Kỳ báo cáo này chưa có kỳ dữ liệu (cột) nào.</span></div>`;
-  }
-  return `<div class="card">
-    <div class="card-head"><h3>⚡ Chọn kỳ báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(mở nhanh trọn bộ cột của một kỳ báo cáo ra trang nhập — Luồng A2)</span></h3></div>
-    <div class="filter-bar">
-      <label>Kỳ báo cáo:</label>
-      <select class="inp" style="width:auto;min-width:240px" onchange="chonKyBaoCaoNhanh(this.value?parseInt(this.value):'')">
-        <option value="">— Chọn để xem cột —</option>${opts}
-      </select>
-    </div>
-    ${phanDuoi}
-  </div>`;
-}
-
-function renderCotBaoCao() {
-  let ds = [...dsCot];
-  if (filterThangCot) ds = ds.filter(k => String(k.thang) === String(filterThangCot));
+function renderKyBaoCao() {
+  let ds = [...dsKy];
+  // Sort
   if (sortCol) {
     ds.sort((a,b) => {
       let va = a[sortCol], vb = b[sortCol];
       if (va === null || va === undefined) va = '';
       if (vb === null || vb === undefined) vb = '';
-      return String(va).localeCompare(String(vb), 'vi', {numeric:true}) * sortDir;
+      return String(va).localeCompare(String(vb), 'vi') * sortDir;
     });
   }
-  const tongSo = ds.length;
-  const tongTrang = Math.max(1, Math.ceil(tongSo / COT_TRANG_SIZE));
-  if (cotPage > tongTrang) cotPage = tongTrang;
-  if (cotPage < 1) cotPage = 1;
-  const dsTrang = ds.slice((cotPage - 1) * COT_TRANG_SIZE, cotPage * COT_TRANG_SIZE);
 
   const cols = [
-    { key:'thu_tu_hien_thi', label:'Thứ tự', w:'90px' },
-    { key:'ma_cot',          label:'Mã cột', w:'150px' },
-    { key:'tieu_de',         label:'Tiêu đề', w:'' },
-    { key:'thang',           label:'Tháng', w:'55px' },
-    { key:'nam',             label:'Năm', w:'60px' },
-    { key:'loai',            label:'Loại', w:'150px' },
-    { key:'do_rong_cot',     label:'Rộng(px)', w:'80px' },
+    { key:'thu_tu_hien_thi', label:'Thứ tự', w:'110px' },
+    { key:'ky_bao_cao',      label:'Mã kỳ',  w:'160px' },
+    { key:'ky_bao_cao_tieu_de', label:'Tên kỳ', w:'' },
+    { key:'thang_bao_cao',   label:'Tháng',  w:'60px' },
+    { key:'nam_bao_cao',     label:'Năm',    w:'65px' },
+    { key:'loai_so_lieu',    label:'Loại',   w:'120px' },
+    { key:'do_rong_cot',     label:'Rộng(px)',w:'80px' },
   ];
+
   const thead = cols.map(c => {
     const cls = sortCol===c.key ? (sortDir===1?'sort-asc':'sort-desc') : '';
     return `<th class="${cls}" style="${c.w?'width:'+c.w:''}" onclick="doSort('${c.key}')">${c.label}<span class="sort-icon"></span></th>`;
   }).join('') + '<th style="text-align:center">Nhập</th><th style="text-align:center">Hiện</th><th></th>';
 
-  const tbody = dsTrang.map(k => {
-    const loaiObj = dsLoai.find(l=>l.ma===k.loai);
-    return `<tr>
+  const tbody = ds.map(k => `<tr>
     <td style="text-align:center;padding:4px 8px">
-      <input class="num-inp" type="number" min="1" value="${k.thu_tu_hien_thi||''}" placeholder="--" style="width:70px"
-        onchange="capNhatCotField(${k.id},'thu_tu_hien_thi',this.value===''?null:parseInt(this.value))">
+      <input class="num-inp" type="number" min="1" value="${k.thu_tu_hien_thi||''}" placeholder="--"
+        style="width:90px"
+        onchange="capNhatKyField('${k.ky_bao_cao}','thu_tu_hien_thi',this.value===''?null:parseInt(this.value))">
     </td>
-    <td class="mono" style="font-size:11px">${k.ma_cot}</td>
-    <td><input class="ct-inp" value="${(k.tieu_de||'').replace(/"/g,'&quot;')}" onchange="capNhatCotField(${k.id},'tieu_de',this.value)"></td>
-    <td style="text-align:center">${k.thang}</td>
-    <td style="text-align:center">${k.nam}</td>
-    <td><span class="badge ${loaiObj?.co_ban?'green':'blue'}">${loaiObj?.ten||k.loai}</span></td>
+    <td class="mono">${k.ky_bao_cao}</td>
+    <td>${k.ky_bao_cao_tieu_de||''}</td>
+    <td style="text-align:center">${k.thang_bao_cao}</td>
+    <td style="text-align:center">${k.nam_bao_cao}</td>
+    <td><span class="badge ${k.loai_so_lieu==='Chính thức'||k.loai_so_lieu==='Lũy kế chính thức'?'green':'blue'}">${k.loai_so_lieu||'--'}</span></td>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="60" max="400" value="${k.do_rong_cot||120}" placeholder="120"
-        onchange="capNhatCotField(${k.id},'do_rong_cot',parseInt(this.value)||120)">
+        onchange="capNhatKyField('${k.ky_bao_cao}','do_rong_cot',parseInt(this.value)||120)">
     </td>
     <td style="text-align:center">
       <label class="sw-wrap" style="justify-content:center">
         <label class="sw"><input type="checkbox" ${!k.khoa_nhap_lieu?'checked':''}
-          onchange="capNhatCotField(${k.id},'khoa_nhap_lieu',!this.checked)">
+          onchange="capNhatKyField('${k.ky_bao_cao}','khoa_nhap_lieu',!this.checked)">
           <span class="sw-slider"></span></label>
         <span class="sw-lbl" style="font-size:10px">${!k.khoa_nhap_lieu?'🔓':'🔒'}</span>
       </label>
     </td>
     <td style="text-align:center">
       <label class="sw-wrap" style="justify-content:center">
-        <label class="sw"><input type="checkbox" ${k.dua_vao_bieu?'checked':''}
-          onchange="capNhatCotField(${k.id},'dua_vao_bieu',this.checked)">
+        <label class="sw"><input type="checkbox" ${k.dua_vao_bieu_bao_cao?'checked':''}
+          onchange="capNhatKyField('${k.ky_bao_cao}','dua_vao_bieu_bao_cao',this.checked)">
           <span class="sw-slider"></span></label>
-        <span class="sw-lbl" style="font-size:10px">${k.dua_vao_bieu?'✅':'⬜'}</span>
+        <span class="sw-lbl" style="font-size:10px">${k.dua_vao_bieu_bao_cao?'✅':'⬜'}</span>
       </label>
     </td>
     <td style="white-space:nowrap">
-      <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalCot(${k.id})">✏️</button>
-      ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaCotAdmin(${k.id})">🗑</button>` : ''}
+      <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalKy('${k.ky_bao_cao}')">✏️</button>
+      <button class="btn danger" style="padding:4px 8px" onclick="xoaKy('${k.ky_bao_cao}')">🗑</button>
     </td>
-  </tr>`;
-  }).join('');
+  </tr>`).join('');
 
   document.getElementById('content').innerHTML = `
-    ${renderChonKyBaoCaoPanel()}
-    <div class="card" style="margin-top:12px">
+    <div class="card">
       <div class="card-head">
-        <h3>📅 Kỳ dữ liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(${tongSo} kỳ dữ liệu${filterThangCot?' — đã lọc tháng '+filterThangCot:''})</span></h3>
-        <div style="display:flex;gap:6px">
-          <button class="btn primary" onclick="taoKyMoiHangLoat()">⚡ Tạo kỳ mới</button>
-          <button class="btn ghost" onclick="ADMIN.moModalCot()">+ Thêm cột khác</button>
-        </div>
+        <h3>📅 Kỳ báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${ds.length} kỳ)</span></h3>
+        <button class="btn primary" onclick="ADMIN.moModalKy()">+ Thêm kỳ mới</button>
       </div>
       <div class="filter-bar">
         <label>Lọc năm:</label>
@@ -757,45 +476,51 @@ function renderCotBaoCao() {
         <input type="number" id="f-nam-bd" value="${filterNamBD}" style="width:70px" oninput="filterNamBD=this.value">
         <label>đến</label>
         <input type="number" id="f-nam-kt" value="${filterNamKT}" style="width:70px" oninput="filterNamKT=this.value">
-        <button class="btn ghost" onclick="hienCotBaoCao()">Lọc</button>
-        <label style="margin-left:6px">Tháng:</label>
-        <select class="inp" style="width:auto" onchange="filterThangCot=this.value;cotPage=1;renderCotBaoCao()">
-          <option value="">Tất cả</option>
-          ${Array.from({length:12},(_,i)=>i+1).map(t=>`<option value="${t}" ${String(filterThangCot)===String(t)?'selected':''}>Tháng ${t}</option>`).join('')}
-        </select>
-        <button class="btn ghost" onclick="filterNamBD='';filterNamKT='';filterThangCot='';cotPage=1;hienCotBaoCao()">Tất cả</button>
-        <span style="flex:1"></span>
-        <button class="btn ghost" style="padding:4px 8px" ${cotPage<=1?'disabled':''} onclick="cotPage--;renderCotBaoCao()">‹ Trước</button>
-        <span style="font-size:12px;color:var(--g5)">Trang ${cotPage}/${tongTrang}</span>
-        <button class="btn ghost" style="padding:4px 8px" ${cotPage>=tongTrang?'disabled':''} onclick="cotPage++;renderCotBaoCao()">Sau ›</button>
+        <button class="btn ghost" onclick="hienKyBaoCao()">Lọc</button>
+        <button class="btn ghost" onclick="filterNamBD='';filterNamKT='';hienKyBaoCao()">Tất cả</button>
       </div>
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>${thead}</tr></thead>
-          <tbody>${tbody||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--g4)">Không có kỳ dữ liệu nào trong bộ lọc hiện tại</td></tr>'}</tbody>
+          <tbody>${tbody||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--g4)">Không có kỳ báo cáo nào</td></tr>'}</tbody>
         </table>
       </div>
     </div>
     ${renderCardSoSanh()}`;
 }
 
-function tenCotAdmin(id) {
-  const c = dsCot.find(x=>x.id===id);
-  return c ? (c.tieu_de || c.ma_cot) : ('#'+id);
+// ── CỘT SO SÁNH TRONG BẢNG NHẬP LIỆU (index.html) ──
+// Cột = Kỳ A ÷ Kỳ B × 100%, chỉ đọc, tự tính lại khi số liệu nhập thay đổi.
+function tenKyAdmin(ma) {
+  const k = dsKy.find(x => x.ky_bao_cao === ma);
+  return k ? (k.ky_bao_cao_tieu_de || ma) : ma;
 }
 
 function renderCardSoSanh() {
-  const cotHien = dsCot.filter(k=>k.dua_vao_bieu).sort((a,b)=>(Number(a.thu_tu_hien_thi)||0)-(Number(b.thu_tu_hien_thi)||0));
-  const opts = cotHien.map(k=>`<option value="${k.id}">${k.tieu_de||k.ma_cot}</option>`).join('');
+  if (!coBangSoSanh) {
+    return `<div class="card" style="margin-top:12px">
+      <div class="card-head"><h3>➗ Cột so sánh trong bảng nhập liệu</h3></div>
+      <div style="padding:14px;font-size:13px;color:var(--g5)">
+        ⚠️ Chưa tạo bảng <b class="mono">cau_hinh_so_sanh</b> trong Supabase.<br>
+        Hãy chạy file <b class="mono">sql_cau_hinh_so_sanh.sql</b> (kèm theo bản cập nhật này)
+        trong <b>Supabase → SQL Editor</b>, sau đó bấm lại mục "Kỳ báo cáo".
+      </div>
+    </div>`;
+  }
+  // Chỉ cho chọn các kỳ ĐANG HIỂN THỊ trong bảng nhập (dua_vao_bieu_bao_cao = true)
+  const kyHien = dsKy.filter(k => k.dua_vao_bieu_bao_cao)
+    .sort((a,b) => (Number(a.thu_tu_hien_thi)||0) - (Number(b.thu_tu_hien_thi)||0));
+  const opts = kyHien.map(k =>
+    `<option value="${k.ky_bao_cao}">${k.ky_bao_cao_tieu_de || k.ky_bao_cao}</option>`).join('');
 
   const rows = dsSoSanh.map(c => `<tr>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="1" value="${c.thu_tu||''}" placeholder="--" style="width:70px"
         onchange="capNhatSoSanhField(${c.id},'thu_tu',this.value===''?null:parseInt(this.value))">
     </td>
-    <td>${tenCotAdmin(c.cot_tu)}</td>
+    <td>${tenKyAdmin(c.ky_tu)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_tu})</span></td>
     <td style="text-align:center;font-weight:700;color:var(--blue)">÷</td>
-    <td>${tenCotAdmin(c.cot_mau)}</td>
+    <td>${tenKyAdmin(c.ky_mau)} <span class="mono" style="color:var(--g4);font-size:11px">(${c.ky_mau})</span></td>
     <td style="text-align:center;padding:4px 8px">
       <input class="num-inp" type="number" min="60" max="400" value="${c.do_rong_cot||128}" placeholder="128"
         onchange="capNhatSoSanhField(${c.id},'do_rong_cot',parseInt(this.value)||128)">
@@ -815,27 +540,27 @@ function renderCardSoSanh() {
 
   return `<div class="card" style="margin-top:12px">
     <div class="card-head">
-      <h3>➗ Cột so sánh trong bảng nhập liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(Cột A ÷ Cột B × 100% — chỉ đọc, tự tính khi nhập)</span></h3>
+      <h3>➗ Cột so sánh trong bảng nhập liệu <span style="font-size:12px;font-weight:400;color:var(--g4)">(Kỳ A ÷ Kỳ B × 100% — chỉ đọc, tự tính khi nhập)</span></h3>
     </div>
     <div class="filter-bar" style="flex-wrap:wrap;gap:8px">
-      <label>Cột A (tử số)</label>
-      <select class="inp" id="ss-tu" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có cột hiển thị</option>'}</select>
+      <label>Kỳ A (tử số)</label>
+      <select class="inp" id="ss-tu" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
       <label style="font-weight:700;color:var(--blue)">÷</label>
-      <label>Cột B (mẫu số)</label>
-      <select class="inp" id="ss-mau" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có cột hiển thị</option>'}</select>
+      <label>Kỳ B (mẫu số)</label>
+      <select class="inp" id="ss-mau" style="width:auto;min-width:180px">${opts||'<option value="">Chưa có kỳ hiển thị</option>'}</select>
       <label>× 100% &nbsp; Thứ tự</label>
       <input class="num-inp" type="number" id="ss-thutu" min="1" placeholder="--" style="width:70px">
       <button class="btn primary" onclick="themSoSanhAdmin()">➕ Thêm cột so sánh</button>
     </div>
     <div style="padding:0 14px 6px;font-size:11px;color:var(--g4);font-style:italic">
-      Chỉ chọn được các cột đang bật "Hiện" (đưa vào biểu). Cột so sánh chỉ xuất hiện trong bảng nhập
-      khi CẢ HAI cột đều đang hiển thị.
+      Chỉ chọn được các kỳ đang bật "Hiện" (đưa vào biểu). Cột so sánh chỉ xuất hiện trong bảng nhập
+      khi CẢ HAI kỳ đều đang hiển thị. Nếu không thấy kỳ cần chọn, hãy mở rộng bộ lọc năm phía trên.
     </div>
     <div style="overflow-x:auto">
       <table class="dt">
         <thead><tr>
-          <th style="width:80px">Thứ tự</th><th>Cột A (tử số)</th><th style="width:36px"></th>
-          <th>Cột B (mẫu số)</th><th style="width:90px">Rộng(px)</th>
+          <th style="width:80px">Thứ tự</th><th>Kỳ A (tử số)</th><th style="width:36px"></th>
+          <th>Kỳ B (mẫu số)</th><th style="width:90px">Rộng(px)</th>
           <th style="width:70px;text-align:center">Hiện</th><th style="width:60px"></th>
         </tr></thead>
         <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--g4)">Chưa có cột so sánh nào</td></tr>'}</tbody>
@@ -848,429 +573,220 @@ async function themSoSanhAdmin() {
   const tu  = document.getElementById('ss-tu')?.value;
   const mau = document.getElementById('ss-mau')?.value;
   const thutu = document.getElementById('ss-thutu')?.value;
-  if (!tu || !mau) { toast('Hãy chọn đủ Cột A và Cột B.', 'er'); return; }
-  if (tu === mau)  { toast('Cột A và Cột B phải khác nhau.', 'er'); return; }
-  if (dsSoSanh.some(c => String(c.cot_tu) === tu && String(c.cot_mau) === mau)) { toast('Cột so sánh này đã có.', 'er'); return; }
+  if (!tu || !mau) { toast('Hãy chọn đủ Kỳ A và Kỳ B.', 'er'); return; }
+  if (tu === mau)  { toast('Kỳ A và Kỳ B phải khác nhau.', 'er'); return; }
+  if (dsSoSanh.some(c => c.ky_tu === tu && c.ky_mau === mau)) { toast('Cột so sánh này đã có.', 'er'); return; }
   try {
-    await DB.themSoSanh({ cot_tu: parseInt(tu), cot_mau: parseInt(mau), thu_tu: thutu ? parseInt(thutu) : null, hien_thi: true, do_rong_cot: 128 });
+    await DB.themSoSanh({ ky_tu: tu, ky_mau: mau, thu_tu: thutu ? parseInt(thutu) : null, hien_thi: true, do_rong_cot: 128 });
     toast('✅ Đã thêm cột so sánh!');
-    await hienCotBaoCao();
+    await hienKyBaoCao();
   } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
 }
 
 async function capNhatSoSanhField(id, col, val) {
+  const u = {}; u[col] = val;
   try {
-    await DB.suaSoSanh(id, {[col]: val});
+    await DB.suaSoSanh(id, u);
     toast('✅ Đã cập nhật!');
     const c = dsSoSanh.find(x => x.id === id);
     if (c) c[col] = val;
-    if (col === 'hien_thi') renderCotBaoCao();
+    if (col === 'hien_thi') renderKyBaoCao();
   } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
 }
 
 function xoaSoSanhAdmin(id) {
   const c = dsSoSanh.find(x => x.id === id);
   UTILS.xacNhan('Xóa cột so sánh',
-    `Xóa cột <b>${tenCotAdmin(c?.cot_tu)} ÷ ${tenCotAdmin(c?.cot_mau)} × 100%</b>?<br>Chỉ xóa cấu hình cột, không ảnh hưởng số liệu.`,
+    `Xóa cột <b>${tenKyAdmin(c?.ky_tu||'')} ÷ ${tenKyAdmin(c?.ky_mau||'')} × 100%</b>?<br>Chỉ xóa cấu hình cột, không ảnh hưởng số liệu.`,
     async () => {
-      try { await DB.xoaSoSanh(id); toast('✅ Đã xóa cột so sánh!'); await hienCotBaoCao(); }
-      catch(e) { toast('Lỗi: ' + e.message, 'er'); }
+      try {
+        await DB.xoaSoSanh(id);
+        toast('✅ Đã xóa cột so sánh!');
+        await hienKyBaoCao();
+      } catch(e) { toast('Lỗi: ' + e.message, 'er'); }
     });
 }
 
 function doSort(col) {
   if (sortCol === col) sortDir *= -1;
   else { sortCol = col; sortDir = 1; }
-  renderCotBaoCao();
+  renderKyBaoCao();
 }
 
-async function capNhatCotField(id, col, val) {
-  try { await DB.capNhatCot(id, {[col]: val}); toast('✅ Đã cập nhật!'); const c = dsCot.find(x=>x.id===id); if (c) c[col] = val; }
-  catch(e) { toast('Lỗi: '+e.message, 'er'); }
+async function capNhatKyField(ma, col, val) {
+  const u = {}; u[col] = val;
+  try {
+    await DB.capNhatKy(ma, u);
+    toast('✅ Đã cập nhật!');
+    const k = dsKy.find(x => x.ky_bao_cao === ma);
+    if (k) k[col] = val;
+  } catch(e) { toast('Lỗi: '+e.message, 'er'); }
 }
 
-function xoaCotAdmin(id) {
-  const c = dsCot.find(x=>x.id===id);
-  UTILS.xacNhan('🗑 Xoá cột báo cáo',
-    `Xoá cột <strong>${c?.tieu_de||c?.ma_cot}</strong>?<br><span style="color:var(--red);font-size:12px">⚠️ Toàn bộ số liệu đã nhập của cột này sẽ bị xoá vĩnh viễn!</span>`,
-    async () => {
-      try { await DB.xoaCot(id); dsCot = dsCot.filter(x=>x.id!==id); toast('✅ Đã xoá!'); renderCotBaoCao(); }
-      catch(e) { toast('Lỗi: '+e.message, 'er'); }
-    });
-}
-
-// "Tạo kỳ mới" — tự sinh cột cho MỌI loại đang co_ban=true ở (tháng, năm) chọn.
-async function taoKyMoiHangLoat() {
-  UTILS.xacNhan('⚡ Tạo kỳ mới (tự sinh loại cơ bản)',
-    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
-      <div style="font-size:12px;color:var(--g5)">Hệ thống sẽ tự tạo cột cho mọi loại số liệu đang đánh dấu "Cơ bản" (xem mục Loại số liệu), bỏ qua loại nào đã có cột ở tháng/năm này.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THÁNG *</label>
-          <input id="tkm-thang" type="number" min="1" max="12" placeholder="7" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
-        <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">NĂM *</label>
-          <input id="tkm-nam" type="number" placeholder="${new Date().getFullYear()}" value="${new Date().getFullYear()}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-size:13px;outline:none"></div>
-      </div>
-    </div>`,
-    async () => {
-      const thang = parseInt(document.getElementById('tkm-thang')?.value);
-      const nam = parseInt(document.getElementById('tkm-nam')?.value);
-      if (!thang || thang<1 || thang>12 || !nam) { toast('Vui lòng nhập đủ Tháng (1-12) và Năm!','er'); return; }
-      const loaiCoBan = dsLoai.filter(l=>l.co_ban);
-      if (!loaiCoBan.length) { toast('Chưa có loại số liệu nào đánh dấu "Cơ bản".','er'); return; }
-      let soTao=0, soBoQua=0, loi=[];
-      for (const loai of loaiCoBan) {
-        try {
-          const daCo = await DB.timCot(thang, nam, loai.ma);
-          if (daCo && daCo.length) { soBoQua++; continue; }
-          const maCot = UTILS.sinhMaCot(loai.ma, thang, nam);
-          const tieuDe = UTILS.sinhTieuDe(loai.mau_tieu_de, thang, nam) || maCot;
-          const moi = await DB.themCot({ ma_cot:maCot, thang, nam, loai:loai.ma, tieu_de:tieuDe, khoa_nhap_lieu:false, dua_vao_bieu:true, do_rong_cot:120 });
-          dsCot.push(moi);
-          soTao++;
-        } catch(e) { loi.push(loai.ten+': '+e.message); }
-      }
-      if (loi.length) toast(`⚠️ Tạo ${soTao} cột, bỏ qua ${soBoQua}. Lỗi: `+loi.join('; '), 'er');
-      else toast(`✅ Đã tạo ${soTao} cột mới cho ${thang}/${nam}`+(soBoQua?` (bỏ qua ${soBoQua} cột đã có)`:'')+'!');
-      renderCotBaoCao();
-    });
+// Tự sinh mã kỳ
+function sinhMaKy() {
+  const thang = document.getElementById('ky-thang').value;
+  const nam   = document.getElementById('ky-nam').value;
+  const loai  = document.getElementById('ky-loai').value;
+  if (!thang || !nam) return;
+  const t = String(thang).padStart(2,'0');
+  const prefix = {
+    'Ước thực hiện': 'uoc',
+    'Ước lũy kế':    'uoclk',
+    'Chính thức':    'ct',
+    'Lũy kế chính thức': 'lkct',
+    'So cùng kỳ':   'sck',
+  }[loai] || 'uoc';
+  document.getElementById('ky-ma').value = `${prefix}_${t}/${nam}`;
+  // Sinh tên đầy đủ
+  const tenLoai = {
+    'Ước thực hiện': `Ước tháng ${thang} năm ${nam}`,
+    'Ước lũy kế':   `Ước lũy kế đến tháng ${thang} năm ${nam}`,
+    'Chính thức':   `Chính thức tháng ${thang} năm ${nam}`,
+    'Lũy kế chính thức': `Lũy kế chính thức đến tháng ${thang} năm ${nam}`,
+    'So cùng kỳ':   `So cùng kỳ tháng ${thang} năm ${nam}`,
+  }[loai] || '';
+  if (!document.getElementById('ky-ten').value || document.getElementById('ky-ten').dataset.auto==='1') {
+    document.getElementById('ky-ten').value = tenLoai;
+    document.getElementById('ky-ten').dataset.auto = '1';
+  }
 }
 
 const ADMIN = {
-  // ── CỘT BÁO CÁO (thêm/sửa 1 cột riêng lẻ — kể cả loại không "cơ bản" hoặc kế hoạch) ──
-  moModalCot(cotId=null) {
-    editCotId = cotId;
-    const c = cotId ? dsCot.find(x=>x.id===cotId) : null;
-    document.getElementById('cot-modal-title').textContent = c ? 'Sửa cột báo cáo' : 'Thêm cột báo cáo';
-    document.getElementById('cot-loai').innerHTML = dsLoai.map(l=>`<option value="${l.ma}">${l.ten}</option>`).join('');
-    document.getElementById('cot-thang').value = c?.thang || (new Date().getMonth()+1);
-    document.getElementById('cot-nam').value   = c?.nam   || new Date().getFullYear();
-    document.getElementById('cot-loai').value  = c?.loai  || (dsLoai[0]?.ma || '');
-    document.getElementById('cot-hauto').value = '';
-    document.getElementById('cot-ma').value    = c?.ma_cot  || '';
-    document.getElementById('cot-ten').value   = c?.tieu_de || '';
-    document.getElementById('cot-ten').dataset.auto = c ? '0' : '1';
-    document.getElementById('cot-thutu').value  = c?.thu_tu_hien_thi || '';
-    document.getElementById('cot-dorong').value = c?.do_rong_cot || 120;
-    document.getElementById('err-cot').textContent = '';
-    ADMIN.sinhCotAuto();
-    UTILS.moModal('modal-cot');
+  moModalKy(maKy=null) {
+    editKyId = maKy;
+    const k = maKy ? dsKy.find(x=>x.ky_bao_cao===maKy) : null;
+    document.getElementById('ky-modal-title').textContent = k ? 'Sửa kỳ báo cáo' : 'Thêm kỳ báo cáo';
+    document.getElementById('ky-thang').value  = k?.thang_bao_cao || '';
+    document.getElementById('ky-nam').value    = k?.nam_bao_cao   || new Date().getFullYear();
+    document.getElementById('ky-loai').value   = k?.loai_so_lieu  || 'Ước thực hiện';
+    document.getElementById('ky-ma').value     = k?.ky_bao_cao    || '';
+    document.getElementById('ky-ten').value    = k?.ky_bao_cao_tieu_de || '';
+    document.getElementById('ky-ten').dataset.auto = '0';
+    document.getElementById('ky-nguon').value  = k?.nguon_so_lieu || '';
+    document.getElementById('ky-thutu').value  = k?.thu_tu_hien_thi || '';
+    document.getElementById('ky-dorong').value = k?.do_rong_cot  || 120;
+    document.getElementById('err-ky').textContent = '';
+    if (!k) sinhMaKy();
+    UTILS.moModal('modal-ky');
   },
 
-  sinhCotAuto() {
-    const loai = document.getElementById('cot-loai').value;
-    const isKH = loai === 'kh';
-    document.getElementById('cot-hauto-wrap').style.display = isKH ? '' : 'none';
-    document.getElementById('cot-thang-wrap').style.display = isKH ? 'none' : '';
-    const thang = isKH ? 1 : (parseInt(document.getElementById('cot-thang').value) || null);
-    const nam = parseInt(document.getElementById('cot-nam').value) || null;
-    const hauTo = document.getElementById('cot-hauto').value.trim();
-    if (!nam || (!isKH && !thang)) return;
-    document.getElementById('cot-ma').value = UTILS.sinhMaCot(loai, thang, nam, hauTo);
-    const loaiObj = dsLoai.find(l=>l.ma===loai);
-    const tieuDeSinh = UTILS.sinhTieuDe(loaiObj?.mau_tieu_de, thang, nam);
-    const tenEl = document.getElementById('cot-ten');
-    if (tenEl.dataset.auto === '1' && tieuDeSinh) tenEl.value = tieuDeSinh;
-  },
-
-  async luuCot() {
-    const loai = document.getElementById('cot-loai').value;
-    const isKH = loai === 'kh';
-    const thang = isKH ? 1 : parseInt(document.getElementById('cot-thang').value);
-    const nam = parseInt(document.getElementById('cot-nam').value);
-    const maCot = document.getElementById('cot-ma').value.trim();
-    const tieuDe = document.getElementById('cot-ten').value.trim();
-    const thutu = document.getElementById('cot-thutu').value;
-    const dorong = parseInt(document.getElementById('cot-dorong').value) || 120;
-    const err = document.getElementById('err-cot');
+  async luuKy() {
+    const ma    = document.getElementById('ky-ma').value.trim();
+    const ten   = document.getElementById('ky-ten').value.trim();
+    const thang = parseInt(document.getElementById('ky-thang').value);
+    const nam   = parseInt(document.getElementById('ky-nam').value);
+    const loai  = document.getElementById('ky-loai').value;
+    const nguon = document.getElementById('ky-nguon').value.trim();
+    const thutu = document.getElementById('ky-thutu').value;
+    const dorong= parseInt(document.getElementById('ky-dorong').value)||120;
+    const err   = document.getElementById('err-ky');
     err.textContent = '';
-    if (!maCot || !tieuDe || !nam || (!isKH && !thang)) { err.textContent = 'Vui lòng điền đủ thông tin!'; return; }
-    const row = { ma_cot:maCot, thang, nam, loai, tieu_de:tieuDe, thu_tu_hien_thi: thutu?parseInt(thutu):null, do_rong_cot: dorong };
+    if (!ma||!ten||!thang||!nam) { err.textContent='Vui lòng điền đủ thông tin!'; return; }
+    const row = {
+      ky_bao_cao: ma, ky_bao_cao_tieu_de: ten,
+      thang_bao_cao: thang, nam_bao_cao: nam,
+      loai_so_lieu: loai, nguon_so_lieu: nguon,
+      thu_tu_hien_thi: thutu?parseInt(thutu):null,
+      do_rong_cot: dorong,
+      khoa_nhap_lieu: false, dua_vao_bieu_bao_cao: true
+    };
     try {
-      if (editCotId) {
-        await DB.capNhatCot(editCotId, row);
-        const i = dsCot.findIndex(x=>x.id===editCotId);
-        if (i>-1) dsCot[i] = {...dsCot[i], ...row};
-      } else {
-        const moi = await DB.themCot({...row, khoa_nhap_lieu:false, dua_vao_bieu:true});
-        dsCot.push(moi);
-      }
-      UTILS.dongModal('modal-cot');
-      toast('✅ Đã lưu cột báo cáo!');
-      renderCotBaoCao();
-    } catch(e) {
-      err.textContent = 'Lỗi: ' + (/duplicate|unique/.test(e.message) ? 'Đã tồn tại cột (tháng, năm, loại) này.' : e.message);
-    }
-  },
-
-  // ── TÀI KHOẢN ──
-  // Bước 7a: chép mật khẩu vừa tạo/đặt lại vào clipboard. Là nút RIÊNG, tách khỏi
-  // nút "Đóng" — admin có thể chép hoặc tự nhớ. Lưu mật khẩu ở _mkChep để nút đọc
-  // (tránh nhét chuỗi vào onclick gây lỗi ký tự đặc biệt).
-  _mkChep: '',
-  async chepMK(ev) {
-    try { if (navigator.clipboard) await navigator.clipboard.writeText(this._mkChep || ''); } catch (e) { /* trình duyệt chặn — admin tự bôi đen chép */ }
-    const b = ev && ev.target; if (b) { b.textContent = '✓ Đã chép'; b.disabled = true; }
-  },
-
-  moModalTK(id=null) {
-    editHoSoId = id;
-    const r = id ? dsTaiKhoan.find(x=>x.id===id) : null;
-    document.getElementById('tk-modal-title').textContent = r ? 'Sửa tài khoản' : 'Thêm tài khoản';
-    document.getElementById('tk-modal-sub').textContent = r
-      ? 'Không đổi được email/mật khẩu ở đây — dùng nút "🔑 Đặt lại MK" ở danh sách.'
-      : 'Tài khoản mới sẽ đăng nhập bằng email + mật khẩu bên dưới.';
-    document.getElementById('tk-email-wrap').style.display = r ? 'none' : '';
-    document.getElementById('tk-mk-wrap').style.display = r ? 'none' : '';
-    document.getElementById('tk-email').value = '';
-    document.getElementById('tk-mk').value = '';
-    document.getElementById('tk-donvi').innerHTML = `<option value="">— Chưa gán —</option>` +
-      dsDonVi.map(d=>`<option value="${d.id}" ${r?.don_vi_id===d.id?'selected':''}>${d.ten}</option>`).join('');
-    document.getElementById('tk-hoten').value  = r?.ho_ten  || '';
-    document.getElementById('tk-vaitro').value = r?.vai_tro || 'editor';
-    document.getElementById('err-tk').textContent = '';
-    document.getElementById('err-tk').style.color = 'var(--red)';
-    // Khôi phục cụm nút gốc (lần tạo trước thành công đã thay bằng nút chép/đóng).
-    // Bước 7a: nút đóng LUÔN có; khi đang thêm dở dang, "Đóng" = huỷ bỏ.
-    const btns = document.querySelector('#modal-tk .mbtns');
-    if (btns) btns.innerHTML =
-      `<button class="btn-p" onclick="ADMIN.luuTK()">💾 Lưu</button>` +
-      `<button class="btn-g" onclick="UTILS.dongModal('modal-tk')">Đóng</button>`;
-    UTILS.moModal('modal-tk');
-  },
-
-  sinhMKNgauNhien() {
-    document.getElementById('tk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
-  },
-
-  async luuTK() {
-    const err = document.getElementById('err-tk');
-    err.textContent = ''; err.style.color = 'var(--red)';
-    const donViId = document.getElementById('tk-donvi').value ? parseInt(document.getElementById('tk-donvi').value) : null;
-    const hoten = document.getElementById('tk-hoten').value.trim();
-    const vaitro = document.getElementById('tk-vaitro').value;
-    if (!hoten) { err.textContent = 'Vui lòng điền họ tên!'; return; }
-
-    if (editHoSoId) {
-      try {
-        await DB.suaHoSo(editHoSoId, { don_vi_id:donViId, ho_ten:hoten, vai_tro:vaitro });
-        UTILS.dongModal('modal-tk');
-        toast('✅ Đã lưu tài khoản!');
-        await loadTaiKhoan();
-        await hienTaiKhoan();
-      } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
-      return;
-    }
-
-    const email = document.getElementById('tk-email').value.trim();
-    const mk = document.getElementById('tk-mk').value;
-    if (!email) { err.textContent = 'Vui lòng nhập email!'; return; }
-    if (!mk || mk.length < 8) { err.textContent = 'Mật khẩu phải có ít nhất 8 ký tự!'; return; }
-    try {
-      await DB.taoTaiKhoan(email, mk, { don_vi_id:donViId, ho_ten:hoten, vai_tro:vaitro });
-      err.style.color = 'var(--xc)';
-      err.innerHTML = `✅ Đã tạo tài khoản <strong>${email}</strong> — mật khẩu ban đầu: <strong class="mono">${mk}</strong><br>
-        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi cho đơn vị ngay — sẽ không hiện lại được. Người này BUỘC đổi mật khẩu ngay lần đăng nhập đầu tiên.</span>`;
-      // Bước 7a: tạo xong → 2 nút RIÊNG: "Chép mật khẩu" (tuỳ dùng) và "Đóng"
-      // (luôn có). Không gộp chung như trước, vì admin có thể tự nhớ, không cần chép.
-      // Ngăn bấm "Lưu" lần nữa gây tạo trùng.
-      this._mkChep = mk;
-      const btns = document.querySelector('#modal-tk .mbtns');
-      if (btns) btns.innerHTML =
-        `<button class="btn-g" onclick="ADMIN.chepMK(event)">📋 Chép mật khẩu</button>` +
-        `<button class="btn-p" onclick="UTILS.dongModal('modal-tk')">Đóng</button>`;
-      await loadTaiKhoan();
-      await hienTaiKhoan();
-    } catch(e) {
-      err.style.color = 'var(--red)';
-      err.textContent = 'Lỗi: ' + (/already registered|duplicate|đã có tài khoản/.test(e.message) ? 'Email này đã có tài khoản.' : e.message);
-    }
-  },
-
-  // ── ĐẶT LẠI MẬT KHẨU (chỉ admin toàn quyền — RPC dat_lai_mat_khau) ──
-  moModalDatLaiMK(id, email) {
-    editHoSoId = id;
-    document.getElementById('dlmk-email').textContent = email;
-    document.getElementById('dlmk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
-    document.getElementById('err-dlmk').textContent = '';
-    document.getElementById('err-dlmk').style.color = 'var(--red)';
-    // Khôi phục cụm nút gốc (lần đặt lại trước thành công đã thay bằng nút chép/đóng).
-    // Bước 7a: nút đóng LUÔN có; đang thao tác dở mà bấm "Đóng" = huỷ bỏ.
-    const btns = document.querySelector('#modal-dlmk .mbtns');
-    if (btns) btns.innerHTML =
-      `<button class="btn-p" onclick="ADMIN.luuDatLaiMK()">💾 Đặt lại</button>` +
-      `<button class="btn-g" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>`;
-    UTILS.moModal('modal-dlmk');
-  },
-
-  sinhMKDatLai() {
-    document.getElementById('dlmk-mk').value = 'Bc@' + Math.random().toString(36).slice(-8);
-  },
-
-  async luuDatLaiMK() {
-    const err = document.getElementById('err-dlmk');
-    const mk = document.getElementById('dlmk-mk').value;
-    err.textContent = ''; err.style.color = 'var(--red)';
-    if (!mk || mk.length < 8) { err.textContent = 'Mật khẩu phải có ít nhất 8 ký tự!'; return; }
-    try {
-      await DB.datLaiMatKhau(editHoSoId, mk);
-      err.style.color = 'var(--xc)';
-      err.innerHTML = `✅ Đã đặt lại — mật khẩu mới: <strong class="mono">${mk}</strong><br>
-        <span style="font-size:11px;color:var(--g4)">Chép lại và gửi ngay — sẽ không hiện lại được. Phiên đăng nhập cũ của người này đã bị huỷ; lần vào tiếp theo BUỘC đổi mật khẩu.</span>`;
-      // Bước 7a: đặt lại xong → 2 nút RIÊNG: "Chép mật khẩu" (tuỳ dùng) + "Đóng"
-      // (luôn có). Ngăn bấm "Đặt lại" lần nữa gây đổi mật khẩu thừa.
-      this._mkChep = mk;
-      const btns = document.querySelector('#modal-dlmk .mbtns');
-      if (btns) btns.innerHTML =
-        `<button class="btn-g" onclick="ADMIN.chepMK(event)">📋 Chép mật khẩu</button>` +
-        `<button class="btn-p" onclick="UTILS.dongModal('modal-dlmk')">Đóng</button>`;
-      await loadTaiKhoan();
+      if (editKyId) await DB.capNhatKy(editKyId, row);
+      else await DB.themKy(row);
+      UTILS.dongModal('modal-ky');
+      toast('✅ Đã lưu kỳ báo cáo!');
+      await hienKyBaoCao();
     } catch(e) { err.textContent = 'Lỗi: ' + e.message; }
   },
 
-  // ── ĐƠN VỊ: bảng xem thêm (quyen_doc_bang) ──
-  async luuPQ() {
-    // Bỏ qua bảng "mình nhập" (checkbox disabled) — không cần ghi dòng ở
-    // quyen_doc_bang vì duoc_doc_bang() đã luôn cho đọc bảng mình nhập.
-    const checked = dsBang
-      .filter(b => b.don_vi_nhap_id !== xemDonViId)
-      .filter(b => document.getElementById('pq-'+b.bang)?.checked)
-      .map(b => b.bang);
+  // ── TÀI KHOẢN ──
+  moModalTK(id=null) {
+    editTKId = id;
+    const r = id ? dsTK.find(x=>x.id===id) : null;
+    document.getElementById('tk-modal-title').textContent = r ? 'Sửa tài khoản' : 'Thêm tài khoản';
+    document.getElementById('tk-donvi').value   = r?.don_vi   || '';
+    document.getElementById('tk-hoten').value   = r?.ho_ten   || '';
+    document.getElementById('tk-email').value   = r?.email    || '';
+    document.getElementById('tk-vaitro').value  = r?.vai_tro  || 'editor';
+    document.getElementById('err-tk').textContent = '';
+    UTILS.moModal('modal-tk');
+  },
+
+  async luuTK() {
+    const dv = document.getElementById('tk-donvi').value.trim();
+    const ht = document.getElementById('tk-hoten').value.trim();
+    const em = document.getElementById('tk-email').value.trim();
+    const vt = document.getElementById('tk-vaitro').value;
+    const err = document.getElementById('err-tk');
+    err.textContent = '';
+    if (!dv||!ht) { err.textContent='Vui lòng điền đơn vị và họ tên!'; return; }
+    const row = { don_vi:dv, ho_ten:ht, email:em||null, vai_tro:vt };
     try {
-      await DB.luuQuyenDocBang(xemDonViId, checked);
+      if (editTKId) await DB.suaTaiKhoan(editTKId, row);
+      else await DB.themTaiKhoan({...row, mat_khau:CONFIG.MAT_KHAU_MAC_DINH, trang_thai:true});
+      UTILS.dongModal('modal-tk');
+      toast('✅ Đã lưu tài khoản!');
+      await hienTaiKhoan();
+    } catch(e) { err.textContent='Lỗi: '+e.message; }
+  },
+
+  async luuPQ() {
+    const checked = dsBang.filter(b=>document.getElementById('pq-'+b.bang)?.checked).map(b=>b.bang);
+    try {
+      await DB.luuPhanQuyen(pqTKId, checked);
       UTILS.dongModal('modal-pq');
-      toast('✅ Đã lưu quyền xem!');
-      await loadQuyenDoc();
-      renderDonVi();
+      toast('✅ Đã lưu phân quyền!');
+      await hienPhanQuyen();
     } catch(e) { toast('Lỗi: '+e.message,'er'); }
   },
 };
 
-// ════════════════════════════════════════════════════════════
-// DUYỆT MỞ KHÓA (yeu_cau_mo_khoa — bổ sung Bước 5)
-// ════════════════════════════════════════════════════════════
-async function hienDuyetMoKhoa() {
-  setAct('ni-mk');
-  document.getElementById('topbar-t').textContent = 'Duyệt yêu cầu mở khóa';
-  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
-  if (!dsBang.length) await loadBang();
-  let dsCho = [], dsDaXuLy = [];
-  try {
-    const { data, error } = await sb.from('yeu_cau_mo_khoa')
-      .select('*, ho_so:user_id(don_vi,ho_ten)')
-      .order('tao_luc', { ascending: false });
-    if (error) throw error;
-    dsCho = (data||[]).filter(r=>r.trang_thai==='cho_duyet');
-    dsDaXuLy = (data||[]).filter(r=>r.trang_thai!=='cho_duyet').slice(0,20);
-  } catch(e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
-    return;
-  }
-  const tenBang = mb => dsBang.find(b=>b.bang===mb)?.ten_bang || mb;
-  const gioVN = t => t ? new Date(t).toLocaleString('vi-VN') : '';
-
-  const rowsCho = dsCho.map(r => `<tr>
-    <td><strong>${tenBang(r.bang)}</strong></td>
-    <td>${r.ho_so?.don_vi||'--'} <span style="color:var(--g4);font-size:11px">${r.ho_so?.ho_ten||''}</span></td>
-    <td style="font-size:12px">${(r.ly_do||'--').replace(/</g,'&lt;')}</td>
-    <td style="font-size:11px;color:var(--g4)">${gioVN(r.tao_luc)}</td>
-    <td style="white-space:nowrap">
-      <button class="btn primary" style="padding:4px 10px;margin-right:4px" onclick="xuLyMoKhoa(${r.id},true)">✅ Đồng ý</button>
-      <button class="btn danger" style="padding:4px 10px" onclick="xuLyMoKhoa(${r.id},false)">❌ Từ chối</button>
-    </td>
-  </tr>`).join('');
-
-  const rowsDaXuLy = dsDaXuLy.map(r => `<tr>
-    <td>${tenBang(r.bang)}</td>
-    <td>${r.ho_so?.don_vi||'--'}</td>
-    <td><span class="badge ${r.trang_thai==='da_mo'?'green':'red'}">${r.trang_thai==='da_mo'?'✅ Đã mở':'❌ Từ chối'}</span></td>
-    <td style="font-size:11px;color:var(--g4)">${gioVN(r.xu_ly_luc)}</td>
-  </tr>`).join('');
-
-  document.getElementById('content').innerHTML = `
-    <div class="card">
-      <div class="card-head"><h3>🔓 Yêu cầu đang chờ duyệt <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsCho.length})</span></h3></div>
-      <div style="overflow-x:auto"><table class="dt">
-        <thead><tr><th>Bảng</th><th>Đơn vị đề nghị</th><th>Lý do</th><th>Thời gian</th><th></th></tr></thead>
-        <tbody>${rowsCho||'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--g4)">Không có yêu cầu nào đang chờ.</td></tr>'}</tbody>
-      </table></div>
-    </div>
-    <div class="card" style="margin-top:12px">
-      <div class="card-head"><h3>📜 Lịch sử xử lý gần đây</h3></div>
-      <div style="overflow-x:auto"><table class="dt">
-        <thead><tr><th>Bảng</th><th>Đơn vị</th><th>Kết quả</th><th>Thời gian xử lý</th></tr></thead>
-        <tbody>${rowsDaXuLy||'<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--g4)">Chưa có.</td></tr>'}</tbody>
-      </table></div>
-    </div>`;
+function xoaKy(ma) {
+  UTILS.xacNhan('Xoá kỳ báo cáo',`Xoá kỳ "<strong>${ma}</strong>"?`,
+    async()=>{try{await DB.xoaKy(ma);toast('✅ Đã xoá!');await hienKyBaoCao();}catch(e){toast('Lỗi: '+e.message,'er')}});
 }
 
-function xuLyMoKhoa(id, dongY) {
-  UTILS.xacNhan(dongY ? '✅ Đồng ý mở khóa' : '❌ Từ chối yêu cầu',
-    dongY ? 'Mở khóa lại toàn bộ chỉ tiêu của bảng này để đơn vị nhập tiếp?' : 'Từ chối yêu cầu này?',
-    async () => {
-      try {
-        await DB.duyetMoKhoa(id, dongY);
-        toast(dongY ? '✅ Đã mở khóa!' : 'Đã từ chối.');
-        await hienDuyetMoKhoa();
-        await capNhatBadgeMoKhoa();
-      } catch(e) { toast('Lỗi: '+e.message,'er'); }
-    });
-}
-
-// ════════════════════════════════════════════════════════════
-// TÀI KHOẢN (ho_so + auth.users qua RPC ds_tai_khoan — Bước 6c/6d)
-// ════════════════════════════════════════════════════════════
+// ── TÀI KHOẢN ──
 async function hienTaiKhoan() {
   setAct('ni-tk');
   document.getElementById('topbar-t').textContent = 'Quản lý tài khoản';
-  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
-  try {
-    await Promise.all([loadTaiKhoan(), loadDonVi()]);
-  } catch(e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
-    return;
-  }
-  const toanQuyen = UTILS.laAdminToanQuyen(user);
-  const nhanVT = vt => ({admin:'⚙️ Admin', admin_han_che:'🛠️ Admin hạn chế', editor:'✏️ Editor'}[vt] || vt);
+  await loadTK();
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-head">
-        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsTaiKhoan.length})</span></h3>
-        ${toanQuyen ? '<button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>' : ''}
+        <h3>👤 Tài khoản <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsTK.length})</span></h3>
+        <button class="btn primary" onclick="ADMIN.moModalTK()">+ Thêm tài khoản</button>
       </div>
-      ${!toanQuyen ? `<div style="padding:8px 16px;font-size:11px;color:var(--amb,#92400e);background:#fef3c7;border-bottom:1px solid var(--g2)">
-        🛠️ Quản trị hạn chế chỉ XEM được danh sách — tạo tài khoản/đổi vai trò/khoá/đặt lại mật khẩu do quản trị viên toàn quyền thực hiện.
-      </div>` : ''}
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>
-            <th>Email</th><th>Đơn vị</th><th>Người phụ trách</th>
+            <th>Đơn vị</th><th>Người phụ trách</th><th>Email</th>
             <th style="text-align:center">Vai trò</th>
             <th style="text-align:center">Trạng thái</th>
-            <th>Đăng nhập gần nhất</th><th></th>
+            <th style="text-align:center">Mật khẩu</th><th></th>
           </tr></thead>
-          <tbody>${dsTaiKhoan.map(r=>`<tr>
-            <td class="mono" style="font-size:12px">${r.email}${r.phai_doi_mat_khau?' <span class="badge yellow" title="Chưa đổi mật khẩu admin cấp">⏳ chờ đổi MK</span>':''}</td>
-            <td><strong>${r.ten_don_vi||'--'}</strong></td>
-            <td>${r.ho_ten||'--'}</td>
+          <tbody>${dsTK.map(r=>`<tr>
+            <td><strong>${r.don_vi}</strong></td>
+            <td>${r.ho_ten}</td>
+            <td class="mono" style="font-size:11px">${r.email||'--'}</td>
+            <td style="text-align:center"><span class="badge ${r.vai_tro==='admin'?'blue':'green'}">${r.vai_tro==='admin'?'⚙️ Admin':'✏️ Editor'}</span></td>
             <td style="text-align:center">
-              ${toanQuyen && r.id!==user.id ? `<select class="ct-sel" style="width:auto" onchange="doiVaiTro('${r.id}', this.value)">
-                <option value="editor" ${r.vai_tro==='editor'?'selected':''}>✏️ Editor</option>
-                <option value="admin_han_che" ${r.vai_tro==='admin_han_che'?'selected':''}>🛠️ Admin hạn chế</option>
-                <option value="admin" ${r.vai_tro==='admin'?'selected':''}>⚙️ Admin toàn quyền</option>
-              </select>` : `<span class="badge ${r.vai_tro==='admin'?'blue':r.vai_tro==='admin_han_che'?'yellow':'gray'}">${nhanVT(r.vai_tro)}</span>`}
-            </td>
-            <td style="text-align:center">
-              ${toanQuyen && r.id!==user.id ? `<label class="sw-wrap" style="justify-content:center">
+              <label class="sw-wrap" style="justify-content:center">
                 <label class="sw"><input type="checkbox" ${r.trang_thai?'checked':''}
-                  onchange="toggleHoSo('${r.id}',this.checked)">
+                  onchange="toggleTK(${r.id},'trang_thai',this.checked)">
                   <span class="sw-slider"></span></label>
                 <span class="sw-lbl">${r.trang_thai?'Hoạt động':'Khoá'}</span>
-              </label>` : `<span class="badge ${r.trang_thai?'green':'red'}">${r.trang_thai?'Hoạt động':'Khoá'}</span>`}
+              </label>
             </td>
-            <td style="font-size:11px;color:var(--g4)">${r.lan_dang_nhap_cuoi ? new Date(r.lan_dang_nhap_cuoi).toLocaleString('vi-VN') : '--'}</td>
+            <td style="text-align:center">
+              <span class="badge ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'gray':'green'}">
+                ${!r.mat_khau||r.mat_khau===CONFIG.MAT_KHAU_MAC_DINH?'🔑 Mặc định':'✅ Đã đổi'}</span>
+              ${r.id!==user.id?`<button class="btn ghost" style="margin-left:4px;padding:3px 8px;font-size:11px" onclick="resetPass(${r.id},'${r.don_vi}')">Reset</button>`:''}
+            </td>
             <td style="white-space:nowrap">
-              ${toanQuyen ? `<button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="ADMIN.moModalTK('${r.id}')">✏️ Sửa</button>
-              <button class="btn yellow" style="padding:4px 8px" onclick="ADMIN.moModalDatLaiMK('${r.id}','${r.email}')">🔑 Đặt lại MK</button>` : ''}
+              <button class="btn ghost" style="margin-right:3px" onclick="ADMIN.moModalTK(${r.id})">✏️</button>
+              ${r.id!==user.id?`<button class="btn danger" onclick="xoaTK(${r.id},'${r.don_vi}')">🗑</button>`:''}
             </td>
           </tr>`).join('')}</tbody>
         </table>
@@ -1278,152 +794,51 @@ async function hienTaiKhoan() {
     </div>`;
 }
 
-async function doiVaiTro(id, vt) {
-  if (id === user.id) { toast('Không thể tự đổi vai trò của chính mình.', 'er'); await hienTaiKhoan(); return; }
-  const nhan = {admin:'Admin toàn quyền', admin_han_che:'Admin hạn chế', editor:'Editor'}[vt] || vt;
-  UTILS.xacNhan('Đổi vai trò', `Đổi vai trò thành <strong>${nhan}</strong>?`,
-    async () => {
-      try { await DB.suaHoSo(id, {vai_tro:vt}); toast('✅ Đã đổi vai trò!'); await hienTaiKhoan(); }
-      catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
-    });
-}
+async function toggleTK(id,col,val){const u={};u[col]=val;await DB.suaTaiKhoan(id,u);toast('✅');await loadTK();await hienTaiKhoan();}
+function resetPass(id,dv){UTILS.xacNhan('Reset mật khẩu',`Reset mật khẩu <strong>${dv}</strong> về <strong>${CONFIG.MAT_KHAU_MAC_DINH}</strong>?`,async()=>{await DB.suaTaiKhoan(id,{mat_khau:CONFIG.MAT_KHAU_MAC_DINH});toast('✅ Đã reset!');await hienTaiKhoan();})}
+function xoaTK(id,dv){UTILS.xacNhan('Xoá tài khoản',`Xoá <strong>${dv}</strong>?`,async()=>{await DB.xoaTaiKhoan(id);toast('✅ Đã xoá!');await hienTaiKhoan();})}
 
-async function toggleHoSo(id, val) {
-  if (id === user.id && !val) {   // tự khoá chính mình — chặn sớm, RPC cũng chặn
-    toast('Không thể tự khoá tài khoản của chính mình.', 'er'); await hienTaiKhoan(); return;
-  }
-  // BƯỚC 7A: gọi RPC đồng bộ 2 lớp (auth banned_until + ho_so.trang_thai) thay
-  // vì chỉ lật ho_so.trang_thai — nếu không, mở lại tài khoản đang bị ban ở lớp
-  // Auth vẫn báo "User is banned".
-  try { await DB.datTrangThaiTaiKhoan(id, val); toast(val?'✅ Đã mở lại!':'🔒 Đã khoá!'); }
-  catch(e) { toast('Lỗi: '+e.message,'er'); await hienTaiKhoan(); }
-}
-
-// ════════════════════════════════════════════════════════════
-// ĐƠN VỊ (don_vi — MỚI Bước 6c/6d, thay "Phân quyền" phan_quyen_bang cũ)
-// ════════════════════════════════════════════════════════════
-async function hienDonVi() {
-  setAct('ni-donvi');
-  document.getElementById('topbar-t').textContent = 'Quản lý đơn vị';
-  await Promise.all([loadDonVi(), loadBang(), loadQuyenDoc()]);
-  renderDonVi();
-}
-
-async function loadQuyenDoc() { dsQuyenDoc = await DB.layTatCaQuyenDocBang(); }
-
-function renderDonVi() {
-  const rows = dsDonVi.map(d => {
-    const bangNhap = dsBang.filter(b=>b.don_vi_nhap_id===d.id);
-    const bangXemThem = dsQuyenDoc.filter(q=>q.don_vi_id===d.id).map(q=>q.bang);
-    const tenXemThem = bangXemThem.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
-    return `<tr>
-      <td style="text-align:center;padding:4px 8px">
-        <input class="num-inp" type="number" min="1" value="${d.thu_tu||''}" placeholder="--"
-          onchange="luuDonViField(${d.id},'thu_tu',this.value===''?null:parseInt(this.value))">
-      </td>
-      <td>
-        <input type="text" value="${(d.ten||'').replace(/"/g,'&quot;')}"
-          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
-          onchange="luuDonViField(${d.id},'ten',this.value)">
-      </td>
-      <td>${bangNhap.length?bangNhap.map(b=>`<span class="badge blue" style="margin:2px">${b.ten_bang}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa giao bảng nào</span>'}</td>
-      <td>${tenXemThem.length?tenXemThem.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Không có</span>'}</td>
-      <td style="text-align:center">
-        <label class="sw-wrap" style="justify-content:center">
-          <label class="sw"><input type="checkbox" ${d.trang_thai?'checked':''}
-            onchange="luuDonViField(${d.id},'trang_thai',this.checked)">
-            <span class="sw-slider"></span></label>
-          <span class="sw-lbl">${d.trang_thai?'Hoạt động':'Ngưng'}</span>
-        </label>
-      </td>
-      <td style="white-space:nowrap">
-        <button class="btn ghost" style="padding:4px 8px;margin-right:3px" onclick="moModalXemThem(${d.id})">🔑 Xem thêm</button>
-        ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaDonViAdmin(${d.id},'${(d.ten||'').replace(/'/g,"\\'")}')">🗑</button>` : ''}
-      </td>
-    </tr>`;
-  }).join('');
-
+// ── PHÂN QUYỀN ──
+async function hienPhanQuyen() {
+  setAct('ni-pq');
+  document.getElementById('topbar-t').textContent = 'Phân quyền nhập liệu';
+  await Promise.all([loadTK(), loadBang()]);
+  const pqAll = await DB.layTatCaPhanQuyen();
+  const editors = dsTK.filter(r=>r.vai_tro==='editor');
   document.getElementById('content').innerHTML = `
     <div class="card">
-      <div class="card-head">
-        <h3>🏢 Đơn vị <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsDonVi.length})</span></h3>
-        <button class="btn primary" onclick="moModalThemDonVi()">+ Thêm đơn vị</button>
-      </div>
-      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
-        💡 <strong>Bảng được nhập</strong> gán ở mục "🗂️ Quản lý bảng" (mỗi bảng đúng một đơn vị).
-        <strong>Bảng xem thêm</strong> là quyền ĐỌC bổ sung ngoài bảng mình nhập — bấm "🔑 Xem thêm" để gán.
-      </div>
+      <div class="card-head"><h3>🔑 Phân quyền bảng nhập liệu</h3></div>
       <div style="overflow-x:auto">
         <table class="dt">
-          <thead><tr><th style="width:60px;text-align:center">Thứ tự</th><th>Tên đơn vị</th><th>Bảng được nhập</th><th>Bảng xem thêm</th><th style="text-align:center">Trạng thái</th><th></th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--g4)">Chưa có đơn vị nào.</td></tr>'}</tbody>
+          <thead><tr><th>Đơn vị</th><th>Người phụ trách</th><th>Bảng được nhập</th><th></th></tr></thead>
+          <tbody>${editors.map(r=>{
+            const pq=(pqAll||[]).filter(p=>p.tai_khoan_id===r.id).map(p=>p.bang);
+            const tenBangs=pq.map(mb=>dsBang.find(b=>b.bang===mb)?.ten_bang||mb);
+            return`<tr>
+              <td><strong>${r.don_vi}</strong></td><td>${r.ho_ten}</td>
+              <td>${tenBangs.length?tenBangs.map(t=>`<span class="badge green" style="margin:2px">${t}</span>`).join(''):'<span style="color:var(--g4);font-size:12px">Chưa phân công</span>'}</td>
+              <td><button class="btn ghost" onclick="moModalPQ(${r.id},'${r.don_vi}')">✏️ Sửa</button></td>
+            </tr>`;
+          }).join('')}</tbody>
         </table>
       </div>
     </div>`;
 }
-
-function moModalThemDonVi() {
-  UTILS.xacNhan('+ Thêm đơn vị', `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN ĐƠN VỊ *</label>
-        <input id="nd-ten" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">THỨ TỰ</label>
-        <input id="nd-thutu" type="number" min="1" value="${dsDonVi.length+1}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-    </div>`,
-    async () => {
-      const ten = document.getElementById('nd-ten')?.value.trim();
-      const thutu = parseInt(document.getElementById('nd-thutu')?.value) || null;
-      if (!ten) { toast('Vui lòng điền tên đơn vị!','er'); return; }
-      try {
-        await DB.themDonVi({ ten, thu_tu: thutu, trang_thai: true });
-        toast('✅ Đã thêm đơn vị ' + ten + '!');
-        await loadDonVi();
-        renderDonVi();
-      } catch(e) { toast('Lỗi: '+(/duplicate|unique/.test(e.message)?'Tên đơn vị đã tồn tại.':e.message),'er'); }
-    });
-}
-
-async function luuDonViField(id, col, val) {
-  const u={}; u[col]=val;
-  try {
-    await DB.suaDonVi(id, u);
-    const d = dsDonVi.find(x=>x.id===id); if (d) d[col]=val;
-    toast('✅ Đã lưu!');
-  } catch(e) { toast('Lỗi: '+e.message,'er'); renderDonVi(); }
-}
-
-function xoaDonViAdmin(id, ten) {
-  UTILS.xacNhan('🗑 Xoá đơn vị',
-    `<p>Xoá đơn vị <strong>${ten}</strong>?</p>
-     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
-       ⚠️ Tài khoản/bảng đang gắn đơn vị này sẽ mất liên kết (không bị xoá), phải gán lại sau.
-     </div>`,
-    async () => {
-      try { await DB.xoaDonVi(id); toast('✅ Đã xoá đơn vị!'); await loadDonVi(); renderDonVi(); }
-      catch(e) { toast('Lỗi: '+e.message,'er'); }
-    });
-}
-
-async function moModalXemThem(donViId) {
-  xemDonViId = donViId;
-  const d = dsDonVi.find(x=>x.id===donViId);
-  document.getElementById('pq-title').textContent = 'Bảng xem thêm: ' + (d?.ten||'');
-  document.getElementById('pq-sub').textContent = 'Đơn vị này LUÔN xem được bảng mình nhập (đánh dấu sẵn, không bỏ được ở đây). Chọn thêm bảng khác muốn cho phép xem:';
-  const dangXem = dsQuyenDoc.filter(q=>q.don_vi_id===donViId).map(q=>q.bang);
-  document.getElementById('pq-list').innerHTML = dsBang.map(b=>{
-    const laBangMinh = b.don_vi_nhap_id === donViId;
-    return `<label style="display:flex;align-items:center;gap:8px;cursor:${laBangMinh?'default':'pointer'};padding:7px 0;border-bottom:1px solid var(--g2);${laBangMinh?'opacity:.6':''}">
-      <input type="checkbox" id="pq-${b.bang}" ${laBangMinh || dangXem.includes(b.bang)?'checked':''} ${laBangMinh?'disabled':''}
+async function moModalPQ(id,donVi){
+  pqTKId=id;
+  document.getElementById('pq-title').textContent='Phân quyền: '+donVi;
+  document.getElementById('pq-sub').textContent='Chọn bảng được phép nhập liệu:';
+  const pq=await DB.layPhanQuyen(id);
+  document.getElementById('pq-list').innerHTML=dsBang.map(b=>`
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;border-bottom:1px solid var(--g2)">
+      <input type="checkbox" id="pq-${b.bang}" ${pq.includes(b.bang)?'checked':''}
         style="width:15px;height:15px;accent-color:var(--xc)">
-      <span><strong>${b.ten_bang}</strong> ${laBangMinh?'<span class="badge blue" style="margin-left:4px">bảng mình nhập</span>':''}</span>
-    </label>`;
-  }).join('');
+      <span><strong>${b.ten_bang}</strong> <span style="font-size:11px;color:var(--g4)">${b.don_vi_bao_cao||''}</span></span>
+    </label>`).join('');
   UTILS.moModal('modal-pq');
 }
-// (ADMIN.luuPQ ở dưới ghi kết quả vào quyen_doc_bang qua DB.luuQuyenDocBang)
 
-// ════════════════════════════════════════════════════════════
-// CHỈ TIÊU
-// ════════════════════════════════════════════════════════════
+// ── CHỈ TIÊU ──
 async function hienChiTieu() {
   setAct('ni-ct');
   document.getElementById('topbar-t').textContent = 'Danh mục chỉ tiêu';
@@ -1452,6 +867,7 @@ async function taiChiTieu(maBang) {
   const ct = await DB.layChiTieuTheoBang(maBang);
   const b = dsBang.find(x=>x.bang===maBang);
 
+  // Helper tạo <select>
   const mkSel = (id, field, opts, cur, extraStyle='') =>
     `<select class="ct-sel" style="${extraStyle}" onchange="capNhatCT('${id}','${field}',this.value==='__true'?true:this.value==='__false'?false:this.value)">
       ${opts.map(o=>`<option value="${o.v}" ${String(cur)===String(o.v)?'selected':''}>${o.l}</option>`).join('')}
@@ -1461,6 +877,7 @@ async function taiChiTieu(maBang) {
   const optsTanSuat= [{v:'hang_thang',l:'Hàng tháng'},{v:'hang_quy',l:'Hàng quý'},{v:'nua_nam',l:'Nửa năm'},{v:'cuoi_nam',l:'Cuối năm'},{v:'nam_dac_biet',l:'Năm đặc biệt'}];
   const optsLaTD   = [{v:'__false',l:'Không'},{v:'__true',l:'Tiêu đề'}];
 
+  // Cột: [key, label, defaultW(px)]
   const cols = [
     {k:'ma_ht',  lbl:'Mã HT',        w:70},
     {k:'ma_bo',  lbl:'Mã Bộ',        w:80},
@@ -1512,9 +929,9 @@ async function taiChiTieu(maBang) {
       <td>${mkSel(c.id,'tan_suat',optsTanSuat,c.tan_suat||'hang_thang')}</td>
       <td>${mkSel(c.id,'la_tieu_de',optsLaTD,isTD?'__true':'__false')}</td>
       <td style="text-align:center;padding:3px 6px">
-        ${UTILS.laAdminToanQuyen(user) ? `<button onclick="xoaChiTieuAdmin('${c.id}','${tenRut}','${maBang}')"
+        <button onclick="moXoaCT('${c.id}','${tenRut}')"
           style="padding:3px 8px;background:#fee2e2;color:var(--red);border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--font)"
-          title="Xóa chỉ tiêu này">🗑️</button>` : ''}
+          title="Xóa chỉ tiêu này">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -1536,10 +953,12 @@ async function taiChiTieu(maBang) {
       </div>
     </div>`;
 
+  // Khởi động kéo thả cột
   initResizeCT();
 }
 
 function initResizeCT() {
+  // Lưu width mặc định vào dataset để reset khi cần
   document.querySelectorAll('#ct-tbl thead th').forEach(th => {
     th.style.width = th.style.width || th.offsetWidth + 'px';
   });
@@ -1562,16 +981,15 @@ async function capNhatCT(id, col, val) {
   try { await DB.capNhatChiTieu(id, {[col]: val}); toast('✅ Đã lưu!'); }
   catch(e) { toast('Lỗi: '+e.message,'er'); }
 }
-
 async function batTatTatCa(maBang,val){
   try {
-    const { error } = await sb.from(CONFIG.BANG.CHI_TIEU).update({cho_phep_nhap:val}).eq('bang',maBang).eq('la_tieu_de',false);
-    if (error) throw error;
+    await sb.from(CONFIG.BANG.CHI_TIEU).update({cho_phep_nhap:val}).eq('bang',maBang).eq('la_tieu_de',false);
     toast(val?'✅ Đã mở tất cả':'🔒 Đã khóa tất cả');
     taiChiTieu(maBang);
   } catch(e){toast('Lỗi: '+e.message,'er')}
 }
 
+// ── THÊM CHỈ TIÊU ──
 function moModalThemCT() {
   ['ct-id','ct-idbo','ct-ten','ct-dvt','ct-thutu','ct-stt'].forEach(id=>{const e=UTILS.el(id);if(e)e.value='';});
   if(UTILS.el('ct-kieu'))    UTILS.el('ct-kieu').value='number';
@@ -1609,7 +1027,8 @@ async function luuChiTieuMoi() {
     cho_phep_nhap:!laTD,
   };
   try {
-    await DB.themChiTieu(row);
+    const {error}=await sb.from(CONFIG.BANG.CHI_TIEU).insert(row);
+    if(error) throw error;
     toast('✅ Đã thêm chỉ tiêu mới!');
     UTILS.dongModal('modal-ct');
     taiChiTieu(maBang);
@@ -1620,171 +1039,282 @@ async function luuChiTieuMoi() {
   }
 }
 
-// Xóa chỉ tiêu — V2: chỉ cần xacNhan (RLS thật đã chặn ghi/xóa chỉ tiêu cho
-// non-admin ở tầng CSDL; bỏ "mật khẩu cấp 2" của V1 vì không còn cần thiết).
-function xoaChiTieuAdmin(id, ten, maBang) {
-  UTILS.xacNhan('🗑️ Xoá chỉ tiêu',
-    `Chỉ tiêu: <strong>${id}</strong> — "${ten}"<br>
-     <span style="color:var(--red);font-size:11px">⚠️ Toàn bộ số liệu đã nhập của chỉ tiêu này cũng sẽ bị xoá vĩnh viễn!</span>`,
+// ── XÓA CHỈ TIÊU (bảo vệ bằng mật khẩu cấp 2) ──
+let _xoaCTId=null, _xoaCTBang=null;
+
+function moXoaCT(id, ten) {
+  _xoaCTId=id;
+  _xoaCTBang=UTILS.el('sel-bang-ct')?.value;
+  UTILS.el('xoa-ct-info').innerHTML=
+    `Chỉ tiêu: <strong>${id}</strong> — "${ten}..."<br>
+     <span style="color:var(--red);font-size:11px">⚠️ Toàn bộ số liệu đã nhập của chỉ tiêu này cũng sẽ bị xóa vĩnh viễn!</span>`;
+  UTILS.el('mk2-inp').value='';
+  UTILS.el('err-xoa-ct').textContent='';
+  UTILS.moModal('modal-xoa-ct');
+  setTimeout(()=>UTILS.el('mk2-inp')?.focus(),100);
+}
+
+async function xacNhanXoaCT() {
+  const err=UTILS.el('err-xoa-ct'); err.textContent='';
+  const mk=UTILS.el('mk2-inp').value;
+  if(!mk){err.textContent='Vui lòng nhập mật khẩu cấp 2.';return;}
+  try {
+    // Kiểm tra mật khẩu cấp 2
+    const {data,error}=await sb
+      .from(CONFIG.BANG.TAI_KHOAN)
+      .select('mat_khau')
+      .eq('don_vi','mật khẩu cấp 2')
+      .single();
+    if(error||!data) {err.textContent='❌ Không tìm thấy tài khoản bảo vệ. Liên hệ quản trị.';return;}
+    if(mk!==data.mat_khau){err.textContent='❌ Mật khẩu cấp 2 không đúng.';UTILS.el('mk2-inp').value='';UTILS.el('mk2-inp').focus();return;}
+    // Xóa
+    const {error:e2}=await sb.from(CONFIG.BANG.CHI_TIEU).delete().eq('id',_xoaCTId);
+    if(e2) throw e2;
+    toast('🗑️ Đã xóa chỉ tiêu '+_xoaCTId);
+    UTILS.dongModal('modal-xoa-ct');
+    if(_xoaCTBang) taiChiTieu(_xoaCTBang);
+  } catch(e){err.textContent='❌ Lỗi: '+e.message;}
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 🧮 CÔNG THỨC CHỈ TIÊU TỔNG
+// Ô có công thức bị KHÓA nhập tay ở trang nhập liệu.
+// ═══════════════════════════════════════════════════════════
+let dsCTCT = [];        // các dòng cong_thuc_chi_tieu của bảng đang chọn
+let ctChiTieu = [];     // danh sách chỉ tiêu của bảng đang chọn
+let ctPrepAdmin = null; // kết quả CT.chuanBi (để hiện lỗi/cảnh báo)
+let ctBangHT = null;
+let ctChuaCoBang = false;
+
+async function hienCongThuc() {
+  setAct('ni-ctct');
+  document.getElementById('topbar-t').textContent = 'Công thức chỉ tiêu tổng';
+  await loadBang();
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>🧮 Công thức chỉ tiêu tổng</h3>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;color:var(--g5)">Chọn bảng:</label>
+          <select id="sel-bang-ctct" onchange="taiCongThuc(this.value)"
+            style="padding:6px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px">
+            ${dsBang.map(b=>`<option value="${b.bang}">${b.ten_bang}</option>`).join('')}
+          </select>
+          <button class="btn ghost" onclick="doiSoatCongThuc()" title="Tính lại toàn bộ chỉ tiêu tổng cho mọi kỳ và ghi xuống CSDL">🔄 Đối soát &amp; ghi lại</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--g5);line-height:1.7;margin-top:4px">
+        Biểu thức chỉ nhận <b>mã chỉ tiêu</b> nối bằng dấu <b>+</b> và <b>−</b> (ví dụ <code>TT7+TT43+TT77</code>).
+        Ô đích sẽ bị <b>khóa nhập tay</b> ở trang nhập liệu và tự cộng từ các dòng thành phần.
+        Cho phép lồng nhau (công thức tham chiếu công thức khác); hệ thống tự phát hiện vòng lặp.
+      </div>
+    </div>
+    <div id="ctct-content"><div class="loading"><span class="spin"></span></div></div>`;
+  if (dsBang.length) taiCongThuc(dsBang[0].bang);
+}
+
+async function taiCongThuc(maBang) {
+  ctBangHT = maBang;
+  const el = document.getElementById('ctct-content');
+  el.innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
+  ctChuaCoBang = false;
+  try { dsCTCT = await DB.layCongThuc(maBang); }
+  catch (e) { dsCTCT = []; ctChuaCoBang = true; }
+  try { ctChiTieu = await DB.layChiTieuTheoBang(maBang); } catch (e) { ctChiTieu = []; }
+  ctPrepAdmin = CT.chuanBi(dsCTCT, ctChiTieu);
+  renderCongThuc();
+}
+
+function _tenCT(id) {
+  const c = ctChiTieu.find(x => x.id === id);
+  return c ? c.chi_tieu.trim() : '';
+}
+
+function renderCongThuc() {
+  const el = document.getElementById('ctct-content');
+  const b = dsBang.find(x => x.bang === ctBangHT);
+
+  if (ctChuaCoBang) {
+    el.innerHTML = `<div class="card"><div class="card-head"><h3>⚠️ Chưa có bảng công thức</h3></div>
+      <div style="font-size:12.5px;color:var(--g5);line-height:1.7">
+        Chưa có bảng <code>cong_thuc_chi_tieu</code> trong Supabase.
+        Hãy mở file <b>sql_cong_thuc_chi_tieu.sql</b>, dán vào Supabase → SQL Editor và chạy một lần, rồi tải lại trang này.
+      </div></div>`;
+    return;
+  }
+
+  const canhBaoHtml = (arr, mau, icon) => arr.length
+    ? `<div style="background:${mau};border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;line-height:1.7">
+        ${arr.map(x => `${icon} ${x}`).join('<br>')}</div>` : '';
+
+  const rows = dsCTCT.map(r => {
+    const hop = ctPrepAdmin.map[r.id_chi_tieu];
+    const ten = _tenCT(r.id_chi_tieu);
+    return `<tr${r.hien_thi === false ? ' style="opacity:.5"' : ''}>
+      <td style="white-space:nowrap"><span class="cell-text mono" style="font-size:11.5px;font-weight:700">${r.id_chi_tieu}</span></td>
+      <td><span class="cell-text" style="font-size:11.5px;color:var(--g5)">${ten || '<span style="color:var(--red)">⚠ không có chỉ tiêu này</span>'}</span></td>
+      <td><input class="ct-inp mono" style="font-size:11.5px" value="${(r.bieu_thuc||'').replace(/"/g,'&quot;')}"
+            placeholder="TT7+TT43+TT77"
+            onchange="luuTruongCT(${r.id},'bieu_thuc',this.value.trim())"></td>
+      <td><input class="ct-inp" style="font-size:11.5px" value="${(r.loai_ky_loai_tru||'').replace(/"/g,'&quot;')}"
+            placeholder="(áp dụng mọi kỳ)" title="Các loai_so_lieu KHÔNG áp công thức, ngăn cách bằng dấu phẩy. Để trống = áp dụng mọi kỳ."
+            onchange="luuTruongCT(${r.id},'loai_ky_loai_tru',this.value.trim()||null)"></td>
+      <td><input class="ct-inp" style="font-size:11.5px" value="${(r.ghi_chu||'').replace(/"/g,'&quot;')}" placeholder="--"
+            onchange="luuTruongCT(${r.id},'ghi_chu',this.value.trim()||null)"></td>
+      <td style="text-align:center">
+        <label class="sw"><input type="checkbox" ${r.hien_thi !== false ? 'checked' : ''}
+          onchange="luuTruongCT(${r.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
+      <td style="text-align:center">${hop ? '<span title="Hợp lệ" style="color:#15803d;font-weight:700">✔</span>'
+                                          : '<span title="Công thức đang sai — ô sẽ trở lại nhập tay" style="color:var(--red);font-weight:700">✘</span>'}</td>
+      <td style="text-align:center;padding:3px 6px">
+        <button onclick="xoaCongThucAdmin(${r.id},'${r.id_chi_tieu}')"
+          style="padding:3px 8px;background:#fee2e2;color:var(--red);border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--font)"
+          title="Xóa công thức — ô trở lại nhập tay">🗑️</button></td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head"><h3>➕ Thêm công thức — ${b?.ten_bang || ''}</h3></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="ctct-id" class="ct-inp mono" placeholder="Mã chỉ tiêu đích (TT4.1)" style="max-width:200px">
+        <span style="font-weight:700;color:var(--g4)">=</span>
+        <input id="ctct-bt" class="ct-inp mono" placeholder="TT7+TT43+TT77+TT115" style="flex:1;min-width:240px">
+        <button class="btn primary" onclick="themCongThucAdmin()">Thêm</button>
+      </div>
+      <div id="ctct-err" style="color:var(--red);font-size:12px;margin-top:8px"></div>
+    </div>
+
+    ${canhBaoHtml(ctPrepAdmin.loi, '#fee2e2', '❌')}
+    ${canhBaoHtml(ctPrepAdmin.canhBao, '#fef3c7', '⚠️')}
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Danh sách công thức <span style="font-size:11px;font-weight:400;color:var(--g4)">(${dsCTCT.length})</span></h3>
+      </div>
+      ${dsCTCT.length ? `<div style="overflow-x:auto"><table class="ct-tbl">
+        <thead><tr>
+          <th style="width:90px">Mã đích</th>
+          <th style="width:230px">Tên chỉ tiêu</th>
+          <th style="width:320px">Biểu thức</th>
+          <th style="width:150px">Kỳ loại trừ</th>
+          <th style="width:160px">Ghi chú</th>
+          <th style="width:60px;text-align:center">Bật</th>
+          <th style="width:50px;text-align:center">OK</th>
+          <th style="width:55px;text-align:center">Xóa</th>
+        </tr></thead>
+        <tbody>${rows}</tbody></table></div>`
+      : `<div style="font-size:12.5px;color:var(--g4);padding:8px 0">Bảng này chưa có công thức nào. Mọi ô vẫn nhập tay bình thường.</div>`}
+    </div>`;
+}
+
+async function luuTruongCT(id, col, val) {
+  try {
+    await DB.suaCongThuc(id, { [col]: val });
+    toast('✅ Đã lưu!');
+    await taiCongThuc(ctBangHT);
+  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
+}
+
+async function themCongThucAdmin() {
+  const err = document.getElementById('ctct-err'); err.textContent = '';
+  const id = document.getElementById('ctct-id').value.trim();
+  const bt = document.getElementById('ctct-bt').value.trim();
+  if (!id) { err.textContent = '❌ Chưa nhập mã chỉ tiêu đích.'; return; }
+  if (!bt) { err.textContent = '❌ Chưa nhập biểu thức.'; return; }
+
+  const dich = ctChiTieu.find(c => c.id === id);
+  if (!dich)                        { err.textContent = `❌ Bảng này không có chỉ tiêu "${id}".`; return; }
+  if (dich.la_tieu_de)              { err.textContent = `❌ "${id}" là dòng tiêu đề nhóm, không gán công thức được.`; return; }
+  if (dich.kieu_du_lieu === 'text') { err.textContent = `❌ "${id}" là chỉ tiêu dạng văn bản, không cộng được.`; return; }
+  if (dsCTCT.some(r => r.id_chi_tieu === id)) { err.textContent = `❌ "${id}" đã có công thức. Hãy sửa dòng bên dưới.`; return; }
+
+  const t = CT.tach(bt);
+  if (t.loi) { err.textContent = '❌ ' + t.loi; return; }
+  const la = t.terms.filter(x => !ctChiTieu.some(c => c.id === x.ma)).map(x => x.ma);
+  if (la.length) { err.textContent = `❌ Mã không có trong bảng: ${[...new Set(la)].join(', ')}`; return; }
+  if (t.terms.some(x => x.ma === id)) { err.textContent = '❌ Công thức tự tham chiếu chính nó.'; return; }
+
+  // Thử ghép vào bộ hiện có để bắt vòng lặp trước khi ghi
+  const thu = CT.chuanBi(dsCTCT.concat([{ id: -1, id_chi_tieu: id, bieu_thuc: bt, hien_thi: true }]), ctChiTieu);
+  const vong = thu.loi.find(x => x.startsWith('Vòng lặp'));
+  if (vong) { err.textContent = '❌ ' + vong; return; }
+
+  try {
+    await DB.themCongThuc({ bang: ctBangHT, id_chi_tieu: id, bieu_thuc: bt });
+    toast('✅ Đã thêm công thức!');
+    document.getElementById('ctct-id').value = '';
+    document.getElementById('ctct-bt').value = '';
+    await taiCongThuc(ctBangHT);
+  } catch (e) { err.textContent = '❌ Lỗi: ' + e.message; }
+}
+
+function xoaCongThucAdmin(id, ma) {
+  UTILS.xacNhan('Xóa công thức',
+    `Xóa công thức của <b>${ma}</b>?<br>Ô này sẽ trở lại <b>nhập tay</b> ở trang nhập liệu. Số liệu đã lưu không bị xóa.`,
     async () => {
-      try { await DB.xoaChiTieu(id); toast('🗑️ Đã xoá chỉ tiêu '+id); taiChiTieu(maBang); }
-      catch(e) { toast('Lỗi: '+e.message,'er'); }
+      try { await DB.xoaCongThuc(id); toast('🗑️ Đã xóa công thức'); await taiCongThuc(ctBangHT); }
+      catch (e) { toast('Lỗi: ' + e.message, 'er'); }
     });
 }
 
-// ════════════════════════════════════════════════════════════
-// QUẢN LÝ BẢNG (danh_sach_bang) — V2: không cần CREATE TABLE thủ công
-// ════════════════════════════════════════════════════════════
+// ── ĐỐI SOÁT: tính lại mọi kỳ và ghi xuống CSDL ──
+async function doiSoatCongThuc() {
+  if (!ctBangHT) return;
+  if (!ctPrepAdmin || !ctPrepAdmin.order.length) { toast('Bảng này chưa có công thức hợp lệ.', 'er'); return; }
+  toast('⏳ Đang đối soát...');
+  try {
+    const dsKyTC = await DB.layTatCaKy();
+    if (!dsKyTC.length) { toast('Chưa có kỳ báo cáo nào.', 'er'); return; }
+    const maKys = dsKyTC.map(k => k.ky_bao_cao);
+    const dl = await DB.layDuLieu(ctBangHT, maKys);
+    const idx = {};
+    dl.forEach(r => { idx[`${r.id_chi_tieu}|${r.ky_bao_cao}`] = r; });
+
+    const kq = CT.apDungVaoIdx(idx, ctPrepAdmin, dsKyTC);
+    const rows = [];
+    Object.keys(idx).forEach(k => {
+      const r = idx[k];
+      if (!r._ct) return;
+      const cu = r._ctCu, moi = r.gia_tri;
+      const lech = (cu === null && moi !== null) || (cu !== null && moi === null) ||
+                   (cu !== null && moi !== null && Math.abs(cu - moi) > 1e-6);
+      if (!lech) return;
+      rows.push({ id_chi_tieu: r.id_chi_tieu, ky_bao_cao: r.ky_bao_cao, gia_tri: moi,
+                  nguoi_nhap: 'Đối soát công thức', thoi_gian_nhap: new Date().toISOString() });
+    });
+
+    if (!rows.length) { toast(`✅ Đã kiểm tra ${kq.soODaSua} ô — không có ô nào lệch.`); return; }
+
+    UTILS.xacNhan('Đối soát công thức',
+      `Đã kiểm tra <b>${kq.soODaSua}</b> ô chỉ tiêu tổng trên <b>${dsKyTC.length}</b> kỳ.<br>
+       Có <b style="color:var(--red)">${rows.length}</b> ô đang lệch so với công thức.<br><br>
+       Ghi đè các ô lệch này bằng giá trị tính từ công thức?`,
+      async () => {
+        try {
+          for (let i = 0; i < rows.length; i += 500) await DB.luuDuLieu(ctBangHT, rows.slice(i, i + 500));
+          toast(`✅ Đã ghi lại ${rows.length} ô theo công thức.`);
+        } catch (e) { toast('Lỗi ghi: ' + e.message, 'er'); }
+      });
+  } catch (e) { toast('Lỗi đối soát: ' + e.message, 'er'); }
+}
+
+// ── QUẢN LÝ BẢNG ──
 async function hienQuanLyBang() {
   setAct('ni-bang');
   document.getElementById('topbar-t').textContent = 'Quản lý bảng báo cáo';
   await loadBang();
-  if (!dsDonVi.length) await loadDonVi();
-  try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = []; }
+  // Nạp danh sách Google Sheet (null = bảng chưa tồn tại trong Supabase)
+  try { dsGS = await DB.layGSheet(false); } catch(e) { dsGS = null; }
   renderQuanLyBang();
   document.getElementById('content').insertAdjacentHTML('beforeend', renderGSheetCard());
   document.getElementById('content').insertAdjacentHTML('beforeend', renderGanGSCard());
 }
 
-function renderQuanLyBang() {
-  document.getElementById('content').innerHTML = `
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-head">
-        <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
-        <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
-      </div>
-      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
-        💡 <strong>Đơn vị nhập</strong>: đơn vị chịu trách nhiệm nhập số liệu bảng này (mỗi bảng đúng MỘT
-        đơn vị). Muốn đơn vị khác XEM THÊM bảng này (không nhập) → vào mục "🏢 Đơn vị".
-      </div>
-      <div style="overflow-x:auto">
-        <table class="dt">
-          <thead><tr>
-            <th style="width:60px;text-align:center">Thứ tự</th>
-            <th style="width:90px">Mã bảng</th>
-            <th>Tên bảng</th>
-            <th>Đơn vị báo cáo</th>
-            <th style="width:170px">Đơn vị nhập</th>
-            <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
-            <th style="text-align:center;width:70px">Rộng ĐVT</th>
-            <th style="text-align:center;width:80px">Rộng ghi chú</th>
-            <th></th>
-          </tr></thead>
-          <tbody>${dsBang.map(b=>`<tr>
-            <td style="text-align:center;padding:4px 8px">
-              <input class="num-inp" type="number" min="1" value="${b.thu_tu||''}" placeholder="--"
-                onchange="luuDoRongBang('${b.bang}','thu_tu',parseInt(this.value)||null)">
-            </td>
-            <td class="mono" style="font-size:12px">${b.bang}</td>
-            <td>
-              <input type="text" value="${(b.ten_bang||'').replace(/"/g,'&quot;')}"
-                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
-                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-                onchange="luuTenBang('${b.bang}','ten_bang',this.value)">
-            </td>
-            <td>
-              <input type="text" value="${(b.don_vi_bao_cao||'').replace(/"/g,'&quot;')}"
-                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
-                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-                onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
-            </td>
-            <td>
-              <select class="ct-sel" onchange="luuDonViNhap('${b.bang}',this.value?parseInt(this.value):null)">
-                <option value="">— Chưa giao —</option>
-                ${dsDonVi.map(d=>`<option value="${d.id}" ${b.don_vi_nhap_id===d.id?'selected':''}>${d.ten}</option>`).join('')}
-              </select>
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="40" max="150" value="${b.do_rong_dvt||70}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_dvt',parseInt(this.value)||70)">
-            </td>
-            <td style="text-align:center;padding:4px 6px">
-              <input class="num-inp" type="number" min="80" max="300" value="${b.do_rong_ghichu||140}"
-                onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
-            </td>
-            <td style="white-space:nowrap">
-              ${UTILS.laAdminToanQuyen(user) ? `<button class="btn danger" style="padding:4px 8px" onclick="xoaBangAdmin('${b.bang}','${(b.ten_bang||'').replace(/'/g,"\\'")}')">🗑 Xoá</button>` : ''}
-            </td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </div>
-    <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#1b5e20">
-      ✅ <strong>V2:</strong> thêm bảng báo cáo mới không cần tạo bảng CSDL riêng — mọi số liệu đều nằm
-      trong bảng <code>so_lieu</code> chung. Chỉ cần thêm dòng ở đây rồi sang mục "Chỉ tiêu" để thêm chỉ tiêu.
-    </div>`;
-}
-
-async function luuDonViNhap(maBang, donViId) {
-  try {
-    await DB.capNhatBang(maBang, { don_vi_nhap_id: donViId });
-    const b = dsBang.find(x=>x.bang===maBang); if (b) b.don_vi_nhap_id = donViId;
-    toast('✅ Đã gán đơn vị nhập!');
-  } catch(e) { toast('Lỗi: '+e.message,'er'); renderQuanLyBang(); }
-}
-
-function moModalThemBang() {
-  const soBang = dsBang.length + 1;
-  const maMoi  = `bang_${String(soBang).padStart(2,'0')}`;
-  UTILS.xacNhan(
-    '+ Thêm bảng báo cáo mới',
-    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;text-align:left">
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ BẢNG *</label>
-        <input id="nb-ma" type="text" value="${maMoi}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN BẢNG *</label>
-        <input id="nb-ten" type="text" placeholder="VD: Lâm nghiệp" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">ĐƠN VỊ BÁO CÁO</label>
-        <input id="nb-dv" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
-    </div>`,
-    async () => {
-      const ma  = document.getElementById('nb-ma')?.value.trim();
-      const ten = document.getElementById('nb-ten')?.value.trim();
-      const dv  = document.getElementById('nb-dv')?.value.trim();
-      if (!ma || !ten) { toast('Vui lòng điền Mã bảng và Tên bảng!','er'); return; }
-      try {
-        await DB.themBang({ bang: ma, ten_bang: ten, don_vi_bao_cao: dv||'', thu_tu: soBang, do_rong_ten:280, do_rong_dvt:70, do_rong_ghichu:140 });
-        toast('✅ Đã thêm bảng ' + ten + '!');
-        await loadBang();
-        renderQuanLyBang();
-      } catch(e) { toast('Lỗi: '+(/duplicate/.test(e.message)?'Mã bảng đã tồn tại.':e.message),'er'); }
-    }
-  );
-}
-
-function xoaBangAdmin(maBang, tenBang) {
-  UTILS.xacNhan(
-    '🗑 Xoá bảng báo cáo',
-    `<p>Xoá bảng <strong>${tenBang}</strong> (<code>${maBang}</code>) khỏi danh sách?</p>
-     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
-       ⚠️ Sẽ thất bại nếu bảng còn chỉ tiêu — hãy xoá/chuyển hết chỉ tiêu của bảng này trước.
-     </div>`,
-    async () => {
-      try {
-        await DB.xoaBang(maBang);
-        toast('✅ Đã xoá bảng ' + tenBang + '!');
-        await loadBang();
-        renderQuanLyBang();
-      } catch(e) { toast('Lỗi: '+(/foreign key|violates/.test(e.message)?'Không thể xoá: bảng còn chỉ tiêu.':e.message),'er'); }
-    }
-  );
-}
-
-async function luuTenBang(maBang, col, val) {
-  const u={}; u[col]=val;
-  try { await DB.capNhatBang(maBang, u); toast('✅ Đã lưu!'); }
-  catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
-async function luuDoRongBang(maBang, col, val) {
-  const u={}; u[col]=val;
-  try { await DB.capNhatBang(maBang, u); toast('📐 Đã lưu độ rộng!'); }
-  catch(e) { toast('Lỗi: '+e.message,'er'); }
-}
-
 // ── GẮN GOOGLE SHEET VÀO BẢNG BÁO CÁO (danh_sach_bang.gsheet_url) ──
+// Bảng được gắn sheet sẽ hiển thị sheet thay cho bảng nhập liệu.
+// Lưu link GỐC người dùng dán; hệ thống tự chuyển sang dạng nhúng khi hiển thị.
 function renderGanGSCard() {
   const coUrl   = dsBang.filter(b => b.gsheet_url);
   const chuaUrl = dsBang.filter(b => !b.gsheet_url);
@@ -1844,7 +1374,7 @@ const GSB = {
         if(!url || !bang){ toast('Vui lòng dán link và chọn bảng!','er'); return; }
         if(!url.includes('docs.google.com/spreadsheets')){ toast('Link phải là Google Sheets.','er'); return; }
         try{
-          await DB.capNhatBang(bang, { gsheet_url: url });
+          await DB.capNhatBang(bang, { gsheet_url: url });   // lưu link GỐC
           toast('✅ Đã gắn Google Sheet!');
           await hienQuanLyBang();
         }catch(e){ toast('Lỗi: '+e.message,'er'); }
@@ -1875,41 +1405,53 @@ const GSB = {
   },
 };
 
-// ── QUẢN LÝ GOOGLE SHEET NHÚNG (danh_sach_gsheet) ──
+// ── QUẢN LÝ GOOGLE SHEET ──
+let dsGS = [];
 function renderGSheetCard() {
-  const rows = dsGS.map(s=>`<tr>
-    <td style="text-align:center;padding:4px 8px">
-      <input class="num-inp" type="number" min="1" value="${s.thu_tu||''}"
-        onchange="GS.capNhat(${s.id},'thu_tu',parseInt(this.value)||1)"></td>
-    <td><input type="text" value="${(s.ten_sheet||'').replace(/"/g,'&quot;')}"
-        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
-        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-        onchange="GS.capNhat(${s.id},'ten_sheet',this.value)"></td>
-    <td><input type="text" value="${(s.mo_ta||'').replace(/"/g,'&quot;')}" placeholder="Mô tả ngắn"
-        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
-        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-        onchange="GS.capNhat(${s.id},'mo_ta',this.value)"></td>
-    <td><input type="text" value="${(s.embed_url||'').replace(/"/g,'&quot;')}" placeholder="https://docs.google.com/spreadsheets/d/…"
-        style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono,monospace);font-size:11px;outline:none"
-        onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
-        onchange="GS.capNhat(${s.id},'embed_url',this.value)"></td>
-    <td style="text-align:center;padding:4px 6px">
-      <input class="num-inp" type="number" min="200" max="2000" value="${s.chieu_cao||520}"
-        onchange="GS.capNhat(${s.id},'chieu_cao',parseInt(this.value)||520)"></td>
-    <td style="text-align:center">
-      <label class="sw"><input type="checkbox" ${s.hien_thi?'checked':''}
-        onchange="GS.capNhat(${s.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
-    <td style="white-space:nowrap">
-      <a href="${s.embed_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
-      <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GS.xoa(${s.id},this.dataset.ten)" data-ten="${(s.ten_sheet||'').replace(/"/g,'&quot;')}">🗑</button></td>
-  </tr>`).join('');
-
-  return `<div class="card" style="margin-top:12px">
-    <div class="card-head">
-      <h3>📈 Google Sheet nhúng <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsGS.length} sheet)</span></h3>
-      <button class="btn primary" onclick="GS.moThem()">+ Thêm Sheet</button>
-    </div>
-    <div style="overflow-x:auto"><table class="dt">
+  let body;
+  if (dsGS === null) {
+    body = `<div style="color:var(--red);font-size:12px;padding:4px 0">⚠️ Chưa có bảng <code>danh_sach_gsheet</code> trong Supabase. Chạy SQL sau một lần rồi tải lại trang:</div>
+      <pre style="background:var(--g1);border-radius:6px;padding:10px;margin-top:6px;font-size:11px;overflow-x:auto">CREATE TABLE danh_sach_gsheet (
+  id        SERIAL PRIMARY KEY,
+  ten_sheet TEXT NOT NULL,
+  mo_ta     TEXT,
+  embed_url TEXT NOT NULL,
+  thu_tu    INTEGER DEFAULT 1,
+  chieu_cao INTEGER DEFAULT 520,
+  hien_thi  BOOLEAN DEFAULT TRUE,
+  tao_luc   TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE danh_sach_gsheet ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "read_all"  ON danh_sach_gsheet FOR SELECT USING (true);
+CREATE POLICY "write_all" ON danh_sach_gsheet USING (true) WITH CHECK (true);</pre>`;
+  } else {
+    const rows = dsGS.map(s=>`<tr>
+      <td style="text-align:center;padding:4px 8px">
+        <input class="num-inp" type="number" min="1" value="${s.thu_tu||''}"
+          onchange="GS.capNhat(${s.id},'thu_tu',parseInt(this.value)||1)"></td>
+      <td><input type="text" value="${(s.ten_sheet||'').replace(/"/g,'&quot;')}"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'ten_sheet',this.value)"></td>
+      <td><input type="text" value="${(s.mo_ta||'').replace(/"/g,'&quot;')}" placeholder="Mô tả ngắn"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'mo_ta',this.value)"></td>
+      <td><input type="text" value="${(s.embed_url||'').replace(/"/g,'&quot;')}" placeholder="https://docs.google.com/spreadsheets/d/…"
+          style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--mono,monospace);font-size:11px;outline:none"
+          onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+          onchange="GS.capNhat(${s.id},'embed_url',this.value)"></td>
+      <td style="text-align:center;padding:4px 6px">
+        <input class="num-inp" type="number" min="200" max="2000" value="${s.chieu_cao||520}"
+          onchange="GS.capNhat(${s.id},'chieu_cao',parseInt(this.value)||520)"></td>
+      <td style="text-align:center">
+        <label class="sw"><input type="checkbox" ${s.hien_thi?'checked':''}
+          onchange="GS.capNhat(${s.id},'hien_thi',this.checked)"><span class="sw-slider"></span></label></td>
+      <td style="white-space:nowrap">
+        <a href="${s.embed_url}" target="_blank" rel="noopener" class="btn ghost" style="padding:4px 8px;text-decoration:none">🔗</a>
+        <button class="btn danger" style="padding:4px 8px;margin-left:3px" onclick="GS.xoa(${s.id},this.dataset.ten)" data-ten="${(s.ten_sheet||'').replace(/"/g,'&quot;')}">🗑</button></td>
+    </tr>`).join('');
+    body = `<div style="overflow-x:auto"><table class="dt">
       <thead><tr>
         <th style="width:60px;text-align:center">Thứ tự</th>
         <th style="min-width:160px">Tên sheet</th>
@@ -1921,7 +1463,14 @@ function renderGSheetCard() {
       </tr></thead>
       <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--g4)">Chưa có Google Sheet nào. Nhấn "+ Thêm Sheet" để bắt đầu.</td></tr>'}</tbody>
     </table></div>
-    <div style="font-size:11px;color:var(--g4);margin-top:8px">💡 Sheet hiển thị sẽ xuất hiện trong nhóm "📈 Dữ liệu Google Sheet" ở trang nhập liệu. Link dạng <code>/edit</code> sẽ tự chuyển sang chế độ nhúng khi hiển thị.</div>
+    <div style="font-size:11px;color:var(--g4);margin-top:8px">💡 Sheet hiển thị sẽ xuất hiện trong nhóm "📈 Dữ liệu Google Sheet" ở trang nhập liệu. Link dạng <code>/edit</code> sẽ tự chuyển sang chế độ nhúng khi hiển thị.</div>`;
+  }
+  return `<div class="card" style="margin-top:12px">
+    <div class="card-head">
+      <h3>📈 Google Sheet nhúng <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsGS===null?'chưa cài':dsGS.length+' sheet'})</span></h3>
+      ${dsGS===null?'':'<button class="btn primary" onclick="GS.moThem()">+ Thêm Sheet</button>'}
+    </div>
+    ${body}
   </div>`;
 }
 
@@ -1970,9 +1519,151 @@ const GS = {
   },
 };
 
-// ════════════════════════════════════════════════════════════
-// TIÊU ĐỀ BẢNG
-// ════════════════════════════════════════════════════════════
+function renderQuanLyBang() {
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <h3>🗂️ Danh sách bảng báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsBang.length} bảng)</span></h3>
+        <button class="btn primary" onclick="moModalThemBang()">+ Thêm bảng mới</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th style="width:60px;text-align:center">Thứ tự</th>
+            <th style="width:80px">Mã bảng</th>
+            <th>Tên bảng</th>
+            <th>Đơn vị báo cáo</th>
+            <th style="text-align:center;width:80px">Rộng tên<br><span style="font-weight:400;opacity:.7">(px)</span></th>
+            <th style="text-align:center;width:70px">Rộng ĐVT</th>
+            <th style="text-align:center;width:80px">Rộng ghi chú</th>
+            <th style="width:80px">Bảng DB</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${dsBang.map(b=>`<tr>
+            <td style="text-align:center;padding:4px 8px">
+              <input class="num-inp" type="number" min="1" value="${b.thu_tu||''}" placeholder="--"
+                onchange="luuDoRongBang('${b.bang}','thu_tu',parseInt(this.value)||null)">
+            </td>
+            <td class="mono" style="font-size:12px">${b.bang}</td>
+            <td>
+              <input type="text" value="${b.ten_bang||''}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:13px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','ten_bang',this.value)">
+            </td>
+            <td>
+              <input type="text" value="${b.don_vi_bao_cao||''}"
+                style="width:100%;padding:4px 8px;border:1.5px solid var(--g2);border-radius:5px;font-family:var(--font);font-size:12px;outline:none"
+                onfocus="this.style.borderColor='var(--xc)'" onblur="this.style.borderColor='var(--g2)'"
+                onchange="luuTenBang('${b.bang}','don_vi_bao_cao',this.value)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="600" value="${b.do_rong_ten||280}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ten',parseInt(this.value)||280)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="40" max="150" value="${b.do_rong_dvt||70}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_dvt',parseInt(this.value)||70)">
+            </td>
+            <td style="text-align:center;padding:4px 6px">
+              <input class="num-inp" type="number" min="80" max="300" value="${b.do_rong_ghichu||140}"
+                onchange="luuDoRongBang('${b.bang}','do_rong_ghichu',parseInt(this.value)||140)">
+            </td>
+            <td class="mono" style="font-size:10px;color:var(--g4)">${(CONFIG.BANG.CSDL_PREFIX+b.bang).toLowerCase()}</td>
+            <td style="white-space:nowrap">
+              <button class="btn danger" style="padding:4px 8px" onclick="xoaBang('${b.bang}','${b.ten_bang}')">🗑 Xoá</button>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#6d4c00">
+      ⚠️ <strong>Trước khi thêm bảng:</strong> chạy SQL tạo bảng dữ liệu trong Supabase trước:<br>
+      <code style="background:#fef3c7;padding:2px 6px;border-radius:3px;font-size:11px">
+        CREATE TABLE csdl_bang_06 (LIKE csdl_bang_01 INCLUDING ALL);
+      </code>
+    </div>`;
+}
+
+// Modal thêm bảng mới
+function moModalThemBang() {
+  // Tính mã bảng tiếp theo
+  const soBang = dsBang.length + 1;
+  const maMoi  = `Bang_${String(soBang).padStart(2,'0')}`;
+  const thuTu  = soBang;
+
+  UTILS.xacNhan(
+    '+ Thêm bảng báo cáo mới',
+    `<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">MÃ BẢNG</label>
+        <input id="nb-ma" type="text" value="${maMoi}" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:monospace;font-size:13px;outline:none">
+        <div style="font-size:11px;color:var(--g4);margin-top:3px">Bảng DB sẽ là: <strong id="nb-db-preview">${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()}</strong></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">TÊN BẢNG</label>
+        <input id="nb-ten" type="text" placeholder="VD: Lâm nghiệp" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;font-weight:700;color:var(--g5);display:block;margin-bottom:4px">ĐƠN VỊ BÁO CÁO</label>
+        <input id="nb-dv" type="text" placeholder="VD: Chi cục Kiểm lâm" style="width:100%;padding:8px 10px;border:1.5px solid var(--g2);border-radius:7px;font-family:var(--font);font-size:13px;outline:none"></div>
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 10px;font-size:11px;color:#856404">
+        ⚠️ Phải tạo bảng DB trong Supabase trước:<br>
+        <code id="nb-sql-preview">CREATE TABLE ${(CONFIG.BANG.CSDL_PREFIX+maMoi).toLowerCase()} (LIKE csdl_bang_01 INCLUDING ALL);</code>
+      </div>
+    </div>`,
+    async () => {
+      const ma  = document.getElementById('nb-ma')?.value.trim();
+      const ten = document.getElementById('nb-ten')?.value.trim();
+      const dv  = document.getElementById('nb-dv')?.value.trim();
+      if (!ma || !ten) { toast('Vui lòng điền Mã bảng và Tên bảng!','er'); return; }
+      try {
+        await sb.from(CONFIG.BANG.DANH_SACH_BANG).insert({
+          bang: ma, ten_bang: ten, don_vi_bao_cao: dv||'',
+          thu_tu: thuTu, do_rong_ten: 280, do_rong_dvt: 70, do_rong_ghichu: 140
+        });
+        toast('✅ Đã thêm bảng ' + ten + '!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+e.message,'er'); }
+    }
+  );
+  // Cập nhật preview khi gõ mã
+  setTimeout(()=>{
+    const inp = document.getElementById('nb-ma');
+    if(inp) inp.addEventListener('input', ()=>{
+      const v = inp.value.trim();
+      const db = (CONFIG.BANG.CSDL_PREFIX+v).toLowerCase();
+      const prev = document.getElementById('nb-db-preview');
+      const sql  = document.getElementById('nb-sql-preview');
+      if(prev) prev.textContent = db;
+      if(sql)  sql.textContent  = `CREATE TABLE ${db} (LIKE csdl_bang_01 INCLUDING ALL);`;
+    });
+  }, 100);
+}
+
+async function xoaBang(maBang, tenBang) {
+  UTILS.xacNhan(
+    '🗑 Xoá bảng báo cáo',
+    `<p>Xoá bảng <strong>${tenBang}</strong> (<code>${maBang}</code>) khỏi danh sách?</p>
+     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:10px">
+       ⚠️ Thao tác này chỉ xoá khỏi danh sách — <strong>không xoá bảng dữ liệu</strong> trong Supabase và <strong>không xoá chỉ tiêu</strong>.<br>
+       Để xoá hoàn toàn, cần chạy SQL trong Supabase.
+     </div>`,
+    async () => {
+      try {
+        await sb.from(CONFIG.BANG.DANH_SACH_BANG).delete().eq('bang', maBang);
+        toast('✅ Đã xoá bảng ' + tenBang + ' khỏi danh sách!');
+        await loadBang();
+        renderQuanLyBang();
+      } catch(e) { toast('Lỗi: '+e.message,'er'); }
+    }
+  );
+}
+
+async function luuTenBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('✅ Đã lưu!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
+
+// ── TIÊU ĐỀ BẢNG ──
 async function hienTieuDeBang() {
   setAct('ni-tdb');
   document.getElementById('topbar-t').textContent = 'Tiêu đề bảng báo cáo';
@@ -1996,6 +1687,11 @@ async function hienTieuDeBang() {
       </div>
     </div>`;
 }
+async function luuDoRongBang(maBang, col, val) {
+  const u={}; u[col]=val;
+  try { await DB.capNhatBang(maBang, u); toast('📐 Đã lưu độ rộng!'); }
+  catch(e) { toast('Lỗi: '+e.message,'er'); }
+}
 
 async function luuTieuDe(maBang) {
   const td1 = document.getElementById('td1-'+maBang)?.value.trim()||'';
@@ -2004,902 +1700,40 @@ async function luuTieuDe(maBang) {
   catch(e) { toast('Lỗi: '+e.message,'er'); }
 }
 
-// ════════════════════════════════════════════════════════════
-// NHẬT KÝ SỬA SỐ LIỆU (lich_su_so_lieu — MỚI Bước 6c/6d)
-// ════════════════════════════════════════════════════════════
-async function hienLichSu() {
-  setAct('ni-ls');
-  document.getElementById('topbar-t').textContent = 'Nhật ký sửa số liệu';
-  if (!dsBang.length) await loadBang();
-  if (!dsTaiKhoan.length) { try { await loadTaiKhoan(); } catch(e) { dsTaiKhoan = []; } }
+// ── ĐỔI MẬT KHẨU ──
+function hienDoiPass() {
+  document.getElementById('topbar-t').textContent = 'Đổi mật khẩu';
   document.getElementById('content').innerHTML = `
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-head">
-        <h3>📜 Nhật ký sửa số liệu</h3>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label style="font-size:12px;color:var(--g5)">Bảng:</label>
-          <select id="sel-bang-ls" onchange="taiLichSu(this.value)"
-            style="padding:6px 10px;border:1.5px solid var(--g2);border-radius:var(--r);font-family:var(--font);font-size:13px">
-            ${dsBang.map(b=>`<option value="${b.bang}">${b.ten_bang}</option>`).join('')}
-          </select>
+    <div style="max-width:400px;margin:0 auto">
+      <div class="card">
+        <div class="card-head"><h3>🔐 Đổi mật khẩu</h3></div>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="fg"><label>Đơn vị</label><input class="inp" value="${user.don_vi}" disabled style="background:var(--g1)"></div>
+          <div class="fg"><label>Mật khẩu hiện tại</label><input class="inp" type="password" id="dp-cu" placeholder="••••••••"></div>
+          <div class="fg"><label>Mật khẩu mới (≥4 ký tự)</label><input class="inp" type="password" id="dp-moi" placeholder="••••••••"></div>
+          <div class="fg"><label>Nhập lại mật khẩu mới</label><input class="inp" type="password" id="dp-moi2" placeholder="••••••••"></div>
         </div>
-      </div>
-      <div style="padding:8px 16px;font-size:11px;color:var(--g4);border-bottom:1px solid var(--g2)">
-        💡 Hiện tối đa 100 lần sửa gần nhất của bảng đang chọn. Không ai (kể cả admin) sửa/xoá được nhật ký này.
-      </div>
-    </div>
-    <div id="ls-content"><div class="loading"><span class="spin"></span></div></div>`;
-  if (dsBang.length) taiLichSu(dsBang[0].bang);
-}
-
-async function taiLichSu(maBang) {
-  const el = document.getElementById('ls-content');
-  el.innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
-  let ds;
-  try { ds = await DB.layLichSuSoLieu({ bang: maBang, gioiHan: 100 }); }
-  catch(e) { el.innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải nhật ký: ${e.message}</div>`; return; }
-
-  const tenNguoi = uid => {
-    const t = dsTaiKhoan.find(x=>x.id===uid);
-    return t ? (t.ho_ten || t.email) : (uid ? uid.slice(0,8)+'…' : '--');
-  };
-  const nhanHanhDong = h => ({them:'🆕 Thêm', sua:'✏️ Sửa', xoa:'🗑 Xoá'}[h] || h);
-  const hienGiaTri = (n, t) => t !== null && t !== undefined && t !== '' ? t : (n !== null && n !== undefined ? n : '--');
-
-  const rows = ds.map(r => `<tr>
-    <td style="font-size:11px;color:var(--g4);white-space:nowrap">${new Date(r.thoi_diem).toLocaleString('vi-VN')}</td>
-    <td class="mono" style="font-size:11px">${r.id_chi_tieu}</td>
-    <td class="mono" style="font-size:11px;text-align:center">${r.cot_id}</td>
-    <td style="text-align:center"><span class="badge ${r.hanh_dong==='them'?'blue':r.hanh_dong==='xoa'?'red':'yellow'}">${nhanHanhDong(r.hanh_dong)}</span></td>
-    <td style="font-size:12px;color:var(--g4)">${hienGiaTri(r.gia_tri_cu, r.gia_tri_text_cu)}</td>
-    <td style="font-size:12px;font-weight:600">${hienGiaTri(r.gia_tri_moi, r.gia_tri_text_moi)}</td>
-    <td style="font-size:12px">${tenNguoi(r.nguoi_sua)} <span style="color:var(--g4);font-size:10px">(${r.vai_tro_luc_sua||''})</span></td>
-    <td style="font-size:12px;color:var(--g5)">${(r.ly_do||'').replace(/</g,'&lt;')||'--'}</td>
-  </tr>`).join('');
-
-  el.innerHTML = `
-    <div class="card">
-      <div style="overflow-x:auto">
-        <table class="dt">
-          <thead><tr>
-            <th>Thời điểm</th><th>Chỉ tiêu</th><th>Cột</th><th style="text-align:center">Hành động</th>
-            <th>Giá trị cũ</th><th>Giá trị mới</th><th>Người sửa</th><th>Lý do</th>
-          </tr></thead>
-          <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--g4)">Chưa có lần sửa nào ghi nhận cho bảng này.</td></tr>'}</tbody>
-        </table>
-      </div>
-    </div>`;
-}
-// ════════════════════════════════════════════════════════════
-// KỲ BÁO CÁO (ky_bao_cao — MỚI Bước 8/8a-vá/8b) — Luồng A1: tạo kỳ (wizard 3
-// bước) + trang chi tiết (cột, hạn, phát hành/đóng). KHÁC "Kỳ dữ liệu" ở
-// mục trên (cot_bao_cao — mốc thời gian từng CỘT, không đổi).
-// ════════════════════════════════════════════════════════════
-
-// ── Bước 8b-vá3: nhãn tiếng Việt cho 6 giá trị loai_ky quy ước theo TCTK
-// (13_phan_loai_ky.sql — "tuan" đang KHOÁ, cột tuan trơ ở CSDL). loai_ky vẫn
-// là text TỰ DO (không CHECK) — nhanLoaiKy() rơi về hiện nguyên mã nếu gặp
-// giá trị lạ (vd "9thang" cũ hoặc giá trị admin tự gõ tay), KHÔNG che giấu
-// dữ liệu thật. AUTO_THANG_LOAI = hai loại server tự suy tháng (6/12) khi
-// tạo kỳ — GIỮ NGUYÊN đúng logic tao_ky_bao_cao() hiện có, KHÔNG đổi SQL. ──
-const LOAI_KY_NHAN = { thang: 'Tháng', quy: 'Quý', '6thang': '6 tháng', canam: 'Cả năm', dot_xuat: 'Đột xuất', tuan: 'Tuần' };
-function nhanLoaiKy(ma) { return LOAI_KY_NHAN[ma] || ma; }
-const AUTO_THANG_LOAI = new Set(['6thang', 'canam']);
-async function hienKyBaoCao() {
-  setAct('ni-kybc');
-  document.getElementById('topbar-t').textContent = 'Kỳ báo cáo';
-  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
-  try {
-    if (!dsLoai.length) await loadLoai();
-    if (!dsBang.length) await loadBang();
-    dsKyBaoCao = await DB.layTatCaKyBaoCao({
-      nam: filterKyNam ? parseInt(filterKyNam) : undefined,
-      thang: filterKyThang ? parseInt(filterKyThang) : undefined,
-    });
-  } catch (e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi tải dữ liệu: ${e.message}</div>`;
-    return;
-  }
-  renderKyBaoCao();
-}
-
-function renderKyBaoCao() {
-  // Bước 8b-vá3: lọc "Loại kỳ báo cáo" — THUẦN CLIENT-SIDE trên danh sách đã
-  // tải (Năm/Tháng vẫn lọc qua server như cũ ở hienKyBaoCao). Đổi lọc Loại
-  // chỉ gọi lại renderKyBaoCao(), KHÔNG gọi lại hienKyBaoCao() (đỡ round-trip).
-  const dsLoaiCoSan = [...new Set(dsKyBaoCao.map(k => k.loai_ky))];
-  const dsHienThi = filterKyLoai ? dsKyBaoCao.filter(k => k.loai_ky === filterKyLoai) : dsKyBaoCao;
-
-  const rows = dsHienThi.map(k => {
-    const badge = k.trang_thai_ky === 'mo' ? 'green' : k.trang_thai_ky === 'dong' ? 'gray' : 'yellow';
-    const nhan  = k.trang_thai_ky === 'mo' ? '🟢 Đang mở' : k.trang_thai_ky === 'dong' ? '⚫ Đã đóng' : '📝 Nháp';
-    return `<tr style="cursor:pointer" onclick="moChiTietKy(${k.id})">
-      <td><strong>${(k.ten||'').replace(/</g,'&lt;')}</strong>${k.dang_thu_thap ? ' <span class="badge blue" style="padding:1px 7px;font-size:10px">⭐ Đang thu thập</span>' : ''}</td>
-      <td style="text-align:center">${k.thang}/${k.nam}</td>
-      <td>${nhanLoaiKy(k.loai_ky)}</td>
-      <td><span class="badge ${badge}">${nhan}</span></td>
-      <td>${UTILS.formatNgay(k.han_nop) || '<span style="color:var(--g4)">Chưa đặt</span>'}</td>
-      <td style="font-size:11px;color:var(--g4)">${k.tao_luc ? new Date(k.tao_luc).toLocaleDateString('vi-VN') : ''}</td>
-      <td><button class="btn ghost" style="padding:4px 8px" onclick="event.stopPropagation();moChiTietKy(${k.id})">Mở ›</button></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('content').innerHTML = `
-    <div class="card">
-      <div class="card-head">
-        <h3>🗓️ Kỳ báo cáo <span style="font-size:12px;font-weight:400;color:var(--g4)">(${dsHienThi.length}${filterKyLoai ? '/' + dsKyBaoCao.length : ''} kỳ — mới nhất trên)</span></h3>
-        <button class="btn primary" onclick="moWizardKy()">+ Tạo kỳ báo cáo mới</button>
-      </div>
-      <div class="filter-bar">
-        <label>Năm</label><input type="number" class="inp" style="width:90px" value="${filterKyNam}" onchange="filterKyNam=this.value;hienKyBaoCao()">
-        <label>Tháng</label>
-        <select class="inp" style="width:auto" onchange="filterKyThang=this.value;hienKyBaoCao()">
-          <option value="">Tất cả</option>
-          ${Array.from({length:12},(_,i)=>i+1).map(t=>`<option value="${t}" ${String(filterKyThang)===String(t)?'selected':''}>Tháng ${t}</option>`).join('')}
-        </select>
-        <label>Loại kỳ</label>
-        <select class="inp" style="width:auto" onchange="filterKyLoai=this.value;renderKyBaoCao()">
-          <option value="">Tất cả</option>
-          ${dsLoaiCoSan.map(l => `<option value="${l}" ${filterKyLoai===l?'selected':''}>${nhanLoaiKy(l)}</option>`).join('')}
-        </select>
-        <button class="btn ghost" onclick="filterKyNam='';filterKyThang='';filterKyLoai='';hienKyBaoCao()">Tất cả</button>
-      </div>
-      <div style="overflow-x:auto"><table class="dt">
-        <thead><tr><th>Tên kỳ báo cáo</th><th style="text-align:center">Tháng/Năm</th><th>Loại</th><th>Trạng thái</th><th>Hạn chung</th><th>Ngày tạo</th><th></th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--g4)">Chưa có kỳ báo cáo nào — bấm "+ Tạo kỳ báo cáo mới" để bắt đầu.</td></tr>'}</tbody>
-      </table></div>
-    </div>
-    <div id="kybc-chi-tiet"></div>`;
-  // Nếu đang mở chi tiết một kỳ (vd sau khi tạo mới) thì render lại luôn
-  if (kyChiTietHienTai) renderChiTietKy();
-}
-
-// ── Luồng A1 — wizard 3 bước: (1) Chọn kỳ (2) Xem trước, chỉ đọc (3) Xác
-// nhận + tuỳ biến (thêm cột đặc biệt). Gộp MỘT LẦN commit khi bấm "Tạo". ──
-function moWizardKy() {
-  kybcW = {
-    buoc: 1, nam: new Date().getFullYear(), loaiKy: 'thang',
-    thang: new Date().getMonth() + 1, ten: '', hanNop: '',
-    duKien: [], dsDacBiet: [],
-  };
-  renderWizardKy();
-  UTILS.moModal('modal-kybc-wizard');
-}
-
-function kybcOnLoaiChange() {
-  const loai = document.getElementById('kybcw-loai')?.value;
-  if (!loai) return;
-  kybcW.loaiKy = loai;
-  renderKybcThangField();
-}
-
-// Bước 8b-vá3: ô "Tháng" đổi hình dạng theo Loại kỳ — số Tháng (thang/
-// dot_xuat), select Quý 1-4 (quy, tự quy đổi sang tháng cuối quý khi Tiếp
-// tục), hoặc ẨN (6thang/canam — server tự suy 6/12, giữ nguyên hành vi cũ).
-// Cập nhật TẠI CHỖ (không renderWizardKy() lại toàn bộ) để không mất giá trị
-// người dùng đã gõ ở Tên/Hạn nộp — đúng tinh thần bản gốc.
-function renderKybcThangField() {
-  const wrap = document.getElementById('kybcw-thang-wrap');
-  if (!wrap) return;
-  const loai = kybcW.loaiKy;
-  if (loai === '6thang' || loai === 'canam') {
-    wrap.style.display = 'none';
-  } else if (loai === 'quy') {
-    wrap.style.display = '';
-    wrap.innerHTML = `<label>Quý</label>
-      <select class="inp" id="kybcw-quy" onchange="kybcQuyChange()">
-        <option value="1">Quý 1 (kết thúc tháng 3)</option>
-        <option value="2">Quý 2 (kết thúc tháng 6)</option>
-        <option value="3">Quý 3 (kết thúc tháng 9)</option>
-        <option value="4">Quý 4 (kết thúc tháng 12)</option>
-      </select>`;
-    kybcQuyChange();
-  } else { // 'thang' hoặc 'dot_xuat'
-    wrap.style.display = '';
-    wrap.innerHTML = `<label>Tháng${loai === 'dot_xuat' ? ' <span style="color:var(--g4);font-weight:400;text-transform:none;letter-spacing:normal">(chỉ để phân biệt kỹ thuật, không hiện trong tên kỳ)</span>' : ''}</label>
-      <input class="inp" id="kybcw-thang" type="number" min="1" max="12" value="${kybcW.thang || new Date().getMonth()+1}">`;
-  }
-}
-
-// Gợi ý sẵn tên kỳ "Kỳ báo cáo Quý N/năm" khi chọn Quý — vì tao_ky_bao_cao()
-// hiện CHƯA có nhánh đặt tên riêng cho 'quy' (chỉ có 6thang/9thang/canam/
-// dot_xuat), để trống tên sẽ tự sinh SAI thành "Kỳ báo cáo tháng 3/2026" thay
-// vì "Quý 1/2026" (khoảng trống của 8b-vá2, ngoài phạm vi SQL của bước này).
-// CHỈ gợi ý khi ô Tên đang trống — không ghi đè tên người dùng đã tự gõ.
-function kybcQuyChange() {
-  const q = document.getElementById('kybcw-quy')?.value;
-  const nam = document.getElementById('kybcw-nam')?.value || kybcW.nam;
-  const tenEl = document.getElementById('kybcw-ten');
-  if (!tenEl || !q || !nam) return;
-  // Chỉ tự điền khi ô Tên đang TRỐNG hoặc lần gần nhất CŨNG do hệ thống tự
-  // gợi ý (data-auto='quy') — đổi từ Quý 1 sang Quý 2 vẫn cập nhật lại được;
-  // một khi người dùng tự gõ (xem oninput bên dưới), KHÔNG ghi đè nữa.
-  if (!tenEl.value.trim() || tenEl.dataset.auto === 'quy') {
-    tenEl.value = `Kỳ báo cáo Quý ${q}/${nam}`;
-    tenEl.dataset.auto = 'quy';
-  }
-}
-
-function renderWizardKy() {
-  const tenBuoc = kybcW.buoc === 1 ? 'Chọn kỳ' : kybcW.buoc === 2 ? 'Xem trước' : 'Xác nhận & tuỳ biến';
-  document.getElementById('kybcw-title').textContent = `🗓️ Tạo kỳ báo cáo mới — Bước ${kybcW.buoc}/3: ${tenBuoc}`;
-  document.getElementById('err-kybcw').textContent = '';
-  const body = document.getElementById('kybcw-body');
-  const btns = document.getElementById('kybcw-btns');
-
-  if (kybcW.buoc === 1) {
-    body.innerHTML = `<div class="mrow">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="fg"><label>Loại kỳ</label>
-          <select class="inp" id="kybcw-loai" onchange="kybcOnLoaiChange()">
-            <option value="thang" ${kybcW.loaiKy==='thang'?'selected':''}>Tháng</option>
-            <option value="quy" ${kybcW.loaiKy==='quy'?'selected':''}>Quý</option>
-            <option value="6thang" ${kybcW.loaiKy==='6thang'?'selected':''}>6 tháng đầu năm</option>
-            <option value="canam" ${kybcW.loaiKy==='canam'?'selected':''}>Cả năm</option>
-            <option value="dot_xuat" ${kybcW.loaiKy==='dot_xuat'?'selected':''}>Đột xuất</option>
-            <option value="tuan" disabled title="Sắp hỗ trợ — cột dữ liệu tuần đã có ở tầng CSDL nhưng chưa nối logic tạo kỳ">Báo cáo tuần (sắp hỗ trợ)</option>
-          </select></div>
-        <div class="fg" id="kybcw-thang-wrap"><label>Tháng</label>
-          <input class="inp" id="kybcw-thang" type="number" min="1" max="12" value="${kybcW.thang}"></div>
-      </div>
-      <div class="fg"><label>Năm</label><input class="inp" id="kybcw-nam" type="number" value="${kybcW.nam}"></div>
-      <div class="fg"><label>Tên kỳ báo cáo <span style="color:var(--g4);font-weight:400">(để trống → tự sinh)</span></label>
-        <input class="inp" id="kybcw-ten" placeholder="Tự sinh theo tháng/năm" value="${(kybcW.ten||'').replace(/"/g,'&quot;')}" oninput="this.dataset.auto=''"></div>
-      <div class="fg"><label>Hạn nộp chung <span style="color:var(--g4);font-weight:400">(tuỳ chọn — chưa có văn bản thì để trống)</span></label>
-        <input class="inp" id="kybcw-han" type="date" value="${kybcW.hanNop||''}"></div>
-    </div>`;
-    renderKybcThangField();
-    btns.innerHTML = `<button class="btn-p" onclick="kybcBuoc1Tiep()">Tiếp tục — Xem trước ›</button>
-      <button class="btn-g" onclick="UTILS.dongModal('modal-kybc-wizard')">Huỷ</button>`;
-  } else if (kybcW.buoc === 2) {
-    if (kybcW.loaiKy === 'dot_xuat') {
-      // 13_phan_loai_ky.sql: loai_ky='dot_xuat' bỏ qua vòng sinh 5 cột mặc
-      // định — kỳ tạo RỖNG, admin tự "+ Thêm cột" đúng nhu cầu sau khi tạo.
-      body.innerHTML = `<div style="padding:12px 14px;background:var(--g1);border-radius:7px;font-size:12px;color:var(--g5);line-height:1.6">
-        <strong style="color:var(--xd)">Kỳ báo cáo đột xuất được tạo RỖNG</strong> — khác kỳ tháng/quý/6 tháng/năm,
-        kỳ đột xuất KHÔNG có cột dữ liệu mặc định nào (báo cáo đột xuất không theo khuôn tháng cố định).<br><br>
-        Sau khi tạo, vào trang chi tiết kỳ và bấm <strong>"+ Thêm cột"</strong> để thêm đúng cột dữ liệu cần cho đợt
-        báo cáo này — hoặc thêm ngay ở bước tiếp theo (Xác nhận &amp; tuỳ biến).
-      </div>`;
-    } else {
-      const rows = kybcW.duKien.map(c => `<tr>
-        <td style="text-align:center">${c.da_ton_tai ? '✅' : '○'}</td>
-        <td class="mono" style="font-size:12px">${c.ma_cot_du_kien}</td>
-        <td style="text-align:center">${c.thang}/${c.nam}</td>
-        <td>${c.loai}</td>
-      </tr>`).join('');
-      body.innerHTML = `<p style="font-size:12px;color:var(--g5);margin-bottom:10px">Hệ thống dự kiến <strong>${kybcW.duKien.length}</strong> kỳ dữ liệu (cột) mặc định cho kỳ
-        <strong>${(kybcW.ten || ('tháng ' + kybcW.thang + '/' + kybcW.nam))}</strong>.
-        ✅ = cột đã có sẵn (dùng lại) &nbsp;·&nbsp; ○ = sẽ tạo mới. <strong>Chưa ghi gì xuống CSDL ở bước này.</strong></p>
-        <div style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="dt">
-          <thead><tr><th style="width:40px"></th><th>Mã cột dự kiến</th><th style="width:90px">Tháng/Năm</th><th>Loại</th></tr></thead>
-          <tbody>${rows}</tbody></table></div>`;
-    }
-    btns.innerHTML = `<button class="btn-p" onclick="kybcBuoc2Tiep()">Tiếp tục — Xác nhận ›</button>
-      <button class="btn-g" onclick="kybcW.buoc=1;renderWizardKy()">‹ Quay lại</button>`;
-  } else {
-    const dacBietOpts = dsLoai.map(l => `<option value="${l.ma}">${l.ten}</option>`).join('');
-    const dsDacBiet = kybcW.dsDacBiet || [];
-    const moTaCot = kybcW.loaiKy === 'dot_xuat'
-      ? 'kỳ <strong>RỖNG</strong> (không có cột mặc định — đúng vì đây là kỳ đột xuất)'
-      : `${kybcW.duKien.length} cột mặc định ở bước trước`;
-    body.innerHTML = `<p style="font-size:12px;color:var(--g5);margin-bottom:8px">Sẵn sàng tạo kỳ <strong>${(kybcW.ten || ('tháng ' + kybcW.thang + '/' + kybcW.nam))}</strong>
-      với ${moTaCot}. Có thể thêm cột dữ liệu ĐẶC BIỆT ngay (vd kế hoạch năm — chọn loại "kh", tháng 12), hoặc thêm sau ở trang chi tiết.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px">
-        <div class="fg"><label>Loại</label><select class="inp" id="kybcw-db-loai">${dacBietOpts}</select></div>
-        <div class="fg"><label>Tháng</label><input class="inp" id="kybcw-db-thang" type="number" min="1" max="12" placeholder="12"></div>
-        <div class="fg"><label>Năm</label><input class="inp" id="kybcw-db-nam" type="number" value="${kybcW.nam}"></div>
-        <button class="btn ghost" type="button" onclick="kybcThemDacBiet()">+ Thêm</button>
-      </div>
-      <div id="kybcw-db-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
-        ${dsDacBiet.length ? dsDacBiet.map((d,i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:var(--g1);border-radius:5px;font-size:12px">
-          <span>${d.loai} — ${d.thang}/${d.nam}</span><button class="btn danger" style="padding:1px 8px" onclick="kybcXoaDacBiet(${i})">✕</button>
-        </div>`).join('') : '<span style="font-size:12px;color:var(--g4)">Chưa thêm cột đặc biệt nào — bỏ qua nếu không cần.</span>'}
-      </div>`;
-    btns.innerHTML = `<button class="btn-p" onclick="kybcXacNhanTao()">✅ Tạo kỳ báo cáo</button>
-      <button class="btn-g" onclick="kybcW.buoc=2;renderWizardKy()">‹ Quay lại</button>`;
-  }
-}
-
-async function kybcBuoc1Tiep() {
-  const err = document.getElementById('err-kybcw');
-  const loai = document.getElementById('kybcw-loai').value;
-  const nam = parseInt(document.getElementById('kybcw-nam').value);
-  // Bước 8b-vá3: tháng suy theo Loại kỳ — 6thang/canam server tự suy (giữ
-  // nguyên hành vi cũ, không phụ thuộc input); quy đổi Quý 1-4 sang tháng
-  // cuối quý (3/6/9/12) vì tao_ky_bao_cao() cần p_thang thật cho 'quy' (đặc
-  // tả 8b-vá2: "quy... admin PHẢI tự truyền p_thang"); thang/dot_xuat đọc
-  // trực tiếp ô số Tháng.
-  let thang;
-  if (loai === '6thang') thang = 6;
-  else if (loai === 'canam') thang = 12;
-  else if (loai === 'quy') { const q = parseInt(document.getElementById('kybcw-quy')?.value); thang = q ? q * 3 : null; }
-  else thang = parseInt(document.getElementById('kybcw-thang')?.value); // thang, dot_xuat
-
-  if (!nam || !thang || thang < 1 || thang > 12) { err.textContent = 'Vui lòng nhập đủ Năm (và Quý/Tháng tương ứng với Loại kỳ đã chọn)!'; return; }
-  kybcW.nam = nam; kybcW.thang = thang; kybcW.loaiKy = loai;
-  kybcW.ten = document.getElementById('kybcw-ten').value.trim();
-  kybcW.hanNop = document.getElementById('kybcw-han').value || null;
-  if (loai === 'dot_xuat') {
-    // Kỳ đột xuất được tao_ky_bao_cao() tạo RỖNG (13_phan_loai_ky.sql) — xem
-    // trước "5 cột mặc định" sẽ SAI/gây hiểu nhầm, nên bỏ qua lời gọi.
-    kybcW.duKien = [];
-  } else {
-    try { kybcW.duKien = await DB.duKienCotKy(thang, nam); }
-    catch (e) { err.textContent = 'Lỗi tải xem trước: ' + e.message; return; }
-  }
-  kybcW.buoc = 2;
-  renderWizardKy();
-}
-
-function kybcBuoc2Tiep() { kybcW.buoc = 3; kybcW.dsDacBiet = kybcW.dsDacBiet || []; renderWizardKy(); }
-
-function kybcThemDacBiet() {
-  const loai = document.getElementById('kybcw-db-loai').value;
-  const thang = parseInt(document.getElementById('kybcw-db-thang').value);
-  const nam = parseInt(document.getElementById('kybcw-db-nam').value);
-  if (!loai || !thang || !nam) { toast('Điền đủ Loại/Tháng/Năm cho cột đặc biệt!', 'er'); return; }
-  kybcW.dsDacBiet = kybcW.dsDacBiet || [];
-  kybcW.dsDacBiet.push({ loai, thang, nam });
-  renderWizardKy();
-}
-function kybcXoaDacBiet(i) { kybcW.dsDacBiet.splice(i, 1); renderWizardKy(); }
-
-async function kybcXacNhanTao() {
-  const err = document.getElementById('err-kybcw');
-  try {
-    // Bước 8b-vá3: truyền p_thang cho MỌI loại trừ 6thang/canam (server tự
-    // suy 6/12 — CASE trong tao_ky_bao_cao() không đổi). 'quy'/'dot_xuat'
-    // PHẢI truyền p_thang thật (đặc tả 8b-vá2) — kybcW.thang đã được
-    // kybcBuoc1Tiep() tính đúng (quy → tháng cuối quý 3/6/9/12).
-    const kyId = await DB.taoKyBaoCao(kybcW.nam, kybcW.loaiKy, AUTO_THANG_LOAI.has(kybcW.loaiKy) ? null : kybcW.thang, kybcW.ten || null, kybcW.hanNop || null);
-    let soLoi = 0;
-    for (const d of (kybcW.dsDacBiet || [])) {
-      try { await DB.themCotVaoKy(kyId, d.thang, d.nam, d.loai, null); }
-      catch (e2) { soLoi++; toast(`⚠️ Không thêm được cột ${d.loai} ${d.thang}/${d.nam}: ${e2.message}`, 'er'); }
-    }
-    UTILS.dongModal('modal-kybc-wizard');
-    toast(`✅ Đã tạo kỳ báo cáo (trạng thái NHÁP — bấm "Phát hành" ở trang chi tiết khi sẵn sàng cho đơn vị thấy)!${soLoi ? ' Có ' + soLoi + ' cột đặc biệt lỗi.' : ''}`);
-    await hienKyBaoCao();
-    await moChiTietKy(kyId);
-  } catch (e) { err.textContent = 'Lỗi: ' + e.message; }
-}
-
-// ── Trang chi tiết một kỳ báo cáo (cột, hạn riêng, phát hành/đóng) ──
-async function moChiTietKy(kyId) {
-  try {
-    kyChiTietHienTai = dsKyBaoCao.find(k => k.id === kyId) || await DB.layKyBaoCao(kyId);
-    if (!dsBang.length) await loadBang();
-    [cotCuaKyChiTiet, hanNopBangChiTiet] = await Promise.all([
-      DB.layCotCuaKy(kyId), DB.layHanNopBang(kyId),
-    ]);
-  } catch (e) { toast('Lỗi tải chi tiết: ' + e.message, 'er'); return; }
-  renderChiTietKy();
-  const elCT = document.getElementById('kybc-chi-tiet');
-  if (elCT && typeof elCT.scrollIntoView === 'function') elCT.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function renderChiTietKy() {
-  const k = kyChiTietHienTai;
-  const el = document.getElementById('kybc-chi-tiet');
-  if (!el || !k) return;
-  const hanMap = {}; hanNopBangChiTiet.forEach(h => hanMap[h.bang] = h.han_nop);
-  const rowsCot = cotCuaKyChiTiet.map(c => `<tr>
-    <td>${c.tieu_de || c.ma_cot}</td><td style="text-align:center">${c.thang}/${c.nam}</td><td>${c.loai}</td>
-    <td style="text-align:center">${c.khoa_nhap_lieu ? '🔒' : '🔓'}</td>
-    <td><button class="btn danger" style="padding:3px 8px" onclick="kybcBoCot(${c.id})">Bỏ khỏi kỳ</button></td>
-  </tr>`).join('');
-  const rowsHan = dsBang.map(b => `<tr>
-    <td>${b.ten_bang}</td>
-    <td><input class="inp" type="date" style="width:auto" value="${hanMap[b.bang] || ''}" onchange="kybcDatHanRieng('${b.bang}',this.value)"></td>
-  </tr>`).join('');
-  const trangThaiNhan = { nhap: '📝 Nháp', mo: '🟢 Đang mở', dong: '⚫ Đã đóng' }[k.trang_thai_ky] || k.trang_thai_ky;
-
-  el.innerHTML = `<div class="card" style="margin-top:12px">
-    <div class="card-head">
-      <h3>📂 Chi tiết: ${(k.ten||'').replace(/</g,'&lt;')} <span style="font-size:12px;font-weight:400;color:var(--g4)">(${trangThaiNhan})</span></h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${k.trang_thai_ky === 'nhap' ? `<button class="btn primary" onclick="kybcDoiTrangThai('mo')">🚀 Phát hành</button>` : ''}
-        ${k.trang_thai_ky === 'mo' ? `<button class="btn ghost" onclick="kybcDoiTrangThai('dong')">⏹ Đóng kỳ</button>` : ''}
-        ${k.trang_thai_ky === 'dong' ? `<button class="btn ghost" onclick="kybcDoiTrangThai('mo')">🔓 Mở lại</button>` : ''}
-        ${k.trang_thai_ky === 'mo' && !k.dang_thu_thap ? `<button class="btn ghost" onclick="kybcDatDangThuThap()">📌 Đặt làm kỳ đang thu thập</button>` : ''}
-        ${k.dang_thu_thap ? `<span class="badge blue" style="align-self:center">⭐ Đang thu thập</span>` : ''}
-        <button class="btn ghost" onclick="kybcDongChiTiet()">✕ Đóng</button>
-      </div>
-    </div>
-    <div class="form-grid">
-      <div class="fg"><label>Tên</label><input class="inp" id="kybc-cd-ten" value="${(k.ten||'').replace(/"/g,'&quot;')}" onchange="kybcSuaTen(this.value)"></div>
-      <div class="fg"><label>Hạn nộp chung</label><input class="inp" type="date" value="${k.han_nop||''}" onchange="kybcSuaHanChung(this.value)"></div>
-    </div>
-    <div class="card-head" style="border-top:1px solid var(--g2)">
-      <h3 style="font-size:13px">📅 Kỳ dữ liệu (cột) thuộc kỳ này (${cotCuaKyChiTiet.length})</h3>
-      <button class="btn ghost" onclick="kybcMoThemCot()">+ Thêm cột</button>
-    </div>
-    <div style="overflow-x:auto"><table class="dt"><thead><tr><th>Tiêu đề</th><th>Tháng/Năm</th><th>Loại</th><th>Khoá nhập</th><th></th></tr></thead>
-      <tbody>${rowsCot || '<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--g4)">Chưa có cột nào</td></tr>'}</tbody></table></div>
-    <div id="kybc-them-cot" style="padding:0 16px 10px"></div>
-    <div class="card-head" style="border-top:1px solid var(--g2)">
-      <h3 style="font-size:13px">⏰ Hạn nộp riêng theo biểu <span style="font-size:11px;font-weight:400;color:var(--g4)">(để trống = dùng hạn chung ở trên)</span></h3>
-    </div>
-    <div style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="dt"><thead><tr><th>Biểu</th><th>Hạn riêng</th></tr></thead>
-      <tbody>${rowsHan}</tbody></table></div>
-  </div>`;
-}
-
-async function kybcDoiTrangThai(tt) {
-  if (!kyChiTietHienTai) return;
-  try {
-    await DB.suaKyBaoCao(kyChiTietHienTai.id, { trang_thai_ky: tt });
-    kyChiTietHienTai.trang_thai_ky = tt;
-    toast(tt === 'mo' ? '✅ Đã phát hành/mở kỳ báo cáo — đơn vị đã thấy được!' : tt === 'dong' ? '✅ Đã đóng kỳ báo cáo!' : '✅ Đã cập nhật!');
-    await hienKyBaoCao();
-    await moChiTietKy(kyChiTietHienTai.id);
-  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-async function kybcDatDangThuThap() {
-  if (!kyChiTietHienTai) return;
-  try {
-    await DB.datKyDangThuThap(kyChiTietHienTai.id);
-    toast('✅ Đã đặt làm kỳ đang thu thập!');
-    await hienKyBaoCao();
-    await moChiTietKy(kyChiTietHienTai.id);
-  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-async function kybcSuaTen(v) {
-  v = (v || '').trim();
-  if (!v || !kyChiTietHienTai) return;
-  try { await DB.suaKyBaoCao(kyChiTietHienTai.id, { ten: v }); kyChiTietHienTai.ten = v; toast('✅ Đã lưu tên!'); renderKyBaoCao(); }
-  catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-async function kybcSuaHanChung(v) {
-  if (!kyChiTietHienTai) return;
-  try { await DB.suaKyBaoCao(kyChiTietHienTai.id, { han_nop: v || null }); kyChiTietHienTai.han_nop = v || null; toast('✅ Đã lưu hạn chung!'); }
-  catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-function kybcBoCot(cotId) {
-  const c = cotCuaKyChiTiet.find(x => x.id === cotId);
-  UTILS.xacNhan('Bỏ kỳ dữ liệu khỏi kỳ báo cáo',
-    `Bỏ <strong>${c?.tieu_de || c?.ma_cot}</strong> khỏi kỳ báo cáo này?<br><span style="font-size:12px;color:var(--g4)">KHÔNG xoá số liệu đã nhập, chỉ gỡ khỏi kỳ báo cáo (cột vẫn còn ở mục "Kỳ dữ liệu").</span>`,
-    async () => {
-      try { await DB.boCotKhoiKy(kyChiTietHienTai.id, cotId); toast('✅ Đã bỏ khỏi kỳ!'); await moChiTietKy(kyChiTietHienTai.id); }
-      catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-    });
-}
-
-async function kybcDatHanRieng(bang, val) {
-  if (!kyChiTietHienTai) return;
-  try { await DB.datHanNop(kyChiTietHienTai.id, bang, val || null); toast('✅ Đã lưu hạn riêng!'); }
-  catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-function kybcMoThemCot() {
-  const el = document.getElementById('kybc-them-cot');
-  if (!el) return;
-  const opts = dsLoai.map(l => `<option value="${l.ma}">${l.ten}</option>`).join('');
-  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;background:var(--g1);padding:10px;border-radius:7px">
-    <div class="fg"><label>Loại</label><select class="inp" id="ktc-loai">${opts}</select></div>
-    <div class="fg"><label>Tháng</label><input class="inp" id="ktc-thang" type="number" min="1" max="12"></div>
-    <div class="fg"><label>Năm</label><input class="inp" id="ktc-nam" type="number" value="${kyChiTietHienTai?.nam || new Date().getFullYear()}"></div>
-    <button class="btn primary" onclick="kybcXacNhanThemCot()">+ Thêm</button>
-  </div>`;
-}
-
-async function kybcXacNhanThemCot() {
-  const loai = document.getElementById('ktc-loai').value;
-  const thang = parseInt(document.getElementById('ktc-thang').value);
-  const nam = parseInt(document.getElementById('ktc-nam').value);
-  if (!loai || !thang || !nam) { toast('Điền đủ Loại/Tháng/Năm!', 'er'); return; }
-  try { await DB.themCotVaoKy(kyChiTietHienTai.id, thang, nam, loai, null); toast('✅ Đã thêm cột!'); await moChiTietKy(kyChiTietHienTai.id); }
-  catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-function kybcDongChiTiet() {
-  kyChiTietHienTai = null; cotCuaKyChiTiet = []; hanNopBangChiTiet = [];
-  const el = document.getElementById('kybc-chi-tiet'); if (el) el.innerHTML = '';
-}
-
-// ════════════════════════════════════════════════════════════
-// THEO DÕI (Luồng C — hàng đợi đề nghị chỉnh sửa, danh sách GOM THEO ĐƠN VỊ,
-// quản lý "phải báo cáo", quản lý danh mục trạng thái nộp)
-// ════════════════════════════════════════════════════════════
-async function hienTheoDoi() {
-  setAct('ni-theodoi');
-  document.getElementById('topbar-t').textContent = 'Theo dõi tiến độ nộp';
-  document.getElementById('content').innerHTML = '<div class="loading"><span class="spin"></span> Đang tải...</div>';
-  try {
-    dsKyMoTheoDoi = await DB.layTatCaKyBaoCao();
-    if (!dsDmTrangThaiNop.length) dsDmTrangThaiNop = await DB.layDmTrangThaiNop();
-  } catch (e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><span class="i">⚠️</span>Lỗi: ${e.message}</div>`;
-    return;
-  }
-  if (!theodoiKyId) {
-    const uuTien = dsKyMoTheoDoi.find(k => k.dang_thu_thap) || dsKyMoTheoDoi.find(k => k.trang_thai_ky === 'mo') || dsKyMoTheoDoi[0];
-    theodoiKyId = uuTien ? uuTien.id : null;
-  }
-  await taiTienDoTheoDoi();
-}
-
-async function taiTienDoTheoDoi() {
-  theodoiChon.clear(); // đổi kỳ → bỏ chọn hàng loạt cũ (khác kỳ, khác "bang" ngữ cảnh)
-  if (!theodoiKyId) { theodoiTienDo = []; theodoiLichSu = []; theodoiTrangThaiNop = []; renderTheoDoi(); return; }
-  try {
-    [theodoiTienDo, theodoiLichSu, theodoiTrangThaiNop] = await Promise.all([
-      DB.tienDoDot(theodoiKyId), DB.layLichSuNopTheoKy(theodoiKyId), DB.layTrangThaiNopTheoKy(theodoiKyId),
-    ]);
-  } catch (e) { toast('Lỗi tải tiến độ: ' + e.message, 'er'); theodoiTienDo = []; theodoiLichSu = []; theodoiTrangThaiNop = []; }
-  renderTheoDoi();
-}
-
-// Bước 8b-vá3: "cần chú ý" = CHƯA hoàn tất (mọi trạng thái khác 'da_nop')
-// HOẶC đã nộp nhưng QUÁ HẠN (trang_thai_thoi_han='qua_han' — nộp trễ vẫn
-// đáng admin lưu ý). "đã duyệt" = phần bù (da_nop, không quá hạn). Không có
-// cờ "duyệt" riêng trong CSDL — đây là quy tắc suy diễn ở tầng giao diện từ
-// hai trường tien_do_dot() đã trả sẵn (trang_thai_don_vi/trang_thai_thoi_han),
-// KHÔNG cần đổi RPC. Xem nhat_ky_buoc_08b_va3.md mục quyết định riêng.
-function theodoiCanChuY(r) {
-  return r.trang_thai_don_vi !== 'da_nop' || r.trang_thai_thoi_han === 'qua_han';
-}
-
-function theodoiToggleDonVi(donVi) {
-  if (theodoiThuGon.has(donVi)) theodoiThuGon.delete(donVi); else theodoiThuGon.add(donVi);
-  renderTheoDoi();
-}
-function theodoiToggleDaDuyet(donVi) {
-  if (theodoiMoDaDuyet.has(donVi)) theodoiMoDaDuyet.delete(donVi); else theodoiMoDaDuyet.add(donVi);
-  renderTheoDoi();
-}
-function theodoiToggleChon(bang, checked) {
-  if (checked) theodoiChon.add(bang); else theodoiChon.delete(bang);
-  renderTheoDoi();
-}
-function theodoiToggleChonNhomEl(el) {
-  const list = (el.dataset.bangs || '').split(',').filter(Boolean);
-  list.forEach(b => { if (el.checked) theodoiChon.add(b); else theodoiChon.delete(b); });
-  renderTheoDoi();
-}
-function theodoiToggleLoc() { theodoiLocMo = !theodoiLocMo; renderTheoDoi(); }
-function theodoiToggleLocTrangThai(ma, checked) {
-  if (checked) theodoiFilterTrangThai.add(ma); else theodoiFilterTrangThai.delete(ma);
-  renderTheoDoi();
-}
-function theodoiXoaLoc() {
-  theodoiFilterTrangThai.clear();
-  theodoiFilterLoaiKy = '';
-  renderTheoDoi();
-}
-// Lọc "Loại kỳ báo cáo" thu hẹp Ô CHỌN KỲ (vẫn chọn MỘT kỳ tại một thời điểm
-// như bản hiện có — KHÔNG gộp nhiều kỳ, để dành việc đó cho bước sau — xem
-// "hai điểm CHƯA làm" ở kế hoạch chi tiết mục 8b-vá3).
-function theodoiDsLoaiKyOptions() { return [...new Set(dsKyMoTheoDoi.map(k => k.loai_ky))]; }
-function theodoiKyLocTheoLoai() { return theodoiFilterLoaiKy ? dsKyMoTheoDoi.filter(k => k.loai_ky === theodoiFilterLoaiKy) : dsKyMoTheoDoi; }
-async function theodoiSetLocLoaiKy(loai) {
-  theodoiFilterLoaiKy = loai;
-  const ds = theodoiKyLocTheoLoai();
-  if (!ds.find(k => String(k.id) === String(theodoiKyId))) {
-    theodoiKyId = ds.length ? ds[0].id : null;
-    await taiTienDoTheoDoi();
-  } else {
-    renderTheoDoi();
-  }
-}
-
-// 👁 Xem lịch sử nộp đầy đủ của MỘT biểu (tường thuật nhiều dòng, thay cho
-// cột "Ghi chú" cũ hiện luôn trên bảng — gọn bảng, xem khi cần).
-function theodoiXemLichSu(bang, tenBang) {
-  const ls = theodoiLichSu.filter(h => h.bang === bang);
-  const dong = UTILS.tuongThuatLichSuNop(ls);
-  document.getElementById('xem-ls-title').textContent = `📜 Lịch sử nộp — ${tenBang || bang}`;
-  document.getElementById('xem-ls-body').innerHTML = dong.length
-    ? dong.map(d => `<div style="padding:6px 0;border-bottom:1px solid var(--g2);font-size:13px">${d}</div>`).join('')
-    : '<div class="empty" style="padding:20px"><span class="i">🗒️</span><span>Chưa có vết nộp/xử lý nào cho biểu này.</span></div>';
-  UTILS.moModal('modal-xem-ls');
-}
-
-function renderTheoDoi() {
-  const dsKySel = theodoiKyLocTheoLoai();
-  const kySel = dsKySel.map(k => `<option value="${k.id}" ${String(theodoiKyId) === String(k.id) ? 'selected' : ''}>${(k.ten||'').replace(/</g,'&lt;')}${k.dang_thu_thap ? ' ⭐' : ''}</option>`).join('');
-  const kyHienTai = dsKyMoTheoDoi.find(k => String(k.id) === String(theodoiKyId));
-
-  const lsTheoBang = {};
-  theodoiLichSu.forEach(h => { (lsTheoBang[h.bang] = lsTheoBang[h.bang] || []).push(h); });
-
-  // Lọc Trạng thái (nhiều lựa chọn, ô lọc nổi) — rỗng = tất cả.
-  const dsLoc = theodoiFilterTrangThai.size
-    ? theodoiTienDo.filter(r => theodoiFilterTrangThai.has(r.trang_thai_don_vi))
-    : theodoiTienDo;
-
-  const badgeMau = (text, hex) => {
-    const h = hex || '#9ca3af';
-    return `<span class="badge" style="background:${h}1a;color:${h};border:1px solid ${h}55">${text}</span>`;
-  };
-
-  const renderIcons = r => {
-    const gcQuanTri = UTILS.ghiChuQuanTriGanNhat(lsTheoBang[r.bang] || []);
-    const tenBangSafe = (r.ten_bang || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    let icons = `<button class="icon-btn" title="Xem lịch sử nộp" onclick="theodoiXemLichSu('${r.bang}','${tenBangSafe}')">👁️</button>`;
-    if (r.trang_thai_don_vi === 'de_nghi_sua') {
-      icons += `<button class="icon-btn" title="Duyệt — mở lại để đơn vị sửa" onclick="theodoiDuyet('${r.bang}',true)">✅</button>`;
-      icons += `<button class="icon-btn" title="Từ chối đề nghị chỉnh sửa" onclick="theodoiDuyet('${r.bang}',false)">❌</button>`;
-    } else if (r.trang_thai_don_vi === 'da_nop') {
-      icons += `<button class="icon-btn" title="Trả lại báo cáo" onclick="theodoiTraLai('${r.bang}')">↩️</button>`;
-    }
-    icons += `<button class="icon-btn" title="${gcQuanTri ? ('Ghi chú quản trị: ' + gcQuanTri.replace(/"/g,'&quot;')) : 'Chưa có ghi chú quản trị'}" ${gcQuanTri ? '' : 'style="opacity:.3"'}>📝</button>`;
-    icons += `<button class="icon-btn" title="Nhắc báo cáo — tính năng sắp có" disabled>🔔</button>`;
-    return icons;
-  };
-
-  const renderHang = r => `<tr>
-    <td style="width:26px"><input type="checkbox" ${theodoiChon.has(r.bang)?'checked':''} onchange="theodoiToggleChon('${r.bang}',this.checked)"></td>
-    <td>${r.ten_bang}</td>
-    <td style="font-size:12px">${UTILS.formatNgay(r.han_nop)}${r.han_rieng ? ' <span style="color:#1e40af">(riêng)</span>' : ''}</td>
-    <td>${badgeMau(r.ten_trang_thai_don_vi || r.trang_thai_don_vi, r.mau_don_vi)}</td>
-    <td>${r.ten_trang_thai_thoi_han ? badgeMau(r.ten_trang_thai_thoi_han, r.mau_thoi_han) : '<span style="color:var(--g4);font-size:11px">--</span>'}</td>
-    <td style="white-space:nowrap">${renderIcons(r)}</td>
-  </tr>`;
-
-  const renderBangNho = (dsRows, rong) => dsRows.length ? `<div style="overflow-x:auto"><table class="dt">
-      <thead><tr><th style="width:26px"></th><th>Biểu</th><th>Hạn nộp</th><th>Trạng thái</th><th>Thời hạn</th><th>Thao tác</th></tr></thead>
-      <tbody>${dsRows.map(renderHang).join('')}</tbody>
-    </table></div>` : `<div style="padding:8px 14px;font-size:12px;color:var(--g4)">${rong}</div>`;
-
-  // Gom theo đơn vị (tien_do_dot() đã ORDER BY don_vi_ten, thu_tu — duyệt
-  // tuần tự để gom, không cần tự sắp lại).
-  let nhomHtml = '';
-  let i = 0;
-  while (i < dsLoc.length) {
-    const donVi = dsLoc[i].don_vi_ten || '(chưa gán đơn vị)';
-    let j = i;
-    while (j < dsLoc.length && (dsLoc[j].don_vi_ten || '(chưa gán đơn vị)') === donVi) j++;
-    const dsNhom = dsLoc.slice(i, j);
-    i = j;
-
-    const canChuY = dsNhom.filter(theodoiCanChuY);
-    const daDuyet = dsNhom.filter(r => !theodoiCanChuY(r));
-    const dangMo = !theodoiThuGon.has(donVi);
-    const moDaDuyet = theodoiMoDaDuyet.has(donVi);
-    const dsBangNhom = dsNhom.map(r => r.bang).join(',');
-
-    nhomHtml += `<div class="tdg">
-      <div class="tdg-head ${dangMo?'mo':''}" onclick="theodoiToggleDonVi('${donVi.replace(/'/g,"\\'")}')">
-        <span class="car">▶</span>
-        <input type="checkbox" title="Chọn tất cả biểu của đơn vị này" data-bangs="${dsBangNhom}"
-          onclick="event.stopPropagation()" onchange="theodoiToggleChonNhomEl(this)">
-        <span class="ten">${donVi}</span>
-        ${canChuY.length ? `<span class="badge yellow">⚠️ ${canChuY.length} cần chú ý</span>` : ''}
-        <span class="badge green">✅ ${daDuyet.length} đã duyệt</span>
-      </div>
-      ${dangMo ? `<div class="tdg-body">
-        <div class="tdg-sub-head fixed">⚠️ Cần chú ý (${canChuY.length})</div>
-        ${renderBangNho(canChuY, '✅ Không có gì cần chú ý ở đơn vị này.')}
-        <div class="tdg-sub-head" onclick="theodoiToggleDaDuyet('${donVi.replace(/'/g,"\\'")}')">
-          ${moDaDuyet ? '▾' : '▸'} Đã duyệt (${daDuyet.length}) — bấm để ${moDaDuyet ? 'ẩn' : 'xem'}
+        <div class="form-actions">
+          <button class="btn primary" onclick="luuPassAdmin()">💾 Lưu mật khẩu</button>
         </div>
-        ${moDaDuyet ? renderBangNho(daDuyet, 'Chưa có biểu nào đã duyệt ở đơn vị này.') : ''}
-      </div>` : ''}
-    </div>`;
-  }
-  if (!nhomHtml) {
-    nhomHtml = `<div class="empty" style="padding:24px"><span class="i">🗒️</span><span>${theodoiTienDo.length ? 'Không có biểu nào khớp bộ lọc hiện tại.' : 'Chưa có biểu nào phải báo ở kỳ này (hoặc chưa chọn kỳ báo cáo).'}</span></div>`;
-  }
-
-  // Ô lọc nổi
-  const soLocDangBat = theodoiFilterTrangThai.size + (theodoiFilterLoaiKy ? 1 : 0);
-  const nhomDonViTrangThai = dsDmTrangThaiNop.filter(d => d.nhom === 'don_vi');
-  const locPanel = theodoiLocMo ? `<div class="loc-panel">
-      <h4>Trạng thái nộp</h4>
-      ${nhomDonViTrangThai.map(d => {
-        const dem = theodoiTienDo.filter(r => r.trang_thai_don_vi === d.ma).length;
-        return `<label class="loc-chk-row"><input type="checkbox" ${theodoiFilterTrangThai.has(d.ma)?'checked':''} onchange="theodoiToggleLocTrangThai('${d.ma}',this.checked)"> ${d.ten} <span style="color:var(--g4)">(${dem})</span></label>`;
-      }).join('') || '<span style="font-size:12px;color:var(--g4)">--</span>'}
-      <h4 style="margin-top:10px">Loại kỳ báo cáo <span style="color:var(--g4);font-weight:400;text-transform:none;letter-spacing:normal">(thu hẹp ô chọn kỳ)</span></h4>
-      <select class="inp" style="width:100%" onchange="theodoiSetLocLoaiKy(this.value)">
-        <option value="">Tất cả loại</option>
-        ${theodoiDsLoaiKyOptions().map(l => `<option value="${l}" ${theodoiFilterLoaiKy===l?'selected':''}>${nhanLoaiKy(l)}</option>`).join('')}
-      </select>
-      <div style="margin-top:10px;text-align:right"><button class="btn ghost" style="padding:4px 10px" onclick="theodoiXoaLoc()">Xoá lọc</button></div>
-    </div>` : '';
-
-  // Thanh thao tác hàng loạt (chỉ hiện khi có chọn)
-  let bulkBar = '';
-  if (theodoiChon.size) {
-    const chonRows = theodoiTienDo.filter(r => theodoiChon.has(r.bang));
-    const trangThaiSet = new Set(chonRows.map(r => r.trang_thai_don_vi));
-    let actions;
-    if (trangThaiSet.size === 1) {
-      const tt = [...trangThaiSet][0];
-      if (tt === 'de_nghi_sua') {
-        actions = `<button class="btn primary" style="padding:5px 12px" onclick="theodoiDuyetHangLoat(true)">✅ Duyệt hàng loạt</button>
-          <button class="btn danger" style="padding:5px 12px" onclick="theodoiDuyetHangLoat(false)">❌ Từ chối hàng loạt</button>`;
-      } else if (tt === 'da_nop') {
-        actions = `<button class="btn ghost" style="padding:5px 12px" onclick="theodoiTraLaiHangLoat()">↩ Trả lại hàng loạt</button>`;
-      } else {
-        actions = `<span style="font-size:12px;color:var(--g4)">Trạng thái "${chonRows[0].ten_trang_thai_don_vi || tt}" chưa có thao tác hàng loạt.</span>`;
-      }
-    } else {
-      actions = `<span style="font-size:12px;color:var(--g4)">Chỉ chọn các biểu CÙNG trạng thái để thao tác hàng loạt.</span>`;
-    }
-    bulkBar = `<div class="bulk-bar">
-      <strong style="color:var(--xd)">Đã chọn ${theodoiChon.size} biểu</strong>
-      ${actions}
-      <button class="btn ghost" style="padding:5px 12px;margin-left:auto" onclick="theodoiChon.clear();renderTheoDoi()">Bỏ chọn</button>
-    </div>`;
-  }
-
-  document.getElementById('content').innerHTML = `
-    <div class="card">
-      <div class="card-head"><h3>📈 Theo dõi tiến độ nộp</h3></div>
-      <div class="filter-bar">
-        <label>Kỳ báo cáo:</label>
-        <select class="inp" style="width:auto;min-width:240px" onchange="theodoiKyId=parseInt(this.value);taiTienDoTheoDoi()">${kySel || '<option value="">Không có kỳ khớp lọc</option>'}</select>
-        ${kyHienTai ? (kyHienTai.dang_thu_thap ? '<span class="badge blue">⭐ Đang thu thập</span>' : `<button class="btn ghost" onclick="theodoiDatDangThuThap()">📌 Đặt làm kỳ đang thu thập</button>`) : ''}
-        <div class="loc-wrap">
-          <button class="btn ghost" onclick="theodoiToggleLoc()">🔍 Lọc${soLocDangBat ? ` <span class="badge blue" style="padding:1px 6px;font-size:10px">${soLocDangBat}</span>` : ''}</button>
-          ${locPanel}
-        </div>
+        <div class="err-txt" id="err-dp" style="padding:0 16px 12px"></div>
       </div>
-      <div style="padding:12px 14px">${nhomHtml}</div>
-      ${bulkBar}
-    </div>
-    ${theodoiKyId ? renderPanelPhaiBaoCao() : ''}
-    ${renderCardDmTrangThaiNop()}
-  `;
+    </div>`;
 }
-
-function theodoiDuyetHangLoat(dongY) {
-  const list = [...theodoiChon];
-  if (!list.length) return;
-  UTILS.xacNhan(dongY ? `✅ Duyệt hàng loạt (${list.length} biểu)` : `❌ Từ chối hàng loạt (${list.length} biểu)`,
-    dongY ? `Mở lại ${list.length} biểu để đơn vị sửa số liệu? (chuyển sang "Đã mở lại để sửa")` : `Từ chối đề nghị của ${list.length} biểu này? (quay lại "Đã nộp", không sửa được nữa)`,
-    async () => {
-      let loi = 0;
-      for (const bang of list) {
-        try { await DB.duyetMoLaiBaoCao(theodoiKyId, bang, dongY); } catch (e) { loi++; }
-      }
-      toast(loi ? `⚠️ Đã xử lý ${list.length - loi}/${list.length} biểu, ${loi} lỗi` : `✅ Đã xử lý ${list.length} biểu!`);
-      theodoiChon.clear();
-      await taiTienDoTheoDoi();
-    });
-}
-
-function theodoiTraLaiHangLoat() {
-  const list = [...theodoiChon];
-  if (!list.length) return;
-  UTILS.xacNhan('↩ Trả lại hàng loạt',
-    `<div style="text-align:left;margin-top:8px">
-      <div style="font-size:12px;color:var(--g5);margin-bottom:8px">Trả lại ${list.length} biểu đã chọn để đơn vị sửa lại — CHUNG một lý do cho cả đợt.</div>
-      <label class="lbl" style="display:block;margin-bottom:4px">Lý do (tuỳ chọn)</label>
-      <input class="inp" id="tdtl-hl-ly-do" type="text" placeholder="Vd: rà soát lại số liệu quý này...">
-    </div>`,
-    async () => {
-      const lyDo = document.getElementById('tdtl-hl-ly-do')?.value || '';
-      let loi = 0;
-      for (const bang of list) {
-        try { await DB.traLaiBaoCao(theodoiKyId, bang, lyDo); } catch (e) { loi++; }
-      }
-      toast(loi ? `⚠️ Đã trả lại ${list.length - loi}/${list.length} biểu, ${loi} lỗi` : `✅ Đã trả lại ${list.length} biểu!`);
-      theodoiChon.clear();
-      await taiTienDoTheoDoi();
-    });
-}
-
-function theodoiDuyet(bang, dongY) {
-  UTILS.xacNhan(dongY ? '✅ Duyệt đề nghị chỉnh sửa' : '❌ Từ chối đề nghị',
-    dongY ? 'Mở lại để đơn vị sửa số liệu? (biểu chuyển sang "Đã mở lại để sửa")' : 'Từ chối đề nghị này? (biểu quay lại "Đã nộp", không sửa được nữa)',
-    async () => {
-      try { await DB.duyetMoLaiBaoCao(theodoiKyId, bang, dongY); toast(dongY ? '✅ Đã mở lại!' : 'Đã từ chối.'); await taiTienDoTheoDoi(); }
-      catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-    });
-}
-
-function theodoiTraLai(bang) {
-  UTILS.xacNhan('↩ Trả lại báo cáo',
-    `<div style="text-align:left;margin-top:8px">
-      <div style="font-size:12px;color:var(--g5);margin-bottom:8px">Trả lại biểu này để đơn vị sửa lại — dùng khi ĐANG CHỦ ĐỘNG phát hiện số liệu sai (không cần đơn vị xin trước).</div>
-      <label class="lbl" style="display:block;margin-bottom:4px">Lý do (tuỳ chọn)</label>
-      <input class="inp" id="tdtl-ly-do" type="text" placeholder="Vd: số liệu tháng 6 chưa khớp báo cáo giấy...">
-    </div>`,
-    async () => {
-      const lyDo = document.getElementById('tdtl-ly-do')?.value || '';
-      try { await DB.traLaiBaoCao(theodoiKyId, bang, lyDo); toast('✅ Đã trả lại!'); await taiTienDoTheoDoi(); }
-      catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-    });
-}
-
-async function theodoiDatDangThuThap() {
-  if (!theodoiKyId) return;
+async function luuPassAdmin() {
+  const cu=document.getElementById('dp-cu').value, moi=document.getElementById('dp-moi').value, moi2=document.getElementById('dp-moi2').value;
+  const err=document.getElementById('err-dp'); err.textContent=''; err.style.color='var(--red)';
+  if(cu!==(user.mat_khau||CONFIG.MAT_KHAU_MAC_DINH)){err.textContent='Mật khẩu hiện tại không đúng.';return}
+  if(moi.length<4){err.textContent='Mật khẩu mới phải có ít nhất 4 ký tự.';return}
+  if(moi!==moi2){err.textContent='Mật khẩu nhập lại không khớp.';return}
+  if(moi===CONFIG.MAT_KHAU_MAC_DINH){err.textContent='Không được dùng lại mật khẩu mặc định.';return}
   try {
-    await DB.datKyDangThuThap(theodoiKyId);
-    toast('✅ Đã đặt làm kỳ đang thu thập!');
-    dsKyMoTheoDoi.forEach(k => k.dang_thu_thap = (k.id === theodoiKyId));
-    renderTheoDoi();
-  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-// ── Quản lý "phải báo cáo" (Luồng C việc 3) — hiển thị CẢ biểu đang bị loại
-// (phai_bao_cao=false), khác bảng gom-theo-đơn-vị ở trên (tienDoDot chỉ trả
-// biểu đang phai_bao_cao=true). ──
-function renderPanelPhaiBaoCao() {
-  const rows = [...theodoiTrangThaiNop]
-    .sort((a, b) => (a.danh_sach_bang?.ten_bang || a.bang).localeCompare(b.danh_sach_bang?.ten_bang || b.bang, 'vi'))
-    .map(r => `<tr>
-      <td>${r.danh_sach_bang?.ten_bang || r.bang}</td>
-      <td style="text-align:center">
-        <label class="sw-wrap" style="justify-content:center">
-          <label class="sw"><input type="checkbox" ${r.phai_bao_cao ? 'checked' : ''} onchange="theodoiSuaPhaiBaoCao('${r.bang}',this.checked)">
-            <span class="sw-slider"></span></label>
-          <span class="sw-lbl" style="font-size:10px">${r.phai_bao_cao ? '✅ Phải báo' : '⬜ Miễn kỳ này'}</span>
-        </label>
-      </td>
-      <td style="text-align:center;font-size:11px;color:var(--g4)">${r.admin_sua_tay ? '✏️ Đã sửa tay' : '(tự tính)'}</td>
-    </tr>`).join('');
-  return `<div class="card" style="margin-top:12px">
-    <div class="card-head"><h3 style="font-size:13px">⚙️ Quản lý "phải báo cáo" <span style="font-size:11px;font-weight:400;color:var(--g4)">(tắt để MIỄN một biểu khỏi kỳ này — vd biểu đã sáp nhập, tạm ngưng)</span></h3></div>
-    <div style="overflow-x:auto;max-height:320px;overflow-y:auto"><table class="dt">
-      <thead><tr><th>Biểu</th><th style="width:130px;text-align:center">Phải báo cáo</th><th style="width:110px;text-align:center">Nguồn</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:14px;color:var(--g4)">Chưa có dòng theo dõi nào cho kỳ này (kỳ vừa tạo, chưa có biểu nào)</td></tr>'}</tbody>
-    </table></div>
-  </div>`;
-}
-
-async function theodoiSuaPhaiBaoCao(bang, phaiBaoCao) {
-  try {
-    await DB.datPhaiBaoCao(theodoiKyId, bang, phaiBaoCao);
-    toast('✅ Đã lưu!');
-    await taiTienDoTheoDoi(); // tải lại: danh sách gom theo đơn vị phụ thuộc phai_bao_cao
-  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
-}
-
-// ── Danh mục trạng thái nộp (dm_trang_thai_nop) — tên/màu/ngưỡng ngày,
-// KHÔNG khoá cứng trong CHECK constraint (hướng dẫn mục Bước 8). ──
-function renderCardDmTrangThaiNop() {
-  const rows = dsDmTrangThaiNop.map(d => `<tr>
-    <td class="mono" style="font-size:11px">${d.ma}</td>
-    <td><span class="badge gray">${d.nhom}</span></td>
-    <td><input class="ct-inp" value="${(d.ten||'').replace(/"/g,'&quot;')}" onchange="capNhatDmTrangThaiNop('${d.ma}','ten',this.value)"></td>
-    <td style="text-align:center"><input type="color" value="${d.mau_sac||'#9ca3af'}" style="width:40px;height:26px;border:none;cursor:pointer;background:none" onchange="capNhatDmTrangThaiNop('${d.ma}','mau_sac',this.value)"></td>
-    <td style="text-align:center">${d.nhom === 'thoi_han'
-      ? `<input class="num-inp" type="number" value="${d.nguong_ngay ?? ''}" placeholder="--" onchange="capNhatDmTrangThaiNop('${d.ma}','nguong_ngay',this.value===''?null:parseInt(this.value))">`
-      : '<span style="color:var(--g4)">--</span>'}</td>
-  </tr>`).join('');
-  return `<div class="card" style="margin-top:12px">
-    <div class="card-head"><h3 style="font-size:13px">🎨 Danh mục trạng thái nộp <span style="font-size:11px;font-weight:400;color:var(--g4)">(tên/màu/ngưỡng ngày — sửa ở đây, không cần đụng CSDL)</span></h3></div>
-    <div style="overflow-x:auto"><table class="dt">
-      <thead><tr><th style="width:120px">Mã</th><th style="width:80px">Nhóm</th><th>Tên hiển thị</th><th style="width:70px;text-align:center">Màu</th><th style="width:130px;text-align:center">Ngưỡng ngày</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--g4)">Chưa có danh mục</td></tr>'}</tbody>
-    </table></div>
-  </div>`;
-}
-
-async function capNhatDmTrangThaiNop(ma, col, val) {
-  try {
-    await DB.suaDmTrangThaiNop(ma, { [col]: val });
-    toast('✅ Đã lưu!');
-    const d = dsDmTrangThaiNop.find(x => x.ma === ma); if (d) d[col] = val;
-    if (col === 'mau_sac' || col === 'ten') renderTheoDoi();
-  } catch (e) { toast('Lỗi: ' + e.message, 'er'); }
+    await DB.doiMatKhau(user.id, moi);
+    user.mat_khau=moi; UTILS.luuSession(user);
+    err.style.color='var(--xc)'; err.textContent='✅ Đổi mật khẩu thành công!';
+    ['dp-cu','dp-moi','dp-moi2'].forEach(id=>document.getElementById(id).value='');
+  } catch(e){err.textContent='Lỗi: '+e.message}
 }
 </script>
-<!-- Wizard tạo kỳ báo cáo mới (Luồng A1 — Bước 8b) — 3 bước trong 1 modal -->
-<div class="modal-bg" id="modal-kybc-wizard">
-  <div class="mbox" style="max-width:640px;width:95%">
-    <h3 id="kybcw-title">🗓️ Tạo kỳ báo cáo mới</h3>
-    <div id="kybcw-body"></div>
-    <div class="mbtns" id="kybcw-btns" style="margin-top:10px"></div>
-    <div class="err-txt" id="err-kybcw" style="margin-top:8px"></div>
-  </div>
-</div>
-<!-- Modal "Xem lịch sử nộp" của một biểu (icon 👁 ở Theo dõi — Bước 8b-vá3) -->
-<div class="modal-bg" id="modal-xem-ls">
-  <div class="mbox" style="max-width:520px;width:95%">
-    <h3 id="xem-ls-title">📜 Lịch sử nộp</h3>
-    <div id="xem-ls-body" style="max-height:400px;overflow-y:auto;margin-bottom:10px"></div>
-    <div class="mbtns"><button class="btn-g" onclick="UTILS.dongModal('modal-xem-ls')">Đóng</button></div>
-  </div>
-</div>
 </body>
 </html>
